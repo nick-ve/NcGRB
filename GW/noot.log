@@ -1,0 +1,134 @@
+  *******************************************
+  *                                         *
+  *        W E L C O M E  to  R O O T       *
+  *                                         *
+  *   Version   5.30/00      27 June 2011   *
+  *                                         *
+  *  You are welcome to visit our Web site  *
+  *          http://root.cern.ch            *
+  *                                         *
+  *******************************************
+
+ROOT 5.30/00 (tags/v5-30-00@40062, Jun 28 2011, 11:49:57 on win32)
+
+CINT/ROOT C/C++ Interpreter version 5.18.00, July 2, 2010
+Type ? for help. Commands must be C++ statements.
+Enclose multiple statements between { }.
+
+
+ --- Welcome to the ROOT general session --- 
+
+ === All Pythia6 and MathMore libraries loaded by default === 
+
+ *** Start at Mon Nov 26 18:15:28 2018 ***
+
+
+Processing simple-test.cc...
+
+ *** Kolmogorov-Smirnov test results WITHOUT under/overflow ***
+ Kolmo Prob  h1 = hpdfbkg, sum bin content =59.8153  effective entries =59.8153
+ Kolmo Prob  h2 = hsig, sum bin content =1000  effective entries =1000
+ Kolmo Prob     = 8.96156e-181, Max Dist = 0.0196867
+ Kolmo Prob     = 1.000000 for shape alone, =0.000000 for normalisation alone
+ Kolmo Prob     = 0.708000 with 1000 pseudo-experiments
+
+ *** Kolmogorov-Smirnov test results WITH under/overflow ***
+ Kolmo Prob  h1 = hpdfbkg, sum bin content =59.8153  effective entries =59.8153
+ Kolmo Prob  h2 = hsig, sum bin content =1008  effective entries =1008
+ Kolmo Prob     = 1.73455e-182, Max Dist = 0.0185359
+ Kolmo Prob     = 1.000000 for shape alone, =0.000000 for normalisation alone
+ Kolmo Prob     = 0.788000 with 1000 pseudo-experiments
+
+ *NcAstrolab::KolmogorovTest* Single sample KS-test results for execution mode PIN
+ === For a single sample KS-test the mode=N is suppressed ===
+ Kolmo Prob  h1 = hsig, sum bin content =1000  effective entries =1000
+ Kolmo Prob  h2 = hpdf, sum bin content =59.8153  effective entries =0
+ Kolmo Prob     = 0.833094, Max Dist = 0.0196867
+ P-value        = 0.732 after 1000 pseudo experiments.
+ Returned value = 0.732
+
+ *NcAstrolab::KolmogorovTest* Single sample KS-test results for execution mode PINUO
+ === For a single sample KS-test the mode=N is suppressed ===
+ Kolmo Prob  h1 = hsig, sum bin content =1008  effective entries =1008
+ Kolmo Prob  h2 = hpdf, sum bin content =59.8153  effective entries =0
+ Kolmo Prob     = 0.879137, Max Dist = 0.0185359
+ P-value        = 0.769 after 1000 pseudo experiments.
+ Returned value = 0.769
+
+ *NcAstrolab::KolmogorovTest* Two sample KS-test results for execution mode KIN
+ Kolmo Prob  h1 = hsig, sum bin content =1000  effective entries =1000
+ Kolmo Prob  h2 = hpdfbkg, sum bin content =59.8153  effective entries =59.8153
+ Kolmo Prob     = 8.96156e-181, Max Dist = 0.0196867
+ Kolmo Prob     = 1.000000 for shape alone, =0.000000 for normalisation alone
+ Returned value = 8.96156e-181
+
+ *NcAstrolab::KolmogorovTest* Single sample KS-test results for execution mode KIN
+ === For a single sample KS-test the mode=N is suppressed ===
+ Kolmo Prob  h1 = hsig, sum bin content =1000  effective entries =1000
+ Kolmo Prob  h2 = hpdf, sum bin content =59.8153  effective entries =0
+ Kolmo Prob     = 0.833094, Max Dist = 0.0196867
+ Returned value = 0.833094
+
+ *NcAstrolab::KolmogorovTest* Two sample KS-test results for execution mode KINUO
+ Kolmo Prob  h1 = hsig, sum bin content =1008  effective entries =1008
+ Kolmo Prob  h2 = hpdfbkg, sum bin content =59.8153  effective entries =59.8153
+ Kolmo Prob     = 1.73455e-182, Max Dist = 0.0185359
+ Kolmo Prob     = 1.000000 for shape alone, =0.000000 for normalisation alone
+ Returned value = 1.73455e-182
+
+ *NcAstrolab::KolmogorovTest* Single sample KS-test results for execution mode KINUO
+ === For a single sample KS-test the mode=N is suppressed ===
+ Kolmo Prob  h1 = hsig, sum bin content =1008  effective entries =1008
+ Kolmo Prob  h2 = hpdf, sum bin content =59.8153  effective entries =0
+ Kolmo Prob     = 0.879137, Max Dist = 0.0185359
+ Returned value = 0.879137
+
+ *NcAstrolab::KolmogorovTest* Two sample KS-test results for execution mode KI
+ Kolmo Prob  h1 = hsig, sum bin content =1000  effective entries =1000
+ Kolmo Prob  h2 = hpdfbkg, sum bin content =59.8153  effective entries =59.8153
+ Kolmo Prob     = 1, Max Dist = 0.0196867
+ Returned value = 1
+
+ *NcAstrolab::KolmogorovTest* Single sample KS-test results for execution mode KI
+ Kolmo Prob  h1 = hsig, sum bin content =1000  effective entries =1000
+ Kolmo Prob  h2 = hpdf, sum bin content =59.8153  effective entries =0
+ Kolmo Prob     = 0.833094, Max Dist = 0.0196867
+ Returned value = 0.833094
+
+ *NcAstrolab::KolmogorovTest* Two sample KS-test results for execution mode KIUO
+ Kolmo Prob  h1 = hsig, sum bin content =1008  effective entries =1008
+ Kolmo Prob  h2 = hpdfbkg, sum bin content =59.8153  effective entries =59.8153
+ Kolmo Prob     = 1, Max Dist = 0.0185359
+ Returned value = 1
+
+ *NcAstrolab::KolmogorovTest* Single sample KS-test results for execution mode KIUO
+ Kolmo Prob  h1 = hsig, sum bin content =1008  effective entries =1008
+ Kolmo Prob  h2 = hpdf, sum bin content =59.8153  effective entries =0
+ Kolmo Prob     = 0.879137, Max Dist = 0.0185359
+ Returned value = 0.879137
+
+ *** Psi analysis for the observed fictative data ***
+ Psi w.r.t. background PDF for the observed fictative data : 1087.22
+ ==> P-value of the observed psi : 0.127 Used # of randomisations : 1000
+ Extreme Psi values for the case of pure background : psimin=852.078 psimax=26281.2
+
+ ====== The following 11 histograms are generated in the output file ======
+hpdfbkg : TMath::Gaus(x)
+hpdfbkgfine : TMath::Gaus(x)
+hpdfsig : TMath::Gaus(x)
+hpdfsigfine : TMath::Gaus(x)
+hsig : Fictative data entries
+hpdfbkgfineCDH : Normalized Backward Cumulative Distribution of histogram hpdfbkgfine
+hpdfbkgCDH : Normalized Forward Cumulative Distribution Histogram of function fbkgpdf
+hsigCDH : Normalized Forward Cumulative Distribution of histogram hsig
+hks1 : KS-test Dmax distribution from pseudo experiments
+hks2 : KS-test Dmax distribution from pseudo experiments
+hrpsi : Random #psi distr. for bkg hypothesis of the fictative data
+
+
+ --- ROOT session ended --- 
+
+ *** Started at Mon Nov 26 18:15:28 2018 ***
+
+ *** Stopped at Mon Nov 26 18:15:29 2018 ***
+

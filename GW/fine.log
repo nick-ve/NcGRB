@@ -1,0 +1,76 @@
+  *******************************************
+  *                                         *
+  *        W E L C O M E  to  R O O T       *
+  *                                         *
+  *   Version   5.30/00      27 June 2011   *
+  *                                         *
+  *  You are welcome to visit our Web site  *
+  *          http://root.cern.ch            *
+  *                                         *
+  *******************************************
+
+ROOT 5.30/00 (tags/v5-30-00@40062, Jun 28 2011, 11:49:57 on win32)
+
+CINT/ROOT C/C++ Interpreter version 5.18.00, July 2, 2010
+Type ? for help. Commands must be C++ statements.
+Enclose multiple statements between { }.
+
+
+ --- Welcome to the ROOT general session --- 
+
+ === All Pythia6 and MathMore libraries loaded by default === 
+
+ *** Start at Mon Sep 24 00:37:55 2018 ***
+
+
+Processing gw-analysis.cc...
+
+ *** Statistics of the observed event samples ***
+ *On time* Number of entries : 29 time window (sec) : 1000 --> Event rate (Hz) : 0.029
+  (Used bin sizes (sec) for the distributions time : 0.1 Delta t : 0.10001)
+ *Off time* Number of entries : 545 time window (sec) : 28692 --> Event rate (Hz) : 0.0189948
+
+ Li-Ma significance of the observed event rate is 2.08679 sigma.
+
+ === The 90.0901% credible interval (in Hz) from the Bayesian signal rate pdf : rlow=0.00213242 rup=0.0195362
+
+ *** Psi analysis for the observed IceCube event times ***
+ Background event rate (Hz) : 0.0189948 --> psi for observed event times : 850.522
+ ==> P-value of the observed psi : 1 Used # of randomisations : 30
+ Extreme Psi values for the case of pure background : psimin=850.522 psimax=1159.99
+
+ *** Kolmogorov-Smirnov test results WITHOUT including normalisation analysis ***
+ Kolmo Prob  h1 = hpdfbkgdt, sum bin content =8.41055  effective entries =8.41055
+ Kolmo Prob  h2 = hdtnu, sum bin content =27  effective entries =27
+ Kolmo Prob     = 0.618308, Max Dist = 0.298245
+ Kolmo Prob     = 0.017000 with 1000 pseudo-experiments
+
+ *** Kolmogorov-Smirnov test results WITH including normalisation analysis ***
+ Kolmo Prob  h1 = hpdfbkgdt, sum bin content =8.41055  effective entries =8.41055
+ Kolmo Prob  h2 = hdtnu, sum bin content =27  effective entries =27
+ Kolmo Prob     = 0.00861695, Max Dist = 0.298245
+ Kolmo Prob     = 0.618308 for shape alone, =0.001785 for normalisation alone
+ Kolmo Prob     = 0.011000 with 1000 pseudo-experiments
+
+ *** Psi analysis for the Poisson Dt distributions ***
+ Background event rate (Hz) : 0.0189948 --> psi for observed neutrino dt distr. : 583.696
+ ==> P-value of the observed psi : 0.75 Used # of randomisations : 40
+ Extreme Psi values for the case of pure background : psimin=551.373 psimax=1530.62
+
+ ====== The following 8 histograms are generated in the output file ======
+htnu : IceCube event times w.r.t. GW trigger
+hdtnu : Delta t distribution to contain exactly 2 events
+hpdfbkgr : Bayesian posterior background rate PDF
+hpdfsigr : Bayesian posterior signal rate PDF
+hpdfbkgdt : Poisson related dt PDF for n=2 and r=0.019     
+hpdfbkgdtfine : Poisson related dt PDF for n=2 and r=0.019     
+hrpsitnu : Random #psi distr. for bkg hypothesis of event times
+hrpsidtnu : Random #psi distr. for bkg hypothesis of event dt
+
+
+ --- ROOT session ended --- 
+
+ *** Started at Mon Sep 24 00:37:55 2018 ***
+
+ *** Stopped at Mon Sep 24 00:38:40 2018 ***
+

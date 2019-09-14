@@ -1,0 +1,60 @@
+  *******************************************
+  *                                         *
+  *        W E L C O M E  to  R O O T       *
+  *                                         *
+  *   Version   5.30/00      27 June 2011   *
+  *                                         *
+  *  You are welcome to visit our Web site  *
+  *          http://root.cern.ch            *
+  *                                         *
+  *******************************************
+
+ROOT 5.30/00 (tags/v5-30-00@40062, Jun 28 2011, 11:49:57 on win32)
+
+CINT/ROOT C/C++ Interpreter version 5.18.00, July 2, 2010
+Type ? for help. Commands must be C++ statements.
+Enclose multiple statements between { }.
+
+
+ --- Welcome to the ROOT general session --- 
+
+ === All Pythia6 and MathMore libraries loaded by default === 
+
+ *** Start at Mon Sep 24 01:39:01 2018 ***
+
+
+Processing simple-test.cc...
+
+ *** Kolmogorov-Smirnov test results WITHOUT including normalisation analysis ***
+ Kolmo Prob  h1 = hpdfbkg, sum bin content =59.8153  effective entries =59.8153
+ Kolmo Prob  h2 = hsig, sum bin content =200  effective entries =200
+ Kolmo Prob     = 0.931827, Max Dist = 0.0796867
+ Kolmo Prob     = 0.122000 with 1000 pseudo-experiments
+
+ *** Kolmogorov-Smirnov test results WITH including normalisation analysis ***
+ Kolmo Prob  h1 = hpdfbkg, sum bin content =59.8153  effective entries =59.8153
+ Kolmo Prob  h2 = hsig, sum bin content =200  effective entries =200
+ Kolmo Prob     = 1.31144e-016, Max Dist = 0.0796867
+ Kolmo Prob     = 0.931827 for shape alone, =0.000000 for normalisation alone
+ Kolmo Prob     = 0.104000 with 1000 pseudo-experiments
+
+ *** Psi analysis for the observed fictative data ***
+ Psi w.r.t. background PDF for the observed fictative data : 794.056
+ ==> P-value of the observed psi : 0.769231 Used # of randomisations : 13
+ Extreme Psi values for the case of pure background : psimin=526.254 psimax=5256.23
+
+ ====== The following 6 histograms are generated in the output file ======
+hpdfbkg : TMath::Gaus(x)
+hpdfbkgfine : TMath::Gaus(x)
+hpdfsig : TMath::Gaus(x)
+hpdfsigfine : TMath::Gaus(x)
+hsig : Fictative data entries
+hrpsi : Random #psi distr. for bkg hypothesis of the fictative data
+
+
+ --- ROOT session ended --- 
+
+ *** Started at Mon Sep 24 01:39:01 2018 ***
+
+ *** Stopped at Mon Sep 24 01:39:01 2018 ***
+

@@ -1,0 +1,172 @@
+  *******************************************
+  *                                         *
+  *        W E L C O M E  to  R O O T       *
+  *                                         *
+  *   Version   5.30/00      27 June 2011   *
+  *                                         *
+  *  You are welcome to visit our Web site  *
+  *          http://root.cern.ch            *
+  *                                         *
+  *******************************************
+
+ROOT 5.30/00 (tags/v5-30-00@40062, Jun 28 2011, 11:49:57 on win32)
+
+CINT/ROOT C/C++ Interpreter version 5.18.00, July 2, 2010
+Type ? for help. Commands must be C++ statements.
+Enclose multiple statements between { }.
+
+
+ --- Welcome to the ROOT general session --- 
+
+ === All Pythia6 and MathMore libraries loaded by default === 
+
+ *** Start at Wed Nov 15 15:12:13 2017 ***
+
+
+Processing grbmodel.cc...
+NcGRB_cxx_ACLiC_dict.cxx
+   Creating library D:\WORK\nick\grbmodel\NcGRB\NcGRB_cxx.lib and object D:\WORK\nick\grbmodel\NcGRB\NcGRB_cxx.exp
+
+ ============================ User provided settings ==================================
+ Declination interval (in degrees) for GRB position acceptance : [5,85]
+ Duration interval (t90 in sec) for GRB acceptance : [1e-006,1e+006]
+ Redshift interval for GRB acceptance : [1e-006,99]
+ Random redshift values taken from z-distribution in case of unknown redshift
+ Maximal combined GRB position and track angular uncertainty (sigma in degrees) for acceptance : 999
+ Neutrino production coupled (1) or not (0) to the gamma flare duration : 0
+ Mean decoupled time difference (in sec) between GRB gammas and nus : -60
+ Sigma of mean time difference (in units of T90) between GRB gammas and nus : 0.5
+ Maximum number (<0 is without stat. fluct.) of detectable neutrinos per GRB : -0.15
+ Angular resolution (degrees) of the detector : 0.5
+ Time resolution (sec) of the detector : 1e-005
+ Mean rate (Hz) of upgoing bkg muons in the detector : 0.003
+ Number of events within a dt cell for which the inter-muon dt statistics will be performed : 2
+ Total search time window (in sec) centered at GRB trigger : 7200
+ Angular search circle (in degrees) around the GRB position : 5
+ Time bin size in average T90 units : 1 (=23.04 sec)
+ Angular bin size in degrees : 1
+ Use Frequentist's approximation for psi determination : 0
+ Number of psi entries for bkg psi-value distributions (<0 means time shuffling) : 0
+ Usage of the observed tott number of entries in case of time shuffling : 1
+ Usage of actually observed GRB positions for bkg studies : 1
+ Maximum number of randomised configurations for direct psi P-value determination : -1e+007
+ Randomisation will be terminated when 10 entries with psi>psi0 have been obtained.
+ ============================== Derived parameters ====================================
+ Mean number of upgoing bkg muons in the time window in the detector : 21.6
+ Mean number of upgoing bkg muons per day in the detector : 259.2
+ Number of accepted GCN observed GRBs : 566
+ Number of detected neutrinos per GRB (<0 is without stat. fluct.) : -0.15
+ Median GRB redshift from the data sample : 1.73082
+ Median GRB T90 duration from the data sample : 23.04
+ ======================================================================================
+
+ *NcAstrolab::ListSignals* List of stored signals.
+ Current timestamp of the laboratory (Lab time offset w.r.t. UT : 00:00:00.000000000000)
+ Sat, 11 Apr 2015 12:00:00.000000000000 (UT)  01:17:33.084867748620 (GAST)
+ === The first 10 stored reference signals according to their actual recorded timestamp ===
+ Index : 1 GRB110517 Equatorial (J2000) a : 12h 40m 35.9s d : 6d 17' 23.9" LAHA : -7h 16m 44.2s
+ Index : 2 GRB110520 Equatorial (J2000) a : 8h 57m 21.8s d : 56d 25' 37.1" LAHA : 3h 23m 9.2s
+ Index : 3 GRB110521 Equatorial (J2000) a : 8h 0m 31.9s d : 45d 49' 37.1" LAHA : -0h 14m 3.9s
+ Index : 4 GRB110522 Equatorial (J2000) a : 15h 15m 38.4s d : 55d 31' 47.9" LAHA : 6h 50m 27.8s
+ Index : 5 GRB110522 Equatorial (J2000) a : 12h 17m 50.4s d : 49d 19' 48.0" LAHA : 10h 45m 54.0s
+ Index : 6 GRB110529 Equatorial (J2000) a : 7h 53m 19.2s d : 67d 54' 36.0" LAHA : 9h 19m 2.0s
+ Index : 7 GRB110529 Equatorial (J2000) a : 11h 30m 24.0s d : 8d 47' 23.9" LAHA : 11h 12m 25.6s
+ Index : 8 GRB110530 Equatorial (J2000) a : 18h 48m 16.3s d : 61d 55' 44.4" LAHA : -10h 46m 9.2s
+ Index : 9 GRB110531 Equatorial (J2000) a : 12h 42m 2.3s d : 11d 51' 0.0" LAHA : -9h 23m 5.2s
+ Index : 10 GRB110601 Equatorial (J2000) a : 20h 42m 50.3s d : 11d 28' 47.9" LAHA : -11h 43m 54.3s
+
+ htotdt. deltatbin : 0.400101 deltatmin : 0 deltatmax : 842.212
+ hbkgdt. deltatbin : 0.400101 deltatmin : 0 deltatmax : 842.212
+ === The 0.900735% credible interval from the Bayesian signal pdf : rlow=1.08662e-005 rup=2.15029e-005
+ === The 0.900069% credible interval from the Bayesian signal pdf : rlow=1.08715e-005 rup=2.15066e-005
+ *** Statistics of the stacked observed event samples ***
+ Total stacked solid angle (in sr) : 13.5328
+ *On source* Number of entries : 119 Number of time bins : 312 Number of angular bins : 5 Number of cos(angle) bins : 24
+ Stacked event rate (Hz) : 0.0165278 --> Event rate (Hz) per GRB : 2.9201e-005
+ --- (Unknown) Number of GRB muons : 84 Number of "on source" bkg entries : 35
+ *Off source* Number of bkg entries : 53
+ Stacked bkg event rate (Hz) : 0.00736111 --> Bkg event rate (Hz) per GRB : 1.30055e-005
+
+ *** Observed Bayesian psi values (in dB) for the hyp. of no GRB signal ***
+ --- Observed psi values (in dB) for the "on source" stacked patches ---
+ psi for tott : 1356.07 tota : 411.591 totcosa : 557.674
+ ==> P-value of the observed tott psi : -1 Used # of randomisations : -1
+ ==> P-value of the observed tota psi : -1 Used # of randomisations : -1
+ ==> P-value of the observed totcosa psi : -1 Used # of randomisations : -1
+ --- Observed psi values (in dB) for the corresponding "opposite RA" stacked "off source" bkg patches ---
+     psi for bkgt : 640.644 bkga : 45.8773 bkgcosa : 198.172
+ ==> P-value of the background bkgt psi : -1 Used # of randomisations : -1
+ ==> P-value of the background bkga psi : -1 Used # of randomisations : -1
+ ==> P-value of the background bkgcosa psi : -1 Used # of randomisations : -1
+ --- Difference between observed "on source" and "off source" psi values (in dB) ---
+     Delta psi for tott-bkgt : 715.421 tota-bkga : 365.714 totcosa-bkgcosa : 359.502
+ === Extreme Psi values for the case of pure background ===
+ *** tott psimin : 1000.58 psimax : 2968.04 (psimax-psi)/range : 0.819319
+ --- bkgt psimin : 625.593 psimax : 1321.9 (psimax-psi)/range : 0.978384
+ *** tota psimin : 37.5582 psimax : 1663.23 (psimax-psi)/range : 0.769921
+ --- bkga psimin : 30.6725 psimax : 740.768 (psimax-psi)/range : 0.978588
+ *** totcosa psimin : 167.003 psimax : 1642.45 (psimax-psi)/range : 0.735219
+ --- bkgcosa psimin : 131.306 psimax : 731.512 (psimax-psi)/range : 0.888594
+
+ *** Psi analysis for the Poisson Dt distributions ***
+ Stacked bkg only event rate (Hz) : 0.00736111 --> psi for totdt : 2455.99
+ ==> P-value of the observed totdt psi : -1 Used # of randomisations : -1
+ --- psi for bkgdt : 969.702
+     ==> P-value of the bkgdt psi : -1 Used # of randomisations : -1
+
+ === Poisson Dt extreme Psi values for the case of pure background ===
+ *** totdt psimin : 1538.3 psimax : 6268 (psimax-psi)/range : 0.805973
+ ---  bkgdt psimin : 850.281 psimax : 2732.2 (psimax-psi)/range : 0.936543
+
+
+ *** Observed chi-squared values for the hypothesis of no GRB signal ***
+ chi2 for tott : 1154.97 ndf : 56 P-value : 0 (103.843 * sigma)
+ chi2 for tota : 422.061 ndf : 4 P-value : 0 (147.807 * sigma)
+ chi2 for totcosa : 415.537 ndf : 22 P-value : 0 (59.328 * sigma)
+
+ --- (Unknown) Corresponding chi-squared values for the bkg upgoing muons ---
+ chi2 for bkgt : 273.022 ndf : 47 P-value : 0 (23.3124 * sigma)
+ chi2 for bkga : 6.86641 ndf : 4 P-value : 0.143118 (1.01343 * sigma)
+ chi2 for bkgcosa : 23.8632 ndf : 17 P-value : 0.1232 (1.17703 * sigma)
+
+ ====== The following 32 histograms have been generated in the output file ======
+hz : Swift observed GRB redshifts
+ht90z : Swift observed GRB durations with known redshift
+ht90z2 : Swift observed GRB redshift vs. duration
+ht90zc : Swift observed GRB durations redshift corrected
+ht90zc2 : Swift observed GRB redshift vs. z corrected duration
+ht90 : Observed GRB durations
+hsigmagrb : Observed GRB position uncertainty
+htotsigma : Combined GRB position and track resolution uncertainty
+bkgtfine : t of bkg mu-up in twindow
+tottfine : t of all mu-up in twindow
+bkgt : t of bkg mu-up in twindow
+tott : t of all mu-up in twindow
+bkg2 : t vs. dang of bkg mu-up in twindow
+tot2 : t vs. dang of all mu-up in twindow
+bkga : dang of bkg mu-up in twindow
+tota : dang of all mu-up in twindow
+bkgcosa : cos(dang) of bkg mu-up in twindow
+totcosa : cos(dang) of all mu-up in twindow
+htotdt : dt to contain 2 mu-up in total twindow
+hbkgdt : dt to contain 2 mu-up in bkg twindow
+hpdfbkgr : Bayesian posterior background rate PDF
+hpdfsigr : Bayesian posterior signal rate PDF
+hpdftotdt : Poisson related dt PDF for n=2 and r=0.0165    
+hrpsibkgdt : Random #psi distr. for bkg hypothesis of bkg dt
+hrpsitott : Random #psi distr. for bkg hypothesis of tott
+hrpsibkgt : Random #psi distr. for bkg hypothesis of bkgt
+hrpsitota : Random #psi distr. for bkg hypothesis of tota
+hrpsibkga : Random #psi distr. for bkg hypothesis of bkga
+hrpsitotcosa : Random #psi distr. for bkg hypothesis of totcosa
+hrpsibkgcosa : Random #psi distr. for bkg hypothesis of bkgcosa
+hrpsitotdt : Random #psi distr. for bkg hypothesis of tot dt
+hrpsibkgdt : Random #psi distr. for bkg hypothesis of bkg dt
+
+
+ --- ROOT session ended --- 
+
+ *** Started at Wed Nov 15 15:12:13 2017 ***
+
+ *** Stopped at Wed Nov 15 15:12:30 2017 ***
+
