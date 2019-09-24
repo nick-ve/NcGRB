@@ -133,13 +133,14 @@ class NcAstrolab2 : public TTask,public NcTimestamp
   void SetBurstParameter(TString name,Double_t value); // Specification of a certain transient burst parameter setting
   NcDevice* GetBurstParameters();    // Provide the device containing all the burst parameter settings
   void ListBurstParameters() const;  // Listing of all the burst parameter settings
-  void LoadBurstData(TString file,TString tree,Int_t date1=0,Int_t date2=0,Int_t nmax=-1,TString type="GRB");  // Load observed burst data
-  void GenBurstData(Int_t n,TString name="GRB"); // Generate fictative burst data
+  void LoadBurstGCNdata(TString file,TString tree,Int_t date1=0,Int_t date2=0,Int_t nmax=-1,TString type="GRB");  // Load observed burst GCN data
+  void GenBurstGCNdata(Int_t n,TString name="GRB"); // Generate fictative burst GCN data
+  void GenBurstSignals(); // Generate detector signals from the stored transient bursts
   void ListHistograms() const;                   // Provide a list of all the stored histograms
   void WriteHistograms(TString filename);        // Write all stored histograms to a ROOT output file
   void MakeZdist(TString file,TString tree,TString branch,Int_t nb=200,Float_t zmin=0,Float_t zmax=20); // Make observed redshift distribution
   void MakeT90dist(TString file,TString tree,TString branch,Int_t nb=50,Float_t xmin=-5,Float_t xmax=5); // Make observed T90 distribution
-//  TH1* GetBayesianSignalRate(Double_t p,Double_t& rlow,Double_t& rup,Int_t n=1000); // Provide Bayesian signal rate and credible interval 
+  TH1* GetBurstBayesianSignalRate(Double_t p,Double_t& rlow,Double_t& rup,Int_t n=1000); // Provide transient burst Bayesian signal rate and credible interval 
 //  Double_t GetLiMaSignificance() const;                         // Provide the Li-Ma signal significance
 //  void GetBayesianPsiStatistics(TString type,Int_t ndt=2,Double_t nr=-1,Int_t ncut=10,Int_t freq=0); // Provide Bayesian Psi statistics
 //  void GetChi2Statistics(TString type,Int_t ndt=2);             // Provide Chi-squared statistics
@@ -246,6 +247,9 @@ class NcAstrolab2 : public TTask,public NcTimestamp
   // Storage for transient burst investigations
   NcDevice* fBurstParameters; // Various parameters describing the transient burst
   TObjArray fHistos;          // Storage of all the produced histograms
+
+  // Internal function for transient burst investigations
+  void BurstCompensate(Int_t& nmugrb,Float_t Grbnu,Float_t Ngrbs,Int_t Inburst,Float_t Dtnu,Float_t Dtnus,Float_t Angres,Float_t Timres,Float_t Datype,Float_t Dawin);
  
  ClassDef(NcAstrolab2,30) // Virtual lab to provide (astro)physical parameters, treat data and relate observations with astrophysical phenomena
 };

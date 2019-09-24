@@ -10,23 +10,18 @@
 ///////////////////////////////////////////////////////////////////
 {
  gSystem->Load("ncfspack");
-///// gSystem->Load("icepack");
 
  // Load and compile the user code
  gROOT->LoadMacro("NcAstrolab2.cxx+");
-//// gROOT->LoadMacro("NcGRB.cxx+");
 
  // The (transient) cosmic coincidence analysis
-/// NcGRB grb;
  NcAstrolab2 grb;
  grb.SetExperiment("IceCube");
  grb.SetUT("11-04-2015","12:00:00.0",0); // Fixed fictative analysis date
  grb.SetRandomiser(-1); // Use the UT timestamp to generate a seed
  grb.Data();
 
- grb.SetBurstParameter("*",0);
-
- grb.SetBurstParameter("Nmax",20);
+// grb.SetBurstParameter("Nmax",20);
  grb.SetBurstParameter("Declmin",5);
  grb.SetBurstParameter("Declmax",85);
 // grb.SetParameter("Grbnu",-0.03);
@@ -41,34 +36,34 @@
  grb.MakeZdist("../grbweb/GRB-z-Swift.root","T","z",200,0,20);
  grb.MakeT90dist("../grbweb/GRB-t90-Fermi.root","T","t90");
 
-/// grb.LoadBurstData("../grbweb/GRBweb.root","T");
+ grb.LoadBurstGCNdata("../grbweb/GRBweb.root","T");
 
 /***********
-// grb.LoadBurstData("GRB-IC86-*.root","T");
- grb.LoadBurstData("GRB-IC86-2011.root","T");
- grb.LoadBurstData("GRB-IC86-2012.root","T");
- grb.LoadBurstData("GRB-IC86-2013.root","T");
- grb.LoadBurstData("GRB-IC86-2014.root","T");
- grb.LoadBurstData("GRB-IC86-2015.root","T");
- grb.LoadBurstData("GRB-IC86-2016+.root","T");
+// grb.LoadBurstGCNdata("GRB-IC86-*.root","T");
+ grb.LoadBurstGCNdata("GRB-IC86-2011.root","T");
+ grb.LoadBurstGCNdata("GRB-IC86-2012.root","T");
+ grb.LoadBurstGCNdata("GRB-IC86-2013.root","T");
+ grb.LoadBurstGCNdata("GRB-IC86-2014.root","T");
+ grb.LoadBurstGCNdata("GRB-IC86-2015.root","T");
+ grb.LoadBurstGCNdata("GRB-IC86-2016+.root","T");
 ************/
 
- grb.GenBurstData(5,"GRB");
- grb.GenBurstData(5,"GW");
+/// grb.GenBurstGCNdata(5,"GRB");
+/// grb.GenBurstGCNdata(5,"GW");
 
  cout << endl;
  grb.ListSignals("equ","J",1,"T",10);
  cout << endl;
 
-//// grb.ExecuteTask();
+ grb.GenBurstSignals();
 
  cout << endl;
  grb.ListBurstParameters();
 
-/**************
  Double_t rlow,rup;
- grb.GetBayesianSignalRate(90,rlow,rup);
+ grb.GetBurstBayesianSignalRate(90,rlow,rup);
 
+/**************
  grb.GetLiMaSignificance();
 
  grb.GetBayesianPsiStatistics("time",2,1e4);
