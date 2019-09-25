@@ -33,8 +33,8 @@
  cout << endl;
  grb.ListBurstParameters();
 
- grb.MakeZdist("../grbweb/GRB-z-Swift.root","T","z",200,0,20);
- grb.MakeT90dist("../grbweb/GRB-t90-Fermi.root","T","t90");
+ grb.MakeBurstZdist("../grbweb/GRB-z-Swift.root","T","z",200,0,20);
+ grb.MakeBurstT90dist("../grbweb/GRB-t90-Fermi.root","T","t90");
 
  grb.LoadBurstGCNdata("../grbweb/GRBweb.root","T");
 
@@ -77,15 +77,5 @@
  grb.GetChi2Statistics("dt",2);
 ***************/
 
-/*************
- // Create a multi-task job environment
- NcJob job;
- job->Add(&grb);
- job->ListEnvironment();
-
- // Execute the analysis
- job->ExecuteJob(10);
-**********/
-
- grb.WriteHistograms("tessie.root");
+ grb.WriteBurstHistograms("tessie.root");
 }
