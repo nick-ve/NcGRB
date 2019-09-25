@@ -141,9 +141,9 @@ class NcAstrolab2 : public TTask,public NcTimestamp
   void MakeBurstZdist(TString file,TString tree,TString branch,Int_t nb=200,Float_t zmin=0,Float_t zmax=20); // Make transient burst observed redshift distribution
   void MakeBurstT90dist(TString file,TString tree,TString branch,Int_t nb=50,Float_t xmin=-5,Float_t xmax=5); // Make transient burst observed T90 distribution
   TH1* GetBurstBayesianSignalRate(Double_t p,Double_t& rlow,Double_t& rup,Int_t n=1000); // Provide transient burst Bayesian signal rate and credible interval 
-//  Double_t GetLiMaSignificance() const;                         // Provide the Li-Ma signal significance
-//  void GetBayesianPsiStatistics(TString type,Int_t ndt=2,Double_t nr=-1,Int_t ncut=10,Int_t freq=0); // Provide Bayesian Psi statistics
-//  void GetChi2Statistics(TString type,Int_t ndt=2);             // Provide Chi-squared statistics
+  Double_t GetBurstLiMaSignificance() const;                         // Provide the transient burst Li-Ma signal significance
+  void GetBurstBayesianPsiStatistics(TString type,Int_t ndt=2,Double_t nr=-1,Int_t ncut=10,Int_t freq=0); // Provide transient burst Bayesian Psi statistics
+  void GetBurstChi2Statistics(TString type,Int_t ndt=2);             // Provide the transient burst Chi-squared statistics
  
  protected:
   NcPosition fLabPos;    // Position of the lab in the terrestrial longitude-latitude frame

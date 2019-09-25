@@ -9475,6 +9475,698 @@ TH1* NcAstrolab2::GetBurstBayesianSignalRate(Double_t p,Double_t& rlow,Double_t&
  return hpdfsigr;
 }
 ///////////////////////////////////////////////////////////////////////////
+Double_t NcAstrolab2::GetBurstLiMaSignificance() const
+{
+// Provide the transient burst Li-Ma signal significance in terms of the amount of
+// standard deviations w.r.t. the "on source" and "off source" observations.
+//
+// In case of inconsistent data the value 0 is returned.
+
+ Double_t sigma=0;
+
+ TH1* tott=(TH1*)fBurstHistos.FindObject("tott");
+ TH1* bkgt=(TH1*)fBurstHistos.FindObject("bkgt");
+
+ if (!tott || !bkgt) return 0;
+
+ Double_t underflow,overflow;
+ Int_t nbins=0;
+ Double_t nentot=tott->GetEntries();
+ nbins=tott->GetNbinsX();
+ underflow=tott->GetBinContent(0);
+ overflow=tott->GetBinContent(nbins+1);
+ nentot=nentot-(underflow+overflow);
+ Double_t nenbkg=bkgt->GetEntries();
+ nbins=bkgt->GetNbinsX();
+ underflow=bkgt->GetBinContent(0);
+ overflow=bkgt->GetBinContent(nbins+1);
+ nenbkg=nenbkg-(underflow+overflow);
+
+ if (nentot<=0 || nenbkg<=0) return 0;
+
+ Int_t fNgrbs=GetNsignals(0);
+ Float_t fDtwin=fBurstParameters->GetSignal("Dtwin");
+
+ // The "on source" and "off source" data
+ Int_t Non=int(nentot);
+ Double_t Ton=fDtwin*float(fNgrbs);
+ Int_t Noff=int(nenbkg);
+ Double_t Toff=Ton;
+
+ NcMath m;
+ sigma=m.LiMaSignificance(Non,Ton,Noff,Toff);
+
+ cout << endl;
+ cout << " *" << ClassName() << "::GetBurstLiMaSignificance* The Li-Ma signal significance is : " << sigma << " sigma." << endl;
+
+ return sigma;
+}
+///////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::GetBurstBayesianPsiStatistics(TString type,Int_t ndt,Double_t nr,Int_t ncut,Int_t freq)
+{
+// Provide the transient burst Bayesian Psi statistics for the (stacked) distributions of the
+// observed arrival times and opening angles w.r.t. the corresponding bursts.
+//
+// Consider a hypothesis B_m representing a counting experiment with m different
+// possible outcomes and which is completely defined by the probabilities
+// of the various outcomes (and the requirement that the sum of all these
+// probabilities equals 1).
+// In mathematical terms such a hypothesis belongs to the Bernoulli class B_m. 
+//
+// The Psi value of n trials of B_m provides (in dB scale) the amount of support
+// that the data can maximally give to any Bernoulli class hypothesis different
+// from the currently specified B_m.
+//
+// To be specific : Psi=-10*log[p(D|B_m I)]
+//
+// where p(D|B_m I) represents the likelihood of the data D under the condition
+// that B_m (given some prior information I) are true.
+//
+// In our current situation, the hypotheses B_m (i.e. Probability Distribution Functions)
+// for the various observed distributions are known and "m" just represents the number
+// of bins, and "n" represents the number of entries of the corresponding histogram.
+// As such, the Psi value (psi0) of the actual observation can be determined.
+//
+// Further mathematical details can be found in the publication
+// N. van Eijndhoven, Astropart. Phys. 28 (2008) 540 (astro-ph/0702029).
+//
+// This memberfunction may also provide the statistical P-value (i.e. the fraction of
+// recorded psi values with psi>=psi0) for the actually observed psi value (psi0)
+// based on "nr" repetitions of the counting experiment corresponding to B_m
+// with "n" independent random trials.
+//
+// Input arguments :
+// -----------------
+// type : "time"  --> Provide statistics for the observed arrival times
+//                    This will investigate the deviation from a uniform background time spectrum 
+//        "angle" --> Provide statistics for the observed opening angles
+//                    This will investigate the deviation from a isotropic background angular spectrum 
+//        "cosa"  --> Provide statistics for the cosine of the observed opening angles
+//                    This will investigate the deviation from a uniform background cos(angle) spectrum 
+//        "dt"    --> Provide statistics for the time intervals between the observed arrival times
+//                    This will investigate the deviation from dt spectrum expected from Poisson statistics
+// ndt  : Number of events within a dt cell for which the dt statistics will be performed 
+// nr   : (Maximum) number of randomised configurations for psi P-value determination.
+//        nr<0 implies that no psi P-values will be determined (saves CPU time).
+//        nr=0 implies the allowed maximum of 1e19 randomisations.
+// ncut : Number of obtained randomised psi entries above the actual observed psi value
+//        at which randomisations will be terminated (to save CPU time).
+//        ncut=0 implies no early termination.
+// freq : Use frequentist's approximation (1) or exact Bayesian expression (0)
+//
+// The default values are ndt=2, nr=-1, ncut=10 and freq=0.
+
+ NcMath math;
+
+ TString text="none";
+ if (type=="time") text="arrival time";
+ if (type=="angle") text="opening angle";
+ if (type=="cosa") text="cos(opening angle)";
+ if (type=="dt") text="arrival time interval";
+
+ cout << endl; 
+ if (text=="none")
+ {
+  cout << " *" << ClassName() << "::GetBurstBayesianPsiStatistics* Unknown statistics type : " << type << endl;
+  return;
+ }
+ else
+ {
+  cout << " *" << ClassName() << "::GetBurstBayesianPsiStatistics* Analysis of " << text << " statistics" << endl;
+ }
+
+ Double_t psitot=-1, psibkg=-1;
+ Float_t psidif=0;
+ Float_t psimintot=-1, psimaxtot=-1, psifractot=0;
+ Float_t psiminbkg=-1, psimaxbkg=-1, psifracbkg=0;
+ Double_t nrxtot=-1, nrxbkg=-1;
+ Double_t pvaluetot=-1, pvaluebkg=-1;
+ TH1F* rtot=0;
+ TH1F* rbkg=0;
+
+ ////////////////////////////////////////////
+ // Arrival time histo Bayesian statistics //
+ ////////////////////////////////////////////
+ if (type=="time")
+ {
+  TH1* tot=(TH1*)fBurstHistos.FindObject("tott");
+  TH1* bkg=(TH1*)fBurstHistos.FindObject("bkgt");
+
+  if (!tot || !bkg) return;
+
+  psitot=math.PsiValue(tot,0,0,freq);
+  psibkg=math.PsiValue(bkg,0,0,freq);
+  psidif=psitot-psibkg;
+
+  // Extreme Psi values for a pure background hypothesis of the recorded arrival time entries
+  psimintot=math.PsiExtreme(tot,0,0,-2);
+  psimaxtot=math.PsiExtreme(tot,0,0,-1);
+  psifractot=(psimaxtot-psitot)/(psimaxtot-psimintot);
+  psiminbkg=math.PsiExtreme(bkg,0,0,-2); 
+  psimaxbkg=math.PsiExtreme(bkg,0,0,-1);
+  psifracbkg=(psimaxbkg-psibkg)/(psimaxbkg-psiminbkg);
+
+  // P-value determination
+  if (nr>=0)
+  {
+   TH1F* hrpsitott=(TH1F*)fBurstHistos.FindObject("hrpsitott");
+   TH1F* hrpsibkgt=(TH1F*)fBurstHistos.FindObject("hrpsibkgt");
+
+   if (hrpsitott)
+   {
+    rtot=(TH1F*)hrpsitott->Clone();
+    rtot->Reset();
+   }
+   else
+   {
+    rtot=new TH1F("hrpsitott","Random #psi distr. for bkg hypothesis of on-source arrival time data",100,psimintot-1.,psimaxtot+1.);
+   }
+
+   if (hrpsibkgt)
+   {
+    rbkg=(TH1F*)hrpsibkgt->Clone();
+    rbkg->Reset();
+   }
+   else
+   {
+    rbkg=new TH1F("hrpsibkgt","Random #psi distr. for bkg hypothesis of off-source arrival time data",100,psiminbkg-1.,psimaxbkg+1.);
+   }
+
+   pvaluetot=math.PsiPvalue(-1,nr,tot,0,0,freq,0,rtot,ncut,&nrxtot);
+   pvaluebkg=math.PsiPvalue(-1,nr,bkg,0,0,freq,0,rbkg,ncut,&nrxbkg);
+   fBurstHistos.Add(rtot);
+   fBurstHistos.Add(rbkg);
+
+   cout << " The following randomised Psi histograms have been generated :" << endl;
+   cout << " ... " << rtot->GetName() << " : " << rtot->GetTitle() << endl;      
+   cout << " ... " << rbkg->GetName() << " : " << rbkg->GetTitle() << endl;
+  }
+ }
+ 
+ /////////////////////////////////////////////
+ // Opening angle histo Bayesian statistics //
+ /////////////////////////////////////////////
+ if (type=="angle")
+ {
+  TH1* tot=(TH1*)fBurstHistos.FindObject("tota");
+  TH1* bkg=(TH1*)fBurstHistos.FindObject("bkga");
+
+  if (!tot || !bkg) return;
+
+  TF1 pdfa("pdfa","sin(x*acos(-1.)/180.)");
+  psitot=math.PsiValue(tot,0,&pdfa,freq);
+  psibkg=math.PsiValue(bkg,0,&pdfa,freq);
+  psidif=psitot-psibkg;
+
+  // Extreme Psi values for a pure background hypothesis of the recorded opening angle entries
+  psimintot=math.PsiExtreme(tot,0,&pdfa,-2);
+  psimaxtot=math.PsiExtreme(tot,0,&pdfa,-1);
+  psifractot=(psimaxtot-psitot)/(psimaxtot-psimintot);
+  psiminbkg=math.PsiExtreme(bkg,0,&pdfa,-2);
+  psimaxbkg=math.PsiExtreme(bkg,0,&pdfa,-1);
+  psifracbkg=(psimaxbkg-psibkg)/(psimaxbkg-psiminbkg);
+
+  // P-value determination
+  if (nr>=0)
+  {
+   TH1F* hrpsitota=(TH1F*)fBurstHistos.FindObject("hrpsitota");
+   TH1F* hrpsibkga=(TH1F*)fBurstHistos.FindObject("hrpsibkga");
+
+   if (hrpsitota)
+   {
+    rtot=(TH1F*)hrpsitota->Clone();
+    rtot->Reset();
+   }
+   else
+   {
+    rtot=new TH1F("hrpsitota","Random #psi distr. for bkg hypothesis of on-source opening angle data",100,psimintot-1.,psimaxtot+1.);
+   }
+
+   if (hrpsibkga)
+   {
+    rbkg=(TH1F*)hrpsibkga->Clone();
+    rbkg->Reset();
+   }
+   else
+   {
+    rbkg=new TH1F("hrpsibkga","Random #psi distr. for bkg hypothesis of off-source opening angle data",100,psiminbkg-1.,psimaxbkg+1.);
+   }
+
+   pvaluetot=math.PsiPvalue(-1,nr,tot,0,&pdfa,freq,0,rtot,ncut,&nrxtot);
+   pvaluebkg=math.PsiPvalue(-1,nr,bkg,0,&pdfa,freq,0,rbkg,ncut,&nrxbkg);
+   fBurstHistos.Add(rtot);
+   fBurstHistos.Add(rbkg);
+
+   cout << " The following randomised Psi histograms have been generated :" << endl;
+   cout << " ... " << rtot->GetName() << " : " << rtot->GetTitle() << endl;      
+   cout << " ... " << rbkg->GetName() << " : " << rbkg->GetTitle() << endl;
+  }      
+ }
+
+ ///////////////////////////////////////////////////////
+ // Cosine of opening angle histo Bayesian statistics //
+ ///////////////////////////////////////////////////////
+ if (type=="cosa")
+ {
+  TH1* tot=(TH1*)fBurstHistos.FindObject("totcosa");
+  TH1* bkg=(TH1*)fBurstHistos.FindObject("bkgcosa");
+
+  if (!tot || !bkg) return;
+
+  psitot=math.PsiValue(tot,0,0,freq);
+  psibkg=math.PsiValue(bkg,0,0,freq);
+  psidif=psitot-psibkg;
+
+  // Extreme Psi values for a pure background hypothesis of the recorded cos(opening angle) entries
+  psimintot=math.PsiExtreme(tot,0,0,-2);
+  psimaxtot=math.PsiExtreme(tot,0,0,-1);
+  psifractot=(psimaxtot-psitot)/(psimaxtot-psimintot);
+  psiminbkg=math.PsiExtreme(bkg,0,0,-2);
+  psimaxbkg=math.PsiExtreme(bkg,0,0,-1);
+  psifracbkg=(psimaxbkg-psibkg)/(psimaxbkg-psiminbkg);
+
+  // P-value determination
+  if (nr>=0)
+  {
+   TH1F* hrpsitotcosa=(TH1F*)fBurstHistos.FindObject("hrpsitotcosa");
+   TH1F* hrpsibkgcosa=(TH1F*)fBurstHistos.FindObject("hrpsibkgcosa");
+
+   if (hrpsitotcosa)
+   {
+    rtot=(TH1F*)hrpsitotcosa->Clone();
+    rtot->Reset();
+   }
+   else
+   {
+    rtot=new TH1F("hrpsitotcosa","Random #psi distr. for bkg hypothesis of on-source cos(opening angle) data",100,psimintot-1.,psimaxtot+1.);
+   }
+
+   if (hrpsibkgcosa)
+   {
+    rbkg=(TH1F*)hrpsibkgcosa->Clone();
+    rbkg->Reset();
+   }
+   else
+   {
+    rbkg=new TH1F("hrpsibkgcosa","Random #psi distr. for bkg hypothesis of off-source cos(opening angle) data",100,psiminbkg-1.,psimaxbkg+1.);
+   }
+    pvaluetot=math.PsiPvalue(-1,nr,tot,0,0,freq,0,rtot,ncut,&nrxtot);
+    pvaluebkg=math.PsiPvalue(-1,nr,bkg,0,0,freq,0,rbkg,ncut,&nrxbkg);
+    fBurstHistos.Add(rtot);
+    fBurstHistos.Add(rbkg);
+
+    cout << " The following randomised Psi histograms have been generated :" << endl;
+    cout << " ... " << rtot->GetName() << " : " << rtot->GetTitle() << endl;      
+    cout << " ... " << rbkg->GetName() << " : " << rbkg->GetTitle() << endl;
+  }
+ }
+
+ ///////////////////////////////////////////////
+ // Arrival time interval Bayesian statistics //
+ ///////////////////////////////////////////////
+ if (type=="dt")
+ {
+  TH1* tot=(TH1*)fBurstHistos.FindObject("tottfine");
+  TH1* bkg=(TH1*)fBurstHistos.FindObject("bkgtfine");
+
+  if (!tot || !bkg) return;
+
+  // Create the delta t histograms
+  TString nametot="htotdt";
+  nametot+=ndt;
+  TString namebkg="hbkgdt";
+  namebkg+=ndt;
+  TH1F* htotdt=(TH1F*)fBurstHistos.FindObject(nametot.Data());
+  TH1F* hbkgdt=(TH1F*)fBurstHistos.FindObject(namebkg.Data());
+  Double_t deltatbin=0, deltatmin=0, deltatmax=0;
+  if (!htotdt && !hbkgdt)
+  {
+   htotdt=(TH1F*)(GetDxHistogram(tot,ndt,-1,0,-1).Clone(nametot.Data()));
+   deltatbin=htotdt->GetXaxis()->GetBinWidth(1);
+   deltatmin=htotdt->GetXaxis()->GetXmin();
+   deltatmax=htotdt->GetXaxis()->GetXmax();
+   hbkgdt=(TH1F*)(GetDxHistogram(bkg,ndt,deltatbin,deltatmin,deltatmax).Clone(namebkg.Data()));
+
+   // Create titles and labels for the delta t histograms
+   TString title="Time intervals containing ";
+   title+=ndt;
+   title+=" consecutive events in the on-source time window";
+   title+=";dt (in sec);Counts per bin of size %-10.3g";
+   TString s=title.Format(title.Data(),deltatbin);
+   htotdt->SetTitle(s.Data());
+
+   title="Time intervals containing ";
+   title+=ndt;
+   title+=" consecutive events in the off-source time window";
+   title+=";dt (in sec);Counts per bin of size %-10.3g";
+   s=title.Format(title.Data(),deltatbin);
+   hbkgdt->SetTitle(s.Data());
+
+   fBurstHistos.Add(htotdt);
+   fBurstHistos.Add(hbkgdt);
+
+   cout << " The following arrival time interval (dt) histograms have been generated :" << endl;
+   cout << " ... " << htotdt->GetName() << " : " << htotdt->GetTitle() << endl;      
+   cout << " ... " << hbkgdt->GetName() << " : " << hbkgdt->GetTitle() << endl;
+  }
+
+  // Creation of the Poisson based dt PDFs from the observed data for a background only hypothesis 
+  Double_t underflow,overflow;
+  Int_t nbins=0;
+  Double_t nentot=tot->GetEntries();
+  nbins=tot->GetNbinsX();
+  underflow=tot->GetBinContent(0);
+  overflow=tot->GetBinContent(nbins+1);
+  nentot=nentot-(underflow+overflow);
+  Double_t nenbkg=bkg->GetEntries();
+  nbins=bkg->GetNbinsX();
+  underflow=bkg->GetBinContent(0);
+  overflow=bkg->GetBinContent(nbins+1);
+  nenbkg=nenbkg-(underflow+overflow);
+
+  if (nentot<=0 || nenbkg<=0) return;
+
+  Double_t fDtwin=fBurstParameters->GetSignal("Dtwin");
+  Double_t ratetot=nentot/(fDtwin);
+  Double_t ratebkg=nenbkg/(fDtwin);
+
+  // Determine the corresponding dt PDFs based on Poisson statistics
+  // Only the bkg dt PDF is used, since this may be obtained from off-source measurements.
+  // Using the total dt PDF would artificially lower the sensitivity due to possible signal events.
+
+  TF1 fdttot=math.PoissonDtDist(ratetot,ndt); // Only for reference, not used in the analysis
+  TF1 fdtbkg=math.PoissonDtDist(ratebkg,ndt);
+
+  nametot="hpdftotdt";
+  nametot+=ndt;
+  namebkg="hpdfbkgdt";
+  namebkg+=ndt;
+  TH1* hpdftotdt=(TH1*)fBurstHistos.FindObject(nametot.Data());
+  TH1* hpdfbkgdt=(TH1*)fBurstHistos.FindObject(namebkg.Data());
+
+  // Provide the dt PDFs as histograms in the output file
+  if (!hpdftotdt && !hpdfbkgdt)
+  {
+   deltatmax=htotdt->GetXaxis()->GetXmax();
+   fdttot.SetRange(0,deltatmax);
+   fdttot.SetNpx(10000);
+   hpdftotdt=(TH1*)fdttot.GetHistogram()->Clone();
+   hpdftotdt->SetName(nametot.Data());
+   deltatmax=hbkgdt->GetXaxis()->GetXmax();
+   fdtbkg.SetRange(0,deltatmax);
+   fdtbkg.SetNpx(10000);
+   hpdfbkgdt=(TH1*)fdtbkg.GetHistogram()->Clone();
+   hpdfbkgdt->SetName(namebkg.Data());
+   fBurstHistos.Add(hpdftotdt);
+   fBurstHistos.Add(hpdfbkgdt);
+
+   cout << " The following arrival time interval (dt) PDFs have been generated :" << endl;
+   cout << " ... " << hpdftotdt->GetName() << " : " << hpdftotdt->GetTitle() << endl;      
+   cout << " ... " << hpdfbkgdt->GetName() << " : " << hpdfbkgdt->GetTitle() << endl;
+  }
+
+  psitot=math.PsiValue(htotdt,0,&fdtbkg,freq);
+  psibkg=math.PsiValue(hbkgdt,0,&fdtbkg,freq);
+  psidif=psitot-psibkg;
+
+  psimintot=math.PsiExtreme(htotdt,0,&fdtbkg,-2);
+  psimaxtot=math.PsiExtreme(htotdt,0,&fdtbkg,-1);
+  psifractot=(psimaxtot-psitot)/(psimaxtot-psimintot);
+  psiminbkg=math.PsiExtreme(hbkgdt,0,&fdtbkg,-2);
+  psimaxbkg=math.PsiExtreme(hbkgdt,0,&fdtbkg,-1);
+  psifracbkg=(psimaxbkg-psibkg)/(psimaxbkg-psiminbkg);
+
+  // P-value determination
+  if (nr>=0)
+  {
+   nametot="hrpsitotdt";
+   nametot+=ndt;
+   namebkg="hrpsibkgdt";
+   namebkg+=ndt;
+
+   TH1F* hrpsitotdt=(TH1F*)fBurstHistos.FindObject(nametot.Data());
+   TH1F* hrpsibkgdt=(TH1F*)fBurstHistos.FindObject(namebkg.Data());
+
+   TString title;
+   if (hrpsitotdt)
+   {
+    rtot->Reset();
+   }
+   else
+   {
+    title="Random #psi distr. for bkg hypothesis of on-source dt data for n=";
+    title+=ndt;
+    rtot=new TH1F(nametot.Data(),title.Data(),100,psimintot-1.,psimaxtot+1.);
+   }
+
+   if (hrpsibkgdt)
+   {
+    rbkg->Reset();
+   }
+   else
+   {
+    title="Random #psi distr. for bkg hypothesis of off-source dt data for n=";
+    title+=ndt;
+    rbkg=new TH1F(namebkg.Data(),title.Data(),100,psiminbkg-1.,psimaxbkg+1.);
+   }
+
+   pvaluetot=math.PsiPvalue(-1,nr,htotdt,0,&fdtbkg,freq,0,rtot,ncut,&nrxtot);
+   pvaluebkg=math.PsiPvalue(-1,nr,hbkgdt,0,&fdtbkg,freq,0,rbkg,ncut,&nrxbkg);
+   fBurstHistos.Add(rtot);
+   fBurstHistos.Add(rbkg);
+
+   cout << " The following randomised Psi histograms have been (re)generated :" << endl;
+   cout << " ... " << rtot->GetName() << " : " << rtot->GetTitle() << endl;      
+   cout << " ... " << rbkg->GetName() << " : " << rbkg->GetTitle() << endl;
+  }
+ }
+
+ // Listing of the statistics results
+ cout << " *** Observed Psi values (in dB) for the hypothesis of no burst signal ***" << endl;
+ cout << " For the \"on source\" stacked patches : psi = " << psitot << endl;
+ cout << " For the corresponding \"opposite RA\" stacked \"off source\" patches : psi = " << psibkg << endl;
+ cout << " --> Difference between observed \"on source\" and \"off source\" psi values : " << psidif << endl;
+ cout << " *** Extreme Psi values for the case of pure background ***" << endl;
+ cout << " For \"on source\"  psimin : " << psimintot << " psimax : " << psimaxtot << " (psimax-psi)/range : " << psifractot << endl;
+ cout << " For \"off source\" psimin : " << psiminbkg << " psimax : " << psimaxbkg << " (psimax-psi)/range : " << psifracbkg << endl;
+
+ if (nr>=0)
+ {
+  cout << " *** P-values of the observed \"on source\" and \"off source\" psi values ***" << endl;
+  cout << " For the \"on source\"  stacked patches : P-value = " << pvaluetot << " Used number of randomisations : " << nrxtot << endl;
+  cout << " For the \"off source\" stacked patches : P-value = " << pvaluebkg << " Used number of randomisations : " << nrxbkg << endl;
+ }
+}
+///////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::GetBurstChi2Statistics(TString type,Int_t ndt)
+{
+// Provide the transient burst Chi-squared statistics for the (stacked) distributions
+// of the observed arrival times and opening angles w.r.t. the corresponding bursts.
+//
+// Input arguments :
+// -----------------
+// type : "time"  --> Provide statistics for the observed arrival times
+//                    This will investigate the deviation from a uniform background time spectrum 
+//        "angle" --> Provide statistics for the observed opening angles
+//                    This will investigate the deviation from a isotropic background angular spectrum 
+//        "cosa"  --> Provide statistics for the cosine of the observed opening angles
+//                    This will investigate the deviation from a uniform background cos(angle) spectrum 
+//        "dt"    --> Provide statistics for the time intervals between the observed arrival times
+//                    This will investigate the deviation from dt spectrum expected from Poisson statistics
+// ndt  : Number of events within a dt cell for which the dt statistics will be performed 
+//
+// The default value is ndt=2.
+
+ NcMath math;
+
+ TString text="none";
+ if (type=="time") text="arrival time";
+ if (type=="angle") text="opening angle";
+ if (type=="cosa") text="cos(opening angle)";
+ if (type=="dt") text="arrival time interval";
+
+ cout << endl; 
+ if (text=="none")
+ {
+  cout << " *" << ClassName() << "::GetBurstChi2Statistics* Unknown statistics type : " << type << endl;
+  return;
+ }
+ else
+ {
+  cout << " *" << ClassName() << "::GetBurstChi2Statistics* Analysis of " << text << " statistics" << endl;
+ }
+
+ TH1F* rtot=0;
+ TH1F* rbkg=0;
+ Int_t ndftot=0;
+ Int_t ndfbkg=0;
+ Float_t chitot=0;
+ Float_t chibkg=0;
+
+ ///////////////////////////////////////////////
+ // Arrival time histo Chi-squared statistics //
+ ///////////////////////////////////////////////
+ if (type=="time")
+ {
+  TH1* tot=(TH1*)fBurstHistos.FindObject("tott");
+  TH1* bkg=(TH1*)fBurstHistos.FindObject("bkgt");
+
+  if (!tot || !bkg) return;
+
+  chitot=math.Chi2Value(tot,0,0,&ndftot);
+  chibkg=math.Chi2Value(bkg,0,0,&ndfbkg);
+ }
+
+ ////////////////////////////////////////////////
+ // Opening angle histo Chi-squared statistics //
+ ////////////////////////////////////////////////
+ if (type=="angle")
+ {
+  TH1* tot=(TH1*)fBurstHistos.FindObject("tota");
+  TH1* bkg=(TH1*)fBurstHistos.FindObject("bkga");
+
+  if (!tot || !bkg) return;
+
+  TF1 pdf("pdf","sin(x*acos(-1.)/180.)");
+  chitot=math.Chi2Value(tot,0,&pdf,&ndftot);
+  chibkg=math.Chi2Value(bkg,0,&pdf,&ndfbkg);
+ }
+
+ //////////////////////////////////////////////////////////
+ // Cosine of opening angle histo Chi-squared statistics //
+ //////////////////////////////////////////////////////////
+ if (type=="cosa")
+ {
+  TH1* tot=(TH1*)fBurstHistos.FindObject("totcosa");
+  TH1* bkg=(TH1*)fBurstHistos.FindObject("bkgcosa");
+
+  if (!tot || !bkg) return;
+
+  chitot=math.Chi2Value(tot,0,0,&ndftot);
+  chibkg=math.Chi2Value(bkg,0,0,&ndfbkg);
+ }
+
+ ///////////////////////////////////////////////
+ // Arrival time interval Bayesian statistics //
+ ///////////////////////////////////////////////
+ if (type=="dt")
+ {
+  TH1* tot=(TH1*)fBurstHistos.FindObject("tottfine");
+  TH1* bkg=(TH1*)fBurstHistos.FindObject("bkgtfine");
+
+  if (!tot || !bkg) return;
+ 
+  // Create the delta t histograms
+  TString nametot="htotdt";
+  nametot+=ndt;
+  TString namebkg="hbkgdt";
+  namebkg+=ndt;
+  TH1F* htotdt=(TH1F*)fBurstHistos.FindObject(nametot.Data());
+  TH1F* hbkgdt=(TH1F*)fBurstHistos.FindObject(namebkg.Data());
+  Double_t deltatbin=0, deltatmin=0, deltatmax=0;
+  if (!htotdt && !hbkgdt)
+  {
+   htotdt=(TH1F*)(GetDxHistogram(tot,ndt,-1,0,-1).Clone(nametot.Data()));
+   deltatbin=htotdt->GetXaxis()->GetBinWidth(1);
+   deltatmin=htotdt->GetXaxis()->GetXmin();
+   deltatmax=htotdt->GetXaxis()->GetXmax();
+   hbkgdt=(TH1F*)(GetDxHistogram(bkg,ndt,deltatbin,deltatmin,deltatmax).Clone(namebkg.Data()));
+
+   // Create titles and labels for the delta t histograms
+   TString title="Time intervals containing ";
+   title+=ndt;
+   title+=" consecutive events in the on-source time window";
+   title+=";dt (in sec);Counts per bin of size %-10.3g";
+   TString s=title.Format(title.Data(),deltatbin);
+   htotdt->SetTitle(s.Data());
+
+   title="Time intervals containing ";
+   title+=ndt;
+   title+=" consecutive events in the off-source time window";
+   title+=";dt (in sec);Counts per bin of size %-10.3g";
+   s=title.Format(title.Data(),deltatbin);
+   hbkgdt->SetTitle(s.Data());
+
+   fBurstHistos.Add(htotdt);
+   fBurstHistos.Add(hbkgdt);
+
+   cout << " The following arrival time interval (dt) histograms have been generated :" << endl;
+   cout << " ... " << htotdt->GetName() << " : " << htotdt->GetTitle() << endl;      
+   cout << " ... " << hbkgdt->GetName() << " : " << hbkgdt->GetTitle() << endl;
+  }
+
+  // Creation of the Poisson based dt PDFs from the observed data for a background only hypothesis 
+  Double_t underflow,overflow;
+  Int_t nbins=0;
+  Double_t nentot=tot->GetEntries();
+  nbins=tot->GetNbinsX();
+  underflow=tot->GetBinContent(0);
+  overflow=tot->GetBinContent(nbins+1);
+  nentot=nentot-(underflow+overflow);
+  Double_t nenbkg=bkg->GetEntries();
+  nbins=bkg->GetNbinsX();
+  underflow=bkg->GetBinContent(0);
+  overflow=bkg->GetBinContent(nbins+1);
+  nenbkg=nenbkg-(underflow+overflow);
+
+  if (nentot<=0 || nenbkg<=0) return;
+
+  Double_t fDtwin=fBurstParameters->GetSignal("Dtwin");
+  Double_t ratetot=nentot/(fDtwin);
+  Double_t ratebkg=nenbkg/(fDtwin);
+
+  TF1 fdttot=math.PoissonDtDist(ratetot,ndt); // Only for reference, not used in the analysis
+  TF1 fdtbkg=math.PoissonDtDist(ratebkg,ndt);
+
+  nametot="hpdftotdt";
+  nametot+=ndt;
+  namebkg="hpdfbkgdt";
+  namebkg+=ndt;
+  TH1* hpdftotdt=(TH1*)fBurstHistos.FindObject(nametot.Data());
+  TH1* hpdfbkgdt=(TH1*)fBurstHistos.FindObject(namebkg.Data());
+
+  // Provide the dt PDFs as histograms in the output file
+  if (!hpdftotdt && !hpdfbkgdt)
+  {
+   deltatmax=htotdt->GetXaxis()->GetXmax();
+   fdttot.SetRange(0,deltatmax);
+   fdttot.SetNpx(10000);
+   hpdftotdt=(TH1*)fdttot.GetHistogram()->Clone();
+   hpdftotdt->SetName(nametot.Data());
+   deltatmax=hbkgdt->GetXaxis()->GetXmax();
+   fdtbkg.SetRange(0,deltatmax);
+   fdtbkg.SetNpx(10000);
+   hpdfbkgdt=(TH1*)fdtbkg.GetHistogram()->Clone();
+   hpdfbkgdt->SetName(namebkg.Data());
+   fBurstHistos.Add(hpdftotdt);
+   fBurstHistos.Add(hpdfbkgdt);
+
+   cout << " The following arrival time interval (dt) PDFs have been generated :" << endl;
+   cout << " ... " << hpdftotdt->GetName() << " : " << hpdftotdt->GetTitle() << endl;      
+   cout << " ... " << hpdfbkgdt->GetName() << " : " << hpdfbkgdt->GetTitle() << endl;
+  }
+
+  chitot=math.Chi2Value(htotdt,0,&fdttot,&ndftot);
+  chibkg=math.Chi2Value(hbkgdt,0,&fdtbkg,&ndfbkg);
+ }
+
+ // Listing of the statistics results
+ Float_t chidif=chitot-chibkg;
+ cout << " *** Observed Chi-squared values for the hypothesis of no burst signal ***" << endl;
+ cout << " For the \"on source\" stacked patches : chi2 = " << chitot << " ndf = " << ndftot << endl;
+ cout << " For the corresponding \"opposite RA\" stacked \"off source\" patches : chi2 = " << chibkg << " ndf = " << ndfbkg << endl;
+ cout << " --> Difference between observed \"on source\" and \"off source\" chi2 values : " << chidif << endl;
+
+ Float_t ptot=math.Chi2Pvalue(chitot,ndftot);
+ Float_t sigmatot=math.Chi2Pvalue(chitot,ndftot,0,1);
+ Float_t pbkg=math.Chi2Pvalue(chibkg,ndfbkg);
+ Float_t sigmabkg=math.Chi2Pvalue(chibkg,ndfbkg,0,1);
+
+ cout << " *** P-values of the observed \"on source\" and \"off source\" chi2 values ***" << endl;
+ cout << " For the \"on source\"  stacked patches : P-value = " << ptot << " (" << sigmatot << " sigma)" << endl;
+ cout << " For the \"off source\" stacked patches : P-value = " << pbkg << " (" << sigmabkg << " sigma)" << endl;
+}
+///////////////////////////////////////////////////////////////////////////
 void NcAstrolab2::ListBurstHistograms() const
 {
 // Provide a list of all the stored transient burst histograms

@@ -24,8 +24,8 @@
 // grb.SetBurstParameter("Nmax",20);
  grb.SetBurstParameter("Declmin",5);
  grb.SetBurstParameter("Declmax",85);
-// grb.SetParameter("Grbnu",-0.03);
-// grb.SetParameter("Tbint90",1.5);
+ grb.SetBurstParameter("Grbnu",-0.03);
+// grb.SetBurstParameter("Tbint90",1.5);
 
  NcDevice* params=grb.GetBurstParameters();
  if (params) params->Data();
@@ -63,19 +63,17 @@
  Double_t rlow,rup;
  grb.GetBurstBayesianSignalRate(90,rlow,rup);
 
-/**************
- grb.GetLiMaSignificance();
+ grb.GetBurstLiMaSignificance();
 
- grb.GetBayesianPsiStatistics("time",2,1e4);
- grb.GetBayesianPsiStatistics("angle",2,1e4);
- grb.GetBayesianPsiStatistics("cosa",2,1e4);
- grb.GetBayesianPsiStatistics("dt",2,1e4);
+ grb.GetBurstBayesianPsiStatistics("time",2,1e4);
+ grb.GetBurstBayesianPsiStatistics("angle",2,1e4);
+ grb.GetBurstBayesianPsiStatistics("cosa",2,1e4);
+ grb.GetBurstBayesianPsiStatistics("dt",2,1e4);
 
- grb.GetChi2Statistics("time",2);
- grb.GetChi2Statistics("angle",2);
- grb.GetChi2Statistics("cosa",2);
- grb.GetChi2Statistics("dt",2);
-***************/
+ grb.GetBurstChi2Statistics("time",2);
+ grb.GetBurstChi2Statistics("angle",2);
+ grb.GetBurstChi2Statistics("cosa",2);
+ grb.GetBurstChi2Statistics("dt",2);
 
  grb.WriteBurstHistograms("tessie.root");
 }
