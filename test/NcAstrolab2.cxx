@@ -8533,7 +8533,8 @@ void NcAstrolab2::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t d
  fBurstParameters->AddNamedSlot("Ngrbs");
  fBurstParameters->SetSignal(fNgrbs,"Ngrbs");
 
- cout << "*" << ClassName() << "::LoadBurstGCNdata* " << ngcn << " bursts were stored from Tree:" << tree << " of file(s):" << file << endl;
+ cout << "*" << ClassName() << "::LoadBurstGCNdata* " << ngcn << " bursts of type " << type
+      << " were stored from Tree:" << tree << " of file(s):" << file << endl;
  cout << " Total number of stored bursts : " << fNgrbs << endl;
 }
 ///////////////////////////////////////////////////////////////////////////
@@ -8676,7 +8677,7 @@ void NcAstrolab2::GenBurstGCNdata(Int_t n,TString name)
  fBurstParameters->AddNamedSlot("Ngrbs");
  fBurstParameters->SetSignal(fNgrbs,"Ngrbs");
 
- cout << "*" << ClassName() << "::GenBurstGCNdata* " << ngen << " generated bursts were stored." << endl;
+ cout << "*" << ClassName() << "::GenBurstGCNdata* " << ngen << " generated bursts with name " << name << " were stored." << endl;
  cout << " Total number of stored bursts : " << fNgrbs << endl;
 }
 ///////////////////////////////////////////////////////////////////////////
@@ -8826,6 +8827,110 @@ void NcAstrolab2::MakeBurstT90dist(TString file,TString tree,TString branch,Int_
 
  cout << "*" << ClassName() << "::MakeBurstT90dist* " << nt90 << " archival T90 values have been obtained from Branch:" << branch
       << " of Tree:" << tree << " in file(s):" << file << endl;
+}
+///////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MakeBurstEdist(TF1& spec,Int_t nbins,Double_t xmin,Double_t xmax)
+{
+// Create a log10(E) energy (in GeV) distribution based on the provided spectral function "spec".
+// If this memberfunction is invoked before LoadBurstData() or GenBurstData(),
+// the resulting log10(E) distribution will be used to draw random energy values
+// (if requested) for the burst induced signal events.
+//
+// Example: To make a dN/dE=E^-2 energy spectrum for 100 Gev < E < 10 PeV
+//
+// TF1 spec("spec","pow(x,-2.)");
+// nbins=1000;
+// xmin=2;
+// xmax=7;
+// MakeBurstEdist(spec,nbins,xmin,xmax);
+
+ TString s="Burst induced signal energy distribution;^{10}Log(Energy) in GeV;pdf";
+ TH1F his=GetCountsHistogram(spec,nbins,xmin,xmax,1,s);
+ TH1F* hpdflogE=(TH1F*)his.Clone();
+ hpdflogE->SetName("hpdflogE");
+ fBurstHistos.Add(hpdflogE);
+}
+///////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MakeBurstEdist(Double_t gamma,Int_t nbins,Double_t xmin,Double_t xmax)
+{
+// Create a log10(E) energy (in GeV) distribution based on a single power law
+// with spectral index "gamma".
+// If this memberfunction is invoked before LoadBurstData() or GenBurstData(),
+// the resulting log10(E) distribution will be used to draw random energy values
+// (if requested) for the burst induced signal events.
+//
+// Example: To make a dN/dE=E^-2 energy spectrum for 100 Gev < E < 10 PeV
+//
+// gamma=2;
+// nbins=1000;
+// xmin=2;
+// xmax=7;
+
+ TF1 spec("spec","pow(x,[0])");
+ spec.SetParameter(0,-gamma);
+ MakeBurstEdist(spec,nbins,xmin,xmax);
+}
+///////////////////////////////////////////////////////////////////////////
+Double_t NcAstrolab2::GetBurstSignalEnergy(Double_t Emin,Double_t Emax) const
+{
+// Provide the energy in the interval [Emin,Emax] GeV for a Burst signal 
+// from the user provided energy spectrum as produced by MakeBurstEdist().
+//
+// If Emin<0 the lower boundary of the provided spectrum will be used as Emin. 
+// If Emax<0 the upper boundary of the provided spectrum will be used as Emax.
+//
+// In case of inconsistent data the value -1 is returned.
+//
+// The default values are Emin=-1 and Emax=-1.
+
+ Double_t E=-1;
+
+ // Get pointer to the relevant histogram 
+ TH1* hpdflogE=(TH1*)fBurstHistos.FindObject("hpdflogE");
+
+ if (!hpdflogE) return E;
+
+ Int_t nbins=hpdflogE->GetNbinsX();
+
+ if (nbins<=0) return E;
+
+ TAxis* xaxis=hpdflogE->GetXaxis();
+ 
+ if (!xaxis) return E;
+
+ Double_t xlow=xaxis->GetBinLowEdge(1);
+ Double_t xup=xaxis->GetBinUpEdge(nbins);
+
+ Double_t logEmin=0;
+ if (Emin<0)
+ {
+  logEmin=xlow;
+ }
+ else
+ {
+  logEmin=log10(Emin);
+ }
+
+ Double_t logEmax=0;
+ if (Emax<0)
+ {
+  logEmax=xup;
+ }
+ else
+ {
+  logEmax=log10(Emax);
+ }
+
+ if (logEmax<=logEmin || logEmin>=xup || logEmax<=xlow) return E;
+
+ while (E<logEmin || E>logEmax)
+ {
+  E=hpdflogE->GetRandom();
+ }
+
+ E=pow(float(10),E);
+
+ return E;
 }
 ///////////////////////////////////////////////////////////////////////////
 void NcAstrolab2::GenBurstSignals()
