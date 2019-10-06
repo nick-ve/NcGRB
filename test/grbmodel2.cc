@@ -33,14 +33,28 @@
  cout << endl;
  grb.ListBurstParameters();
 
-// grb.MakeBurstZdist("../grbweb/GRB-z-Swift.root","T","z",200,0,20);
-// grb.MakeBurstT90dist("../grbweb/GRB-t90-Fermi.root","T","t90");
+ grb.MakeBurstZdist("../grbweb/GRB-z-Swift.root","T","z",200,0,20);
+ grb.MakeBurstT90dist("../grbweb/GRB-t90-Fermi.root","T","t90");
+/**********
+ grb.MakeBurstBkgEdist("IC86_2011_data.root","tree","logE","dec","rad",200,1e7,1000);
+ grb.MakeBurstBkgEdist("IC86_2012_data.root","tree","logE","dec","rad",200,1e7,1000);
+ grb.MakeBurstBkgEdist("IC86_2013_data.root","tree","logE","dec","rad",200,1e7,1000);
+ grb.MakeBurstBkgEdist("IC86_2014_data.root","tree","logE","dec","rad",200,1e7,1000);
+ grb.MakeBurstBkgEdist("IC86_2015_data.root","tree","logE","dec","rad",200,1e7,1000);
+ grb.MakeBurstBkgEdist("IC86_2016_data.root","tree","logE","dec","rad",200,1e7,1000);
+ grb.MakeBurstBkgEdist("IC86_2017_data.root","tree","logE","dec","rad",200,1e7,1000);
+ grb.MakeBurstBkgEdist("IC86_2018_data.root","tree","logE","dec","rad",200,1e7,1000);
+***********/
+ grb.MakeBurstBkgEdist("IC86*data.root","tree","logE","dec","rad",200,1e7,1000);
 
+ Double_t emin=100;
+ Double_t emax=1e7;
+ Int_t nbins=10000;
  TF1 spec("spec","pow(x,-2.)");
-// grb.MakeBurstEdist(spec,1000,2,7);
+// grb.MakeBurstEdist(spec,emin,emax,nbins);
 
  Double_t gamma=2;
- grb.MakeBurstEdist(gamma,100,2,7);
+ grb.MakeBurstEdist(gamma,emin,emax,nbins);
 
  for (Int_t i=0; i<100; i++)
  {

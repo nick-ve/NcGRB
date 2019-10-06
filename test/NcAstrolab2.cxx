@@ -8798,7 +8798,7 @@ void NcAstrolab2::MakeBurstT90dist(TString file,TString tree,TString branch,Int_
  if (!nen || !bx) return;
 
  // The Tree branch with the T90 data
- data.SetBranchAddress(branch.Data(),&t90);
+ bx->SetAddress(&t90);
 
  // Create a new distribution in case a T90 distribution is not yet present
  TH1* t90dist=(TH1*)fBurstHistos.FindObject("ht90");
@@ -8829,46 +8829,222 @@ void NcAstrolab2::MakeBurstT90dist(TString file,TString tree,TString branch,Int_
       << " of Tree:" << tree << " in file(s):" << file << endl;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab2::MakeBurstEdist(TF1& spec,Int_t nbins,Double_t xmin,Double_t xmax)
+void NcAstrolab2::MakeBurstBkgEdist(TString file,TString tree,TString bE,TString bD,TString uD,Double_t Emin,Double_t Emax,Int_t nb)
 {
-// Create a log10(E) energy (in GeV) distribution based on the provided spectral function "spec".
+// Create a background energy distribution on the interval [Emin,Emax] GeV
+// based on observed archival energy data. 
 // If this memberfunction is invoked before LoadBurstData() or GenBurstData(),
-// the resulting log10(E) distribution will be used to draw random energy values
-// (if requested) for the burst induced signal events.
+// the resulting log10(E) distribution will be used to draw random Energy values
+// for the background events.
+//
+// Note : Only those data will be used that correspond with the selected
+//        declination interval for the burst investigations.
+//
+// The input data has to be provided via a ROOT Tree which contains at least
+// the specified Branch name (see below) filled with data of type Float_t.
+//
+// Input arguments :
+// -----------------
+// file   : Name of the input file containing the ROOT Tree (wildcards are allowed)
+// tree   : Name of the Tree containing the data
+// bE     : Name of the Branch containing the log10(E) data (in GeV) in Float_t format
+// bD     : Name of the Branch containing the declination data (in degrees) in Float_t format
+// uD     : The units ("deg"=degrees or "rad"=radians) of the declination data
+// Emin   : Minimal energy value in GeV
+// Emax   : Maximal energy value in GeV
+// nb     : Number of bins for the Energy distribution
+//
+// The default value is nb=1000.
+//
+// Note : This memberfunction may be invoked several times to read different files
+//        to accumulate data.
+
+ Float_t fDeclmin=fBurstParameters->GetSignal("Declmin");
+ Float_t fDeclmax=fBurstParameters->GetSignal("Declmax");
+
+ if (Emin<=0) Emin=1e-10;
+
+ if (Emax<=Emin)
+ {
+  cout << "*" << ClassName() << "::MakeBurstBkgEdist* Inconsistent data: Emin=" << Emin << " Emax=" << Emax << endl;
+  return;
+ }
+
+ // Convert the energy boundaries to the log10 scale of the X-axis
+ Double_t xmin=log10(Emin);
+ Double_t xmax=log10(Emax);
+
+ Float_t logEf=0;
+ Double_t logEd=0;
+ Float_t decf=0;
+ Double_t decd=0;
+
+ // The Tree containing the burst data
+ TChain data(tree.Data());
+ data.Add(file.Data());
+
+ Int_t nen=data.GetEntries();
+cout << " nen: " << nen << endl;
+ TBranch* bxe=data.GetBranch(bE.Data());
+ TBranch* bxd=data.GetBranch(bD.Data());
+
+ if (!nen || !bxe || !bxd)
+ {
+  cout << "*" << ClassName() << "::MakeBurstBkgEdist* Missing information for Energy branch:" << bE
+       << " Declination branch:" << bD << endl;
+  cout << " of Tree:" << tree << " with " << nen <<  " entries in file:" << file << endl;
+  return;
+ }
+cout << " Branch names bE:" << bxe->GetName() << " bD:" << bxd->GetName() << endl;
+cout << " Branch titles bE:" << bxe->GetTitle() << " bD:" << bxd->GetTitle() << endl;
+
+ TString s;
+ s=bxe->GetTitle();
+ Int_t ed=0;
+ if (s.Contains("/D")) ed=1;
+cout << " bxe s:" << s << " ed:" << ed << endl;
+ s=bxd->GetTitle();
+ Int_t dd=0;
+ if (s.Contains("/D")) dd=1;
+cout << " bxd s:" << s << " dd:" << dd << endl;
+
+ // The Tree branch with the log10(E) data
+ if (!ed)
+ {
+  data.SetBranchAddress(bE.Data(),&logEf);
+ }
+ else
+ {
+  data.SetBranchAddress(bE.Data(),&logEd);
+ }
+
+ // The Tree branch with the declination data
+ if (!dd)
+ {
+  data.SetBranchAddress(bD.Data(),&decf);
+ }
+ else
+ {
+  data.SetBranchAddress(bD.Data(),&decd);
+ }
+
+ // Create a new distribution in case an energy distribution is not yet present
+ TH1* Edist=(TH1*)fBurstHistos.FindObject("hbkgE");
+ if (!Edist)
+ {
+  // Creation of the observed background energy histo
+  TH1F* hbkgE=new TH1F("hbkgE","Archival data of observed energies",nb,xmin,xmax);
+  fBurstHistos.Add(hbkgE);
+  hbkgE->GetXaxis()->SetTitle("^{10}log(Energy) in GeV");
+  hbkgE->GetYaxis()->SetTitle("Counts");
+ }
+
+ // Get pointer to the relevant histogram 
+ TH1* hbkgE=(TH1*)fBurstHistos.FindObject("hbkgE");
+
+ Int_t nE=0;
+ Double_t logE=0;
+ Double_t dec=0;
+ for (Int_t ien=0; ien<nen; ien++)
+ {
+  dec=-999;
+
+  data.GetEntry(ien);
+
+  if (!ed)
+  {
+   logE=logEf;
+  }
+  else
+  {
+   logE=logEd;
+  }
+  if (!dd)
+  {
+   dec=decf;
+  }
+  else
+  {
+   dec=decd;
+  }
+
+  // Convert declination to degrees if needed
+  if (uD=="rad") dec*=180./acos(-1.); 
+if (ien<100)
+{
+ cout << " logEf:" << logEf << " decf:" << decf << endl;
+ cout << " logEd:" << logEd << " decd:" << decd << endl;
+ cout << " logE:" << logE << " dec:" << dec << endl;
+}
+  if (dec>=fDeclmin && dec<=fDeclmax)
+  {
+   hbkgE->Fill(logE);
+   nE++;
+  }
+ }
+
+ cout << "*" << ClassName() << "::MakeBurstBkgEdist* " << nE << " archival Energy values have been obtained from Branch:" << bE
+      << " of Tree:" << tree << " in file(s):" << file << endl;
+}
+///////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MakeBurstEdist(TF1& spec,Double_t Emin,Double_t Emax,Int_t nbins)
+{
+// Create an energy distribution on the interval [Emin,Emax] GeV based on the 
+// provided spectral function "spec" describing dN/dE.
+// If this memberfunction is invoked before LoadBurstData() or GenBurstData(),
+// the resulting energy distribution will be used to draw random energy values
+// for the burst induced signal events.
 //
 // Example: To make a dN/dE=E^-2 energy spectrum for 100 Gev < E < 10 PeV
 //
 // TF1 spec("spec","pow(x,-2.)");
+// xmin=100;
+// xmax=1e7;
 // nbins=1000;
-// xmin=2;
-// xmax=7;
-// MakeBurstEdist(spec,nbins,xmin,xmax);
+// MakeBurstEdist(spec,Emin,Emax,nbins);
+//
+// The default value is nbins=1000.
+
+ if (Emin<=0) Emin=1e-10;
+
+ if (Emax<=Emin)
+ {
+  cout << "*" << ClassName() << "::MakeBurstEdist* Inconsistent data: Emin=" << Emin << " Emax=" << Emax << endl;
+  return;
+ }
+
+ // Convert the energy boundaries to the log10 scale of the X-axis
+ Double_t xmin=log10(Emin);
+ Double_t xmax=log10(Emax);
 
  TString s="Burst induced signal energy distribution;^{10}Log(Energy) in GeV;pdf";
  TH1F his=GetCountsHistogram(spec,nbins,xmin,xmax,1,s);
- TH1F* hpdflogE=(TH1F*)his.Clone();
- hpdflogE->SetName("hpdflogE");
- fBurstHistos.Add(hpdflogE);
+ TH1F* hpdfE=(TH1F*)his.Clone();
+ hpdfE->SetName("hpdfE");
+ fBurstHistos.Add(hpdfE);
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab2::MakeBurstEdist(Double_t gamma,Int_t nbins,Double_t xmin,Double_t xmax)
+void NcAstrolab2::MakeBurstEdist(Double_t gamma,Double_t Emin,Double_t Emax,Int_t nbins)
 {
-// Create a log10(E) energy (in GeV) distribution based on a single power law
-// with spectral index "gamma".
+// Create an energy distribution on the interval [Emin,Emax] GeV based on a 
+// a single power law with spectral index "gamma" describing dN/dE.
 // If this memberfunction is invoked before LoadBurstData() or GenBurstData(),
-// the resulting log10(E) distribution will be used to draw random energy values
-// (if requested) for the burst induced signal events.
+// the resulting energy distribution will be used to draw random energy values
+// for the burst induced signal events.
 //
 // Example: To make a dN/dE=E^-2 energy spectrum for 100 Gev < E < 10 PeV
 //
 // gamma=2;
+// Emin=100;
+// Emax=1e7;
 // nbins=1000;
-// xmin=2;
-// xmax=7;
+// MakeBurstEdist(gamma,Emin,Emax,nbins);
+//
+// The default value is nbins=1000.
 
  TF1 spec("spec","pow(x,[0])");
  spec.SetParameter(0,-gamma);
- MakeBurstEdist(spec,nbins,xmin,xmax);
+ MakeBurstEdist(spec,Emin,Emax,nbins);
 }
 ///////////////////////////////////////////////////////////////////////////
 Double_t NcAstrolab2::GetBurstSignalEnergy(Double_t Emin,Double_t Emax) const
@@ -8886,15 +9062,15 @@ Double_t NcAstrolab2::GetBurstSignalEnergy(Double_t Emin,Double_t Emax) const
  Double_t E=-1;
 
  // Get pointer to the relevant histogram 
- TH1* hpdflogE=(TH1*)fBurstHistos.FindObject("hpdflogE");
+ TH1* hpdfE=(TH1*)fBurstHistos.FindObject("hpdfE");
 
- if (!hpdflogE) return E;
+ if (!hpdfE) return E;
 
- Int_t nbins=hpdflogE->GetNbinsX();
+ Int_t nbins=hpdfE->GetNbinsX();
 
  if (nbins<=0) return E;
 
- TAxis* xaxis=hpdflogE->GetXaxis();
+ TAxis* xaxis=hpdfE->GetXaxis();
  
  if (!xaxis) return E;
 
@@ -8925,7 +9101,69 @@ Double_t NcAstrolab2::GetBurstSignalEnergy(Double_t Emin,Double_t Emax) const
 
  while (E<logEmin || E>logEmax)
  {
-  E=hpdflogE->GetRandom();
+  E=hpdfE->GetRandom();
+ }
+
+ E=pow(float(10),E);
+
+ return E;
+}
+///////////////////////////////////////////////////////////////////////////
+Double_t NcAstrolab2::GetBurstBackgroundEnergy(Double_t Emin,Double_t Emax) const
+{
+// Provide the energy in the interval [Emin,Emax] GeV for backgound events
+// from the user provided energy spectrum as produced by MakeBurstBkgEdist().
+//
+// If Emin<0 the lower boundary of the provided spectrum will be used as Emin. 
+// If Emax<0 the upper boundary of the provided spectrum will be used as Emax.
+//
+// In case of inconsistent data the value -1 is returned.
+//
+// The default values are Emin=-1 and Emax=-1.
+
+ Double_t E=-1;
+
+ // Get pointer to the relevant histogram 
+ TH1* hbkgE=(TH1*)fBurstHistos.FindObject("hbkgE");
+
+ if (!hbkgE) return E;
+
+ Int_t nbins=hbkgE->GetNbinsX();
+
+ if (nbins<=0) return E;
+
+ TAxis* xaxis=hbkgE->GetXaxis();
+ 
+ if (!xaxis) return E;
+
+ Double_t xlow=xaxis->GetBinLowEdge(1);
+ Double_t xup=xaxis->GetBinUpEdge(nbins);
+
+ Double_t logEmin=0;
+ if (Emin<0)
+ {
+  logEmin=xlow;
+ }
+ else
+ {
+  logEmin=log10(Emin);
+ }
+
+ Double_t logEmax=0;
+ if (Emax<0)
+ {
+  logEmax=xup;
+ }
+ else
+ {
+  logEmax=log10(Emax);
+ }
+
+ if (logEmax<=logEmin || logEmin>=xup || logEmax<=xlow) return E;
+
+ while (E<logEmin || E>logEmax)
+ {
+  E=hbkgE->GetRandom();
  }
 
  E=pow(float(10),E);
