@@ -24,6 +24,7 @@
 #include "TStyle.h"
 #include "TFile.h"
 #include "TChain.h"
+#include "TLeaf.h"
 
 #include "NcTimestamp.h"
 #include "NcPosition.h"
@@ -140,7 +141,7 @@ class NcAstrolab2 : public TTask,public NcTimestamp
   void WriteBurstHistograms(TString filename); // Write all stored transient burst histograms to a ROOT output file
   void MakeBurstZdist(TString file,TString tree,TString branch,Int_t nb=200,Float_t zmin=0,Float_t zmax=20); // Make transient burst observed redshift distribution
   void MakeBurstT90dist(TString file,TString tree,TString branch,Int_t nb=50,Float_t xmin=-5,Float_t xmax=5); // Make transient burst observed T90 distribution
-  void MakeBurstBkgEdist(TString file,TString tree,TString bE,TString bD,TString uD,Double_t Emin,Double_t Emax,Int_t nb=1000);
+  void MakeBurstBkgEdist(TString file,TString tree,TString name1,TString name2,TString u,Double_t Emin,Double_t Emax,Int_t nb=1000);
   void MakeBurstEdist(TF1& spec,Double_t Emin,Double_t Emax,Int_t nbins=1000);
   void MakeBurstEdist(Double_t gamma,Double_t Emin,Double_t Emax,Int_t nbins=1000);
   Double_t GetBurstSignalEnergy(Double_t Emin=-1,Double_t Emax=-1) const;

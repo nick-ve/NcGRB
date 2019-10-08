@@ -8829,7 +8829,7 @@ void NcAstrolab2::MakeBurstT90dist(TString file,TString tree,TString branch,Int_
       << " of Tree:" << tree << " in file(s):" << file << endl;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab2::MakeBurstBkgEdist(TString file,TString tree,TString bE,TString bD,TString uD,Double_t Emin,Double_t Emax,Int_t nb)
+void NcAstrolab2::MakeBurstBkgEdist(TString file,TString tree,TString name1,TString name2,TString u,Double_t Emin,Double_t Emax,Int_t nb)
 {
 // Create a background energy distribution on the interval [Emin,Emax] GeV
 // based on observed archival energy data. 
@@ -8841,15 +8841,15 @@ void NcAstrolab2::MakeBurstBkgEdist(TString file,TString tree,TString bE,TString
 //        declination interval for the burst investigations.
 //
 // The input data has to be provided via a ROOT Tree which contains at least
-// the specified Branch name (see below) filled with data of type Float_t.
+// the specified variable names indicated below.
 //
 // Input arguments :
 // -----------------
 // file   : Name of the input file containing the ROOT Tree (wildcards are allowed)
 // tree   : Name of the Tree containing the data
-// bE     : Name of the Branch containing the log10(E) data (in GeV) in Float_t format
-// bD     : Name of the Branch containing the declination data (in degrees) in Float_t format
-// uD     : The units ("deg"=degrees or "rad"=radians) of the declination data
+// name1  : Name of the tree variable containing the log10(E) data (in GeV)
+// name2  : Name of the tree variable containing the declination data (in degrees)
+// u      : The units ("deg"=degrees or "rad"=radians) of the declination data
 // Emin   : Minimal energy value in GeV
 // Emax   : Maximal energy value in GeV
 // nb     : Number of bins for the Energy distribution
@@ -8874,58 +8874,19 @@ void NcAstrolab2::MakeBurstBkgEdist(TString file,TString tree,TString bE,TString
  Double_t xmin=log10(Emin);
  Double_t xmax=log10(Emax);
 
- Float_t logEf=0;
- Double_t logEd=0;
- Float_t decf=0;
- Double_t decd=0;
-
  // The Tree containing the burst data
  TChain data(tree.Data());
  data.Add(file.Data());
 
  Int_t nen=data.GetEntries();
 cout << " nen: " << nen << endl;
- TBranch* bxe=data.GetBranch(bE.Data());
- TBranch* bxd=data.GetBranch(bD.Data());
 
- if (!nen || !bxe || !bxd)
+ if (!nen || !data.FindLeaf(name1.Data()) || !data.FindLeaf(name2.Data()))
  {
-  cout << "*" << ClassName() << "::MakeBurstBkgEdist* Missing information for Energy branch:" << bE
-       << " Declination branch:" << bD << endl;
+  cout << "*" << ClassName() << "::MakeBurstBkgEdist* Missing information for tree variable:" << name1
+       << " and/or tree variable:" << name2 << endl;
   cout << " of Tree:" << tree << " with " << nen <<  " entries in file:" << file << endl;
   return;
- }
-cout << " Branch names bE:" << bxe->GetName() << " bD:" << bxd->GetName() << endl;
-cout << " Branch titles bE:" << bxe->GetTitle() << " bD:" << bxd->GetTitle() << endl;
-
- TString s;
- s=bxe->GetTitle();
- Int_t ed=0;
- if (s.Contains("/D")) ed=1;
-cout << " bxe s:" << s << " ed:" << ed << endl;
- s=bxd->GetTitle();
- Int_t dd=0;
- if (s.Contains("/D")) dd=1;
-cout << " bxd s:" << s << " dd:" << dd << endl;
-
- // The Tree branch with the log10(E) data
- if (!ed)
- {
-  data.SetBranchAddress(bE.Data(),&logEf);
- }
- else
- {
-  data.SetBranchAddress(bE.Data(),&logEd);
- }
-
- // The Tree branch with the declination data
- if (!dd)
- {
-  data.SetBranchAddress(bD.Data(),&decf);
- }
- else
- {
-  data.SetBranchAddress(bD.Data(),&decd);
  }
 
  // Create a new distribution in case an energy distribution is not yet present
@@ -8945,37 +8906,24 @@ cout << " bxd s:" << s << " dd:" << dd << endl;
  Int_t nE=0;
  Double_t logE=0;
  Double_t dec=0;
+ TLeaf* lx=0;
  for (Int_t ien=0; ien<nen; ien++)
  {
-  dec=-999;
-
   data.GetEntry(ien);
 
-  if (!ed)
-  {
-   logE=logEf;
-  }
-  else
-  {
-   logE=logEd;
-  }
-  if (!dd)
-  {
-   dec=decf;
-  }
-  else
-  {
-   dec=decd;
-  }
+  lx=data.GetLeaf(name1.Data());
+  if (!lx) continue;
+
+  logE=lx->GetValue(0);
+
+  lx=data.GetLeaf(name2.Data());
+  if (!lx) continue;
+
+  dec=lx->GetValue(0);
 
   // Convert declination to degrees if needed
-  if (uD=="rad") dec*=180./acos(-1.); 
-if (ien<100)
-{
- cout << " logEf:" << logEf << " decf:" << decf << endl;
- cout << " logEd:" << logEd << " decd:" << decd << endl;
- cout << " logE:" << logE << " dec:" << dec << endl;
-}
+  if (u=="rad") dec*=180./acos(-1.); 
+if (ien<100) cout << " logE:" << logE << " dec:" << dec << endl;
   if (dec>=fDeclmin && dec<=fDeclmax)
   {
    hbkgE->Fill(logE);
@@ -8983,7 +8931,7 @@ if (ien<100)
   }
  }
 
- cout << "*" << ClassName() << "::MakeBurstBkgEdist* " << nE << " archival Energy values have been obtained from Branch:" << bE
+ cout << "*" << ClassName() << "::MakeBurstBkgEdist* " << nE << " archival Energy values have been obtained from variable:" << name1
       << " of Tree:" << tree << " in file(s):" << file << endl;
 }
 ///////////////////////////////////////////////////////////////////////////
