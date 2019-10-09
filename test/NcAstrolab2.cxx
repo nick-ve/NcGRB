@@ -8681,7 +8681,7 @@ void NcAstrolab2::GenBurstGCNdata(Int_t n,TString name)
  cout << " Total number of stored bursts : " << fNgrbs << endl;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab2::MakeBurstZdist(TString file,TString tree,TString branch,Int_t nb,Float_t zmin,Float_t zmax)
+void NcAstrolab2::MakeBurstZdist(TString file,TString tree,TString name,Int_t nb,Float_t zmin,Float_t zmax)
 {
 // Read observed archival redshift data and create the corresponding distribution.
 // Also the corresponding distribution of the Proper Distance at the time of
@@ -8691,13 +8691,13 @@ void NcAstrolab2::MakeBurstZdist(TString file,TString tree,TString branch,Int_t 
 // (if requested) for the bursts without redshift information.
 //
 // The input data has to be provided via a ROOT Tree which contains at least
-// the specified Branch name (see below) filled with data of type Float_t.
+// the specified variable name indicated below.
 //
 // Input arguments :
 // -----------------
 // file   : Name of the input file(s) containing the ROOT Tree (wildcards are allowed)
 // tree   : Name of the Tree containing the data
-// branch : Name of the Branch containing the redshift data in Float_t format
+// name   : Name of the variable in the Tree containing the redshift data
 // nb     : Number of bins for the z-distribution
 // zmin   : Minimal z-value
 // zmax   : Maximal z-value
@@ -8707,19 +8707,19 @@ void NcAstrolab2::MakeBurstZdist(TString file,TString tree,TString branch,Int_t 
 // Note : This memberfunction may be invoked several times to read different files
 //        to accumulate data.
 
- Float_t z=0;
-
  // The Tree containing the archival data
  TChain data(tree.Data());
  data.Add(file.Data());
 
  Int_t nen=data.GetEntries();
- TBranch* bx=data.GetBranch(branch.Data());
+ TLeaf* lx=data.FindLeaf(name.Data());
 
- if (!nen || !bx) return;
-
- // The Tree branch with the redshift data
- data.SetBranchAddress(branch.Data(),&z);
+ if (!nen || !lx)
+ {
+  cout << "*" << ClassName() << "::MakeBurstZdist* Missing information for tree variable:" << name << endl;
+  cout << " of Tree:" << tree << " with " << nen <<  " entries in file:" << file << endl;
+  return;
+ }
 
  // Create new distributions in case a redshift distribution is not yet present
  TH1* zdist=(TH1*)fBurstHistos.FindObject("hz");
@@ -8745,10 +8745,16 @@ void NcAstrolab2::MakeBurstZdist(TString file,TString tree,TString branch,Int_t 
  TH1* hd=(TH1*)fBurstHistos.FindObject("hd");
 
  Int_t nz=0;
- Float_t d=0;
+ Double_t z=0;
+ Double_t d=0;
  for (Int_t ien=0; ien<nen; ien++)
  {
   data.GetEntry(ien);
+
+  lx=data.GetLeaf(name.Data());
+  if (!lx) continue;
+
+  z=lx->GetValue();
   if (z<zmin || z>zmax) continue;
 
   hz->Fill(z);
@@ -8758,11 +8764,11 @@ void NcAstrolab2::MakeBurstZdist(TString file,TString tree,TString branch,Int_t 
   hd->Fill(d);
  }
 
- cout << "*" << ClassName() << "::MakeBurstZdist* " << nz << " archival z-values have been obtained from Branch:" << branch
+ cout << "*" << ClassName() << "::MakeBurstZdist* " << nz << " archival z-values have been obtained from tree variable:" << name
       << " of Tree:" << tree << " in file(s):" << file << endl;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab2::MakeBurstT90dist(TString file,TString tree,TString branch,Int_t nb,Float_t xmin,Float_t xmax)
+void NcAstrolab2::MakeBurstT90dist(TString file,TString tree,TString name,Int_t nb,Float_t xmin,Float_t xmax)
 {
 // Read observed archival T90 data and create a log10(T90) distribution.
 // If this memberfunction is invoked before LoadBurstData() or GenBurstData(),
@@ -8770,13 +8776,13 @@ void NcAstrolab2::MakeBurstT90dist(TString file,TString tree,TString branch,Int_
 // (if requested) for the bursts without T90 information.
 //
 // The input data has to be provided via a ROOT Tree which contains at least
-// the specified Branch name (see below) filled with data of type Float_t.
+// the specified variable name indicated below.
 //
 // Input arguments :
 // -----------------
 // file   : Name of the input file containing the ROOT Tree (wildcards are allowed)
 // tree   : Name of the Tree containing the data
-// branch : Name of the Branch containing the T90 data in Float_t format
+// name   : Name of the variable in the Tree containing the T90 data
 // nb     : Number of bins for the T90 distribution
 // xmin   : Minimal value for log10(T90)
 // xmax   : Maximal value for log10(T90)
@@ -8786,19 +8792,19 @@ void NcAstrolab2::MakeBurstT90dist(TString file,TString tree,TString branch,Int_
 // Note : This memberfunction may be invoked several times to read different files
 //        to accumulate data.
 
- Float_t t90;
-
  // The Tree containing the burst data
  TChain data(tree.Data());
  data.Add(file.Data());
 
  Int_t nen=data.GetEntries();
- TBranch* bx=data.GetBranch(branch.Data());
+ TLeaf* lx=data.FindLeaf(name.Data());
 
- if (!nen || !bx) return;
-
- // The Tree branch with the T90 data
- bx->SetAddress(&t90);
+ if (!nen || !lx)
+ {
+  cout << "*" << ClassName() << "::MakeBurstT90dist* Missing information for tree variable:" << name << endl;
+  cout << " of Tree:" << tree << " with " << nen <<  " entries in file:" << file << endl;
+  return;
+ }
 
  // Create a new distribution in case a T90 distribution is not yet present
  TH1* t90dist=(TH1*)fBurstHistos.FindObject("ht90");
@@ -8815,9 +8821,15 @@ void NcAstrolab2::MakeBurstT90dist(TString file,TString tree,TString branch,Int_
  TH1* ht90=(TH1*)fBurstHistos.FindObject("ht90");
 
  Int_t nt90=0;
+ Double_t t90=0;
  for (Int_t ien=0; ien<nen; ien++)
  {
   data.GetEntry(ien);
+
+  lx=data.GetLeaf(name.Data());
+  if (!lx) continue;
+
+  t90=lx->GetValue();
   if (t90>0)
   {
    ht90->Fill(log10(t90));
@@ -8825,7 +8837,7 @@ void NcAstrolab2::MakeBurstT90dist(TString file,TString tree,TString branch,Int_
   }
  }
 
- cout << "*" << ClassName() << "::MakeBurstT90dist* " << nt90 << " archival T90 values have been obtained from Branch:" << branch
+ cout << "*" << ClassName() << "::MakeBurstT90dist* " << nt90 << " archival T90 values have been obtained from variable:" << name
       << " of Tree:" << tree << " in file(s):" << file << endl;
 }
 ///////////////////////////////////////////////////////////////////////////
@@ -8879,7 +8891,6 @@ void NcAstrolab2::MakeBurstBkgEdist(TString file,TString tree,TString name1,TStr
  data.Add(file.Data());
 
  Int_t nen=data.GetEntries();
-cout << " nen: " << nen << endl;
 
  if (!nen || !data.FindLeaf(name1.Data()) || !data.FindLeaf(name2.Data()))
  {
@@ -8914,16 +8925,16 @@ cout << " nen: " << nen << endl;
   lx=data.GetLeaf(name1.Data());
   if (!lx) continue;
 
-  logE=lx->GetValue(0);
+  logE=lx->GetValue();
 
   lx=data.GetLeaf(name2.Data());
   if (!lx) continue;
 
-  dec=lx->GetValue(0);
+  dec=lx->GetValue();
 
   // Convert declination to degrees if needed
   if (u=="rad") dec*=180./acos(-1.); 
-if (ien<100) cout << " logE:" << logE << " dec:" << dec << endl;
+
   if (dec>=fDeclmin && dec<=fDeclmax)
   {
    hbkgE->Fill(logE);
@@ -9566,7 +9577,7 @@ void NcAstrolab2::GenBurstSignals()
 
  // Statistics of the stacked event samples
  cout << " *** Statistics of the stacked observed event samples ***" << endl;
- cout << " Total stacked solid angle (in sr) : " << solidangle << endl; 
+ cout << " Total stacked solid angle (in sr) : " << solidangle << " in " << fNgrbs << " stacked patches." << endl; 
  cout << " *On source* Number of events : " << nentot << endl;
  cout << " Stacked \"on source\" event rate (Hz) : " << ratetot << " --> Event rate (Hz) per burst : " << ratetot/float(fNgrbs) << endl;
  cout << " *Off source* Number of (bkg) events : " << nenbkg << endl;

@@ -56,11 +56,6 @@
  Double_t gamma=2;
  grb.MakeBurstEdist(gamma,emin,emax,nbins);
 
- for (Int_t i=0; i<100; i++)
- {
-  cout << " Energy : " << grb.GetBurstSignalEnergy() << endl;
- }
-
 // grb.LoadBurstGCNdata("../grbweb/GRBweb.root","T");
 
 /***********
