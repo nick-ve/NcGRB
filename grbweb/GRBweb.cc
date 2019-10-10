@@ -33,7 +33,7 @@
  ts.LoadUTCparameterFiles("leap.txt","dut.txt");
 
  // The produced output structure
- TFile* output=new TFile("GRBweb.root","RECREATE","GRB database");
+ TFile* output=new TFile("GRBweb2.root","RECREATE","GRB database");
  TTree* otree=new TTree("T","GRB data");
 
  // The output variables for the Tree
@@ -42,7 +42,7 @@
  otree->Branch("dut",&dut,"dut/F");
  otree->Branch("gbmpos",&gbmpos,"gbmpos/I");
  otree->Branch("ra",&ra,"ra/F");
- otree->Branch("decl",&decl,"decl/F");
+ otree->Branch("dec",&decl,"dec/F");
  otree->Branch("sigmapos",&sigmapos,"sigmapos/F");
  otree->Branch("t90",&t90,"t90/F");
  otree->Branch("sigmat90",&sigmat90,"sigmat90/F");

@@ -8369,21 +8369,23 @@ void NcAstrolab2::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t d
 {
 // Load observed burst GCN data, e.g. GRB data from GCN notices as available from
 // https://icecube.wisc.edu/~grbweb_public.
-// The input data has to be provided via a ROOT Tree which contains at least
-// the specified Branch names (see below) filled with data of the indicated type.
+// The input data has to be provided via a ROOT Tree which will be searched
+// for data on the variable names specified below.
+// In case data for a certain variable is not present, the non-physical value -999
+// will be stored. 
 //
-//  Name        Type      Description
-// ----------------------------------
-// "date"       Int_t     Observation date as yyyymmdd
-// "ra"         Float_t   Right ascension (J2000) in decimal degrees
-// "decl"       Float_t   Declination (J2000) in decimal degrees
-// "sigpos      Float_t   The error on the burst position in decimal degrees
-// "t90"        Float_t   The T90 burst duration in seconds
-// "mjdtrig"    Double_t  The (fractional) MJD of the burst trigger
-// "mjdt90start Double_t  The (fractional) MJD of the T90 start time
-// "t100"       Float_t   The T100 burst duration in seconds
-// "fluence"    Float_t   The observed fluence of the burst in erg/cm^2
-// "z"          Float_t   The redshift of the burst
+//  Name             Description
+// ---------------------------------------------------------------
+// "date"        Observation date as yyyymmdd
+// "ra"          Right ascension (J2000) in decimal degrees
+// "dec"         Declination (J2000) in decimal degrees
+// "sigpos"      The error on the burst position in decimal degrees
+// "t90"         The T90 burst duration in seconds
+// "mjdtrig"     The (fractional) MJD of the burst trigger
+// "mjdt90start" The (fractional) MJD of the T90 start time
+// "t100"        The T100 burst duration in seconds
+// "fluence"     The observed fluence of the burst in erg/cm^2
+// "z"           The redshift of the burst
 //
 // Input arguments :
 // -----------------
@@ -8415,26 +8417,6 @@ void NcAstrolab2::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t d
  Int_t fNgrbs=fBurstParameters->GetSignal("Ngrbs");
  Float_t fMaxtotsigma=fBurstParameters->GetSignal("Maxtotsigma");
 
- // The TTree containing the burst data
- TChain gcn(tree.Data());
- gcn.Add(file.Data());
-
- Int_t date;
- Float_t ra,decl,sigmapos,t90,t100,fluence,z;
- Double_t mjdtrig,mjdt90start;
-
- // The variables from the Tree
- gcn.SetBranchAddress("date",&date);
- gcn.SetBranchAddress("ra",&ra);
- gcn.SetBranchAddress("decl",&decl);
- gcn.SetBranchAddress("sigmapos",&sigmapos);
- gcn.SetBranchAddress("t90",&t90);
- gcn.SetBranchAddress("mjdtrig",&mjdtrig);
- gcn.SetBranchAddress("mjdt90start",&mjdt90start);
- gcn.SetBranchAddress("t100",&t100);
- gcn.SetBranchAddress("fluence",&fluence);
- gcn.SetBranchAddress("z",&z);
-
  // Get access to a redshift distribution to draw randomly redshifts if needed
  TH1* zdist=0;
  if (fZmin<0)
@@ -8461,6 +8443,14 @@ void NcAstrolab2::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t d
   }
  }
 
+ // The TTree containing the burst data
+ TChain gcn(tree.Data());
+ gcn.Add(file.Data());
+
+ Int_t date;
+ Float_t ra,dec,sigmapos,t90,t100,fluence,z;
+ Double_t mjdtrig,mjdt90start;
+
  Float_t sigmagrb=fSigmagrb;
  Float_t totsigma=0;
  fNgrbs=GetNsignals(0);
@@ -8471,12 +8461,44 @@ void NcAstrolab2::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t d
  NcTimestamp ts;
  NcSignal* sx=0;
  Int_t ngcn=0;
+ TLeaf* lx=0;
  for (Int_t ient=0; ient<gcn.GetEntries(); ient++)
  {
   if (nmax>=0 && ngcn>=nmax) break;
   if (fNmax>=0 && (fNgrbs+ngcn)>=fNmax) break;
 
   gcn.GetEntry(ient);
+
+  date=-999;
+  lx=gcn.GetLeaf("date");
+  if (lx) date=lx->GetValue();  
+  ra=-999;
+  lx=gcn.GetLeaf("ra");
+  if (lx) ra=lx->GetValue();  
+  dec=-999;
+  lx=gcn.GetLeaf("dec");
+  if (lx) dec=lx->GetValue();  
+  sigmapos=-999;
+  lx=gcn.GetLeaf("sigmapos");
+  if (lx) sigmapos=lx->GetValue();  
+  t90=-999;
+  lx=gcn.GetLeaf("t90");
+  if (lx) t90=lx->GetValue();  
+  mjdtrig=-999;
+  lx=gcn.GetLeaf("mjdtrig");
+  if (lx) mjdtrig=lx->GetValue();  
+  mjdt90start=-999;
+  lx=gcn.GetLeaf("mjdt90start");
+  if (lx) mjdt90start=lx->GetValue();  
+  t100=-999;
+  lx=gcn.GetLeaf("t100");
+  if (lx) t100=lx->GetValue();  
+  fluence=-999;
+  lx=gcn.GetLeaf("fluence");
+  if (lx) fluence=lx->GetValue();  
+  z=-999;
+  lx=gcn.GetLeaf("z");
+  if (lx) z=lx->GetValue();  
 
   if (date1 && date<date1) continue;
   if (date2 && date>date2) continue;
@@ -8490,7 +8512,7 @@ void NcAstrolab2::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t d
   totsigma=sigmagrb*sigmagrb+fAngres*fAngres;
   totsigma=sqrt(totsigma);
    
-  if (decl<fDeclmin || decl>fDeclmax || totsigma>fMaxsigma) continue;
+  if (dec<fDeclmin || dec>fDeclmax || totsigma>fMaxsigma) continue;
 
   t90grb=t90;
   if (t90grb<=0) t90grb=t100;
@@ -8506,7 +8528,7 @@ void NcAstrolab2::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t d
   grbname=type;
   grbname+=idate;
   ts.SetMJD(mjdtrig);
-  sx=SetSignal(1,ra,"deg",decl,"deg","equ",&ts,-1,"J",grbname);
+  sx=SetSignal(1,ra,"deg",dec,"deg","equ",&ts,-1,"J",grbname);
 
   if (!sx) continue;
 
