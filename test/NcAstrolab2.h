@@ -112,8 +112,10 @@ class NcAstrolab2 : public TTask,public NcTimestamp
   Double_t GetHubbleParameter(Double_t z,TString u="Mpc") const; // Provide the Hubble parameter for a certain redshift z in a flat universe
   Double_t GetNuclearMass(Int_t z,Int_t n,Int_t mode=1) const; // Provide the nuclear mass or binding energy for a nucleus (Z,N)
   Double_t GetNeutrinoXsection(Int_t mode,Int_t type,Double_t egev,Double_t xscale=1,Double_t* eprimgev=0,Double_t* alpha=0) const; // Provide neutrino cross section
+  Double_t GetNeutrinoAngle(Double_t E,TString u,Int_t mode,TF1* f=0); // Provide the kinematic opening angle between a neutrino and the CC produced corresponding lepton
   void RandomPosition(Nc3Vector& v,Double_t thetamin,Double_t thetamax,Double_t phimin,Double_t phimax); // Random angular position according to an isotropic solid angle distribution
   void SmearPosition(Nc3Vector& v,Double_t sigma); // Smear angular position according to the specified angular accuracy
+  void ShiftPosition(Nc3Vector& v,Double_t angle); // Shift the position with the specified angular offset to a random location on a cone around the original position
   TH1F GetDxHistogram(TH1* hx,Int_t nc,Double_t dxbin=-1,Double_t dxmin=-1,Double_t dxmax=-1) const; // Provide dx distribution of histogram entries 
   TH1F GetDifHistogram(TH1* hin,Int_t mode,TString s="",TF1* f=0) const;  // Construct the differential dy/dx vs. x histogram from a 1D y vs. x histogram
   TH1F GetCountsHistogram(TF1& spec,Int_t nbins,Double_t xmin, Double_t xmax,Int_t mode,TString s="") const;  // Construct the counts (N) vs. x histogram from a 1D differential spectrum dN/dx
@@ -245,6 +247,9 @@ class NcAstrolab2 : public TTask,public NcTimestamp
   Double_t fHbar;    // The value of hbar in MeV s
   Double_t fHbarc;   // The value of the conversion constant hbar*c in MeV fm
   Double_t fHbarc2;  // The value of the conversion constant (hbar*c)^2 in GeV^2 barn
+
+  // Function to parametrize the Neutrino-Lepton kinematic opening angle
+  TF1* fNuAngle;
 
   // Actual calculation of the posterior Bayesian probability for background c.q. source signal rates
   Double_t GetBackgroundRateProb(Double_t* vars,Double_t* pars); // Posterior Bayesian probability for a background rate "b"

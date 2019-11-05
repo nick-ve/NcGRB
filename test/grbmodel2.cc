@@ -46,6 +46,55 @@
  Double_t gamma=2;
  grb.MakeBurstEdist(gamma,emin,emax,nbins);
 
+ TF1 fx;
+ grb.GetNeutrinoAngle(1000,"deg",2,&fx);
+ grb.GetNeutrinoAngle(1000,"deg",2,&fx);
+ grb.GetNeutrinoAngle(1000,"deg",2,&fx);
+fx->Print();
+ grb.GetNeutrinoAngle(10000,"deg",2,&fx);
+ grb.GetNeutrinoAngle(10000,"deg",2,&fx);
+ grb.GetNeutrinoAngle(10000,"deg",2,&fx);
+fx->Print();
+ grb.GetNeutrinoAngle(100000,"deg",2,&fx);
+ grb.GetNeutrinoAngle(100000,"deg",2,&fx);
+ grb.GetNeutrinoAngle(100000,"deg",2,&fx);
+fx->Print();
+ grb.GetNeutrinoAngle(100,"deg",2,&fx);
+ grb.GetNeutrinoAngle(100,"deg",2,&fx);
+ grb.GetNeutrinoAngle(100,"deg",2,&fx);
+fx->Print();
+
+/*********
+ Double_t E=0;
+ Double_t ang=0;
+ Nc3Vector v;
+ v.SetVector(1,90,0,"sph","deg");
+ Nc3Vector w;
+ w.Load(v);
+ cout << " --- Original vector" << endl;
+ w.Data("sph","deg");
+ cout << " --- Shifted vector" << endl;
+ v.Data("sph","deg");
+ cout << " Opening angle : " << v.GetOpeningAngle(w,"deg") << " degrees." << endl;
+ for (Int_t i=0; i<50; i++)
+ {
+  E=grb.GetBurstBackgroundEnergy();
+  ang=grb.GetNeutrinoAngle(E,"deg");
+  cout << " Energy : " << E << " GeV --> Angle : " << ang << " degrees." << endl;
+///  grb.ShiftPosition(v,ang);
+  grb.SmearPosition(v,ang);
+  cout << " --- Original vector" << endl;
+  w.Data("sph","deg");
+  cout << " --- Shifted vector" << endl;
+  v.Data("sph","deg");
+  ang=ang-v.GetOpeningAngle(w,"deg");
+  cout << " *** Opening angle : " << v.GetOpeningAngle(w,"deg") << " degrees." << endl;
+  cout << " *** Kinematic-opening angle : " << ang << " degrees." << endl;
+//@@@@  w.Load(v);
+  v.Load(w);
+ }
+*********/
+
  grb.LoadBurstGCNdata("../grbweb/GRBweb.root","T");
 
 // grb.GenBurstGCNdata(100,"GRB");

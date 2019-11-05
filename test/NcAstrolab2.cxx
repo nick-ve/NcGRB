@@ -240,6 +240,9 @@ NcAstrolab2::NcAstrolab2(const char* name,const char* title) : TTask(name,title)
  fHbarc=197.3269718;
  fHbarc2=3.89379338e-4;
 
+ // Function to parametrize the Neutrino-Lepton kinematic opening angle
+ fNuAngle=0;
+
  // Storage for transient burst investigations
  fBurstParameters=0;
 
@@ -309,6 +312,12 @@ NcAstrolab2::~NcAstrolab2()
  {
   delete fRan;
   fRan=0;
+ }
+
+ if (fNuAngle)
+ {
+  delete fNuAngle;
+  fNuAngle=0;
  }
 
  if (fBurstParameters)
@@ -392,6 +401,12 @@ NcAstrolab2::NcAstrolab2(const NcAstrolab2& t) : TTask(t),NcTimestamp(t)
  if (ran) fRan=new NcRandom(*ran);
 
  fMaxDt=t.fMaxDt;
+
+ TF1* fx=t.fNuAngle;
+ if (fx) fNuAngle=(TF1*)fx->Clone();
+
+ NcDevice* dx=t.fBurstParameters;
+ if (dx) fBurstParameters=(NcDevice*)dx->Clone();
 }
 ///////////////////////////////////////////////////////////////////////////
 void NcAstrolab2::Data(Int_t mode,TString u,Bool_t utc)
@@ -6313,6 +6328,94 @@ Double_t NcAstrolab2::GetNeutrinoXsection(Int_t mode,Int_t type,Double_t egev,Do
  return xsec;
 }
 ///////////////////////////////////////////////////////////////////////////
+Double_t NcAstrolab2::GetNeutrinoAngle(Double_t E,TString u,Int_t mode,TF1* f)
+{
+// Provide the kinematic opening angle between a neutrino and the corresponding lepton,
+// as produced in a CC interaction on a target at rest.
+//
+// Input arguments :
+// -----------------
+// E    : The neutrino energy in GeV
+// u    : "deg" --> Angle will be returned in degrees 
+//        "rad" --> Angle will be returned in radians
+// mode : 0 -> Return the mean angle
+//        1 -> Return the median angle
+//        2 -> Return a random angle based on a parametrisation of the pdf
+// f    : Optional argument to obtain the function describing the used pdf
+//        In case f=0 no function will be returned.
+//
+// Note :
+// ------
+// The pdf for the opening angle has been obtained via simulations using the
+// Pythia based NcCollider facility.
+// The data for a 1 TeV muon neutrino incident on a proton at rest have been
+// fitted by a Landau distribution.
+// For other energies, the Landau parameters will be scaled via 1/sqrt(E/(1TeV)).
+//
+// Usage example :
+// ---------------
+// Double_t E=500;
+// TF1 func;
+// Double_t angle=GetNeutrinoAngle(E,"deg",2,&func);
+//
+// The default value is f=0.
+//
+// In case of inconsistent data, the unphysical value of -1 will be returned.
+
+ Double_t value=-1;
+
+ if (E<=0 || mode<0 || mode>2) return value;
+
+ // Convert to TeV
+ E*=0.001;
+
+ // The parametrisation (in degrees) for a 1 TeV neutrino
+ Double_t mean=1.38711583;
+ Double_t median=0.86842105;
+ Double_t mpv=0.560150;
+ Double_t sigma=0.226679;
+
+ // Scaling the parameters to the provided neutrino energy
+ Double_t p=log10(E);
+ Double_t scale=1./(pow(1.5,p)*sqrt(E));
+
+ mean*=scale;
+ median*=scale;
+ mpv*=scale;
+ sigma*=scale;
+
+ // Create a normalized Landau distribution template
+ if (!fNuAngle)
+ {
+  fNuAngle=new TF1("NuAngle","TMath::Landau(x,[0],[1],1)",0,90);
+  fNuAngle->SetTitle("Landau pdf;Neutrino-lepton opening angle in degrees;PDF");
+ }
+ 
+ // Set the parameters for the Landau parametrization
+ fNuAngle->SetParameter(0,mpv);
+ fNuAngle->SetParameter(1,sigma);
+
+ // Obtain an opening angle value according to the pdf
+ Double_t ang=fNuAngle->GetRandom();
+ 
+ if (u=="rad")
+ {
+  Double_t fact=acos(-1.)/180.; // Coversion factor degrees->radians
+  mean*=fact;
+  median*=fact;
+  ang*=fact;
+ }
+
+ // Provide the used pdf if requested
+ if (f) fNuAngle->Copy(*f);
+
+ value=mean;
+ if (mode==1) value=median;
+ if (mode==2) value=ang;
+
+ return value;
+}
+///////////////////////////////////////////////////////////////////////////
 void NcAstrolab2::RandomPosition(Nc3Vector& v,Double_t thetamin,Double_t thetamax,Double_t phimin,Double_t phimax)
 {
 // Provide a random angular position for the vector "v" according to an isotropic solid angle distribution.
@@ -6405,7 +6508,7 @@ void NcAstrolab2::SmearPosition(Nc3Vector& v,Double_t sigma)
 
  // Determine the rotation matrix for the frame in which "v" coincides with the positive Z-axis.
  TRotMatrix m;
- m.SetAngles(90.+theta,phi,90.+theta,phi+90.,theta,phi);
+ m.SetAngles(90.+theta,phi,90,phi+90.,theta,phi);
 
  // Generate smeared position w.r.t. the fictative Z-axis 
  Double_t pi=acos(-1.);
@@ -6429,6 +6532,68 @@ void NcAstrolab2::SmearPosition(Nc3Vector& v,Double_t sigma)
  v.SetVector(norm,theta,phi,"sph","deg");
 
  // Invoke the inverse rotation to obtain the actual smeared position.
+ v=v.GetUnprimed(&m);
+ if (ier) v.SetErrors(err,"car");
+}
+///////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::ShiftPosition(Nc3Vector& v,Double_t angle)
+{
+// Shift the angular position for the vector "v" with the specified angular
+// offset "angle" in degrees.
+// The input argument "angle" determines an angular cone around the original
+// pointing position of "v", on which a random new position will be chosen.
+//
+// Notes :
+// -------
+// 1) The vector components of "v" have to be initialised, since they define
+//    the center around which the smearing will be performed.
+//    However, in case the norm of "v" is not set, the norm will be automatically set to 1.
+// 2) In case angular errors have been specified for the vector "v", the smeared vector
+//    will obtain the same angular errors.
+
+ if (!v.HasVector()) return;
+
+ // If needed, initialise the randomiser with a "date/time driven" seed
+ // using the timestamp of the moment of this invokation of the member function.
+ // This will ensure different random sequences if the user repeats analyses
+ // under identical conditions without explicit initialisation of the randomiser
+ // by the user at the start of the analysis.
+ if (!fRan) fRan=new NcRandom(-1);
+
+ Double_t norm=v.GetX(1,"sph","deg");
+ Double_t theta=v.GetX(2,"sph","deg");
+ Double_t phi=v.GetX(3,"sph","deg");
+ Double_t err[3]={0,0,0};
+ Int_t ier=0;
+ if (v.HasErrors())
+ {
+  ier=1;
+  v.GetErrors(err,"car");
+ }
+ if (norm<=0)
+ {
+  norm=1;
+  err[0]=0;
+ }
+ v.SetVector(norm,theta,phi,"sph","deg");
+
+ // The shifted position will be generated as if the actual vector "v" coincided with the positive Z-axis.
+ // The actual shifted position will be obtained via a "backward rotation" to the real frame orientation.
+
+ // Determine the rotation matrix for the frame in which "v" coincides with the positive Z-axis.
+ TRotMatrix m;
+ m.SetAngles(90.+theta,phi,90,phi+90.,theta,phi);
+
+ // Generate the shifted position w.r.t. the fictative Z-axis 
+ Double_t phimin=0;
+ Double_t phimax=360;
+ theta=angle;
+ phi=fRan->Uniform(phimin,phimax);
+
+ // Enter the "fake" shifted position into vector "v".
+ v.SetVector(norm,theta,phi,"sph","deg");
+
+ // Invoke the inverse rotation to obtain the actual shifted position.
  v=v.GetUnprimed(&m);
  if (ier) v.SetErrors(err,"car");
 }
@@ -9614,6 +9779,7 @@ void NcAstrolab2::GenBurstSignals()
  fBurstParameters->SetSignal(fNmupday,"Nmupday");
  fBurstParameters->SetSignal(fAvgrbz,"Avgrbz");
  fBurstParameters->SetSignal(fAvgrbt90,"Avgrbt90");
+ fBurstParameters->SetSignal(fTbin,"Tbin");
  fBurstParameters->AddNamedSlot("solidangle");
  fBurstParameters->SetSignal(solidangle,"solidangle");
  fBurstParameters->AddNamedSlot("nentot");
