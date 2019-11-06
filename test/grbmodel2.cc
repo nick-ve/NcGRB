@@ -26,6 +26,7 @@
  grb.SetBurstParameter("Declmax",85);
  grb.SetBurstParameter("Grbnu",-0.03);
 // grb.SetBurstParameter("Tbint90",1.5);
+ grb.SetBurstParameter("Kinangle",3);
 
  NcDevice* params=grb.GetBurstParameters();
  if (params) params->Data();
@@ -46,6 +47,7 @@
  Double_t gamma=2;
  grb.MakeBurstEdist(gamma,emin,emax,nbins);
 
+/***************
  TF1 fx;
  grb.GetNeutrinoAngle(1000,"deg",2,&fx);
  grb.GetNeutrinoAngle(1000,"deg",2,&fx);
@@ -63,6 +65,7 @@ fx->Print();
  grb.GetNeutrinoAngle(100,"deg",2,&fx);
  grb.GetNeutrinoAngle(100,"deg",2,&fx);
 fx->Print();
+*************/
 
 /*********
  Double_t E=0;

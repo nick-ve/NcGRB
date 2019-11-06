@@ -8236,6 +8236,7 @@ void NcAstrolab2::SetBurstParameter(TString name,Double_t value)
 // Inburst   // Flag to indicate that neutrinos are produced coupled (1) or not (0) to the burst duration
 // Dtnu      // Mean time diff. (in sec) between gamma/GW and nu production (decoupled) or in T90 units w.r.t. trigger (coupled)
 // Dtnus     // Sigma of time difference (in sec) between gamma/GW and nu production (<0 is in T90 units)
+// Kinangle  // Neutrino-lepton kinematic opening angle selection for CC interactions (0=none 1=mean 2=median 3=draw from pdf)
 // Angres    // Detector angular resolution (degrees)
 // Timres    // Detector time resolution (sec)
 // Bkgrate   // Mean rate (in Hz) of bkg events
@@ -8309,6 +8310,9 @@ void NcAstrolab2::SetBurstParameter(TString name,Double_t value)
   name="Dtnus";
   fBurstParameters->AddNamedSlot(name);
   fBurstParameters->SetSignal(-0.5,name);
+  name="Kinangle";
+  fBurstParameters->AddNamedSlot(name);
+  fBurstParameters->SetSignal(3,name);
   name="Angres";
   fBurstParameters->AddNamedSlot(name);
   fBurstParameters->SetSignal(0.5,name);
@@ -8383,6 +8387,7 @@ void NcAstrolab2::ListBurstParameters() const
  Int_t fInburst=fBurstParameters->GetSignal("Inburst");
  Float_t fDtnu=fBurstParameters->GetSignal("Dtnu");
  Float_t fDtnus=fBurstParameters->GetSignal("Dtnus");
+ Int_t fKinangle=fBurstParameters->GetSignal("Kinangle");
  Float_t fAngres=fBurstParameters->GetSignal("Angres");
  Float_t fTimres=fBurstParameters->GetSignal("Timres");
  Float_t fBkgrate=fBurstParameters->GetSignal("Bkgrate");
@@ -8448,6 +8453,7 @@ void NcAstrolab2::ListBurstParameters() const
   cout << " Maximum number of generated neutrinos per burst : " << fGrbnu << endl;
   cout << " The actual number of neutrinos may be less due to statistical fluctuations" << endl;
  }
+ cout << " Neutrino-lepton kinematic opening angle selection for CC interactions (0=none 1=mean 2=median 3=draw from pdf) : " << fKinangle << endl;
  cout << " Angular resolution (degrees) of the detector : " << fAngres << endl;
  cout << " Time resolution (sec) of the detector : " << fTimres << endl;
  cout << " Mean rate (Hz) of bkg events in the detector : " << fBkgrate << endl;
@@ -9327,6 +9333,7 @@ void NcAstrolab2::GenBurstSignals()
  Float_t fT90min=fBurstParameters->GetSignal("T90min");
  Float_t fT90max=fBurstParameters->GetSignal("T90max");
  Float_t fTimres=fBurstParameters->GetSignal("Timres");
+ Int_t fKinangle=fBurstParameters->GetSignal("Kinangle");
  Float_t fAngres=fBurstParameters->GetSignal("Angres");
  Float_t fAvgrbz=fBurstParameters->GetSignal("Avgrbz");
  Float_t fAvgrbt90=fBurstParameters->GetSignal("Avgrbt90");
@@ -9686,7 +9693,8 @@ void NcAstrolab2::GenBurstSignals()
   // The GRB position gets Gaussian smeared to reflect the actual position.
   // The time difference between the gammas and the neutrinos gets corrected
   // for the GRB redshift and smeared by the detector time resolution.
-  // The muon direction gets Gaussian smeared by the detector angular resolution.
+  // The muon direction gets modified to account for the kinematical opening angle
+  // w.r.t. the neutrino direction and Gaussian smeared by the detector angular resolution.
 
   // Prevent statistical overfluctuation in number of GRB signal events if requested by fGrbnu<0
   if (fGrbnu<0 && nmugrb>=int(fabs(fGrbnu)*float(fNgrbs))) continue;
@@ -9724,8 +9732,23 @@ void NcAstrolab2::GenBurstSignals()
     }
    }
    if (fTimres>0) dt=fRan->Gauss(dt,fTimres);
+
+   // The direction of the GRB signal muon
    rmu.Load(rgrb2);
-   // Smear the direction of the upgoing GRB muon according to the detector resolution
+
+   // Modification to account for the neutrino-lepton kinematic opening angle
+   if (fKinangle>0)
+   {
+    Double_t E=GetBurstSignalEnergy();
+    if (E>0)
+    {
+     Int_t mode=fKinangle-1;
+     Double_t ang=GetNeutrinoAngle(E,"deg",mode);
+     if (ang>0) ShiftPosition(rmu,ang);
+    }
+   }
+
+   // Smearing according to the detector resolution
    if (fAngres>0) SmearPosition(rmu,fAngres);
 
    // Determine angular difference w.r.t. the presumed GRB position
@@ -9795,6 +9818,9 @@ void NcAstrolab2::GenBurstSignals()
 void NcAstrolab2::BurstCompensate(Int_t& nmugrb,Float_t fGrbnu,Float_t fNgrbs,Int_t fInburst,Float_t fDtnu,Float_t fDtnus,Float_t fAngres,Float_t fTimres,Float_t fDatype,Float_t fDawin)
 {
 // Compensate statistical underfluctuation in the number of transient burst muons.
+
+ // Retreive the needed parameters
+ Int_t fKinangle=fBurstParameters->GetSignal("Kinangle");
 
  Int_t nmup=int(fabs(fGrbnu)*float(fNgrbs));
  Int_t jgrb=0;
@@ -9866,8 +9892,23 @@ void NcAstrolab2::BurstCompensate(Int_t& nmugrb,Float_t fGrbnu,Float_t fNgrbs,In
     }
    }
    if (fTimres>0) dt=fRan->Gauss(dt,fTimres);
+
+   // The direction of the GRB signal muon
    rmu.Load(rgrb2);
-   // Smear the direction of the upgoing GRB muon according to the detector resolution
+
+   // Modification to account for the neutrino-lepton kinematic opening angle
+   if (fKinangle>0)
+   {
+    Double_t E=GetBurstSignalEnergy();
+    if (E>0)
+    {
+     Int_t mode=fKinangle-1;
+     Double_t ang=GetNeutrinoAngle(E,"deg",mode);
+     if (ang>0) ShiftPosition(rmu,ang);
+    }
+   }
+
+   // Smearing according to the detector resolution
    if (fAngres>0) SmearPosition(rmu,fAngres);
 
    // Determine angular difference w.r.t. the presumed GRB position
