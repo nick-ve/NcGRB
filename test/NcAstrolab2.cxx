@@ -533,8 +533,9 @@ void NcAstrolab2::Data(Int_t mode,TString u,Bool_t utc)
 ///////////////////////////////////////////////////////////////////////////
 void NcAstrolab2::SetLabPosition(Nc3Vector& p)
 {
-// Set the lab position in the terrestrial coordinates.
-// The right handed reference frame is defined such that the North Pole
+// Set the lab position in the terrestrial coordinates and its corresponding
+// time offset w.r.t. UT.
+// The right handed position reference frame is defined such that the North Pole
 // corresponds to a polar angle theta=0 and the Greenwich meridian corresponds
 // to an azimuth angle phi=0, with phi increasing eastwards.
 
@@ -549,7 +550,8 @@ void NcAstrolab2::SetLabPosition(Nc3Vector& p)
 ///////////////////////////////////////////////////////////////////////////
 void NcAstrolab2::SetLabPosition(Double_t l,Double_t b,TString u)
 {
-// Set the lab position in the terrestrial longitude (l) and latitude (b).
+// Set the lab position in the terrestrial longitude (l) and latitude (b)
+// and its corresponding time offset w.r.t. UT.
 // Positions north of the equator have b>0, whereas b<0 indicates
 // locations south of the equator.
 // Positions east of Greenwich have l>0, whereas l<0 indicates
@@ -582,8 +584,8 @@ void NcAstrolab2::SetLabPosition(Double_t l,Double_t b,TString u)
 ///////////////////////////////////////////////////////////////////////////
 void NcAstrolab2::SetExperiment(TString name)
 {
-// Set position and local frame definition for the experiment as specified
-// via the argument "name".
+// Set position, local frame definition and time offset w.r.t. UT
+// for the experiment as specified via the argument "name".
 //
 // Currently the supported experiment names are :
 //
@@ -591,6 +593,8 @@ void NcAstrolab2::SetExperiment(TString name)
 // IceCube : The IceCube neutrino observatory (incl. Amanda) at the South Pole
 // WSRT    : The Westerbork Synthesis Radio Telescope in the Netherlands
 // Astron  : The Netherlands Institute for Radio Astronomy in Dwingeloo
+// ARA     : The Askaryan Radio Array at the South Pole
+// RNO-G   : The Greenland Radio Neutrino Observatory at Summit Station
 //
 // Note : The name and title for the NcAstrolab2 object are updated automatically
 //        according to the specified experiment name at invokation of this
@@ -598,11 +602,14 @@ void NcAstrolab2::SetExperiment(TString name)
 //        In case a different name and/or title is required, please use the 
 //        usual SetNameTitle facility after invokation of this memberfunction.
 
+ Double_t l=0; // Longitude
+ Double_t b=0; // Lattitude
+
  if (name=="Amanda")
  {
   SetNameTitle("Amanda","Antarctic Muon And Neutrino Detector Array");
   SetLabPosition(0,-90,"deg"); // South Pole
-  // Right handed Amanda local frame has Y-North, X-East and Z-Zenith
+  // Right handed Amanda local frame has Y-North (to Greenwich), X-East and Z-Zenith
   SetLocalFrame(90,90,90,180,0,0);
   return;
  }
@@ -610,9 +617,11 @@ void NcAstrolab2::SetExperiment(TString name)
  if (name=="IceCube")
  {
   SetNameTitle("IceCube","The South Pole Neutrino Observatory");
-  SetLabPosition(0,-90,"deg"); // South Pole
-  // Right handed IceCube local frame has Y-North, X-East and Z-Zenith
-  SetLocalFrame(90,90,90,180,0,0);
+  l=-63.453056;
+  b=-89.99;
+  SetLabPosition(l,b,"deg"); // South Pole
+  // Right handed IceCube local frame has Y-North (to Greenwich), X-East and Z-Zenith
+  SetLocalFrame(90,90.+l,90,180.+l,0,0);
   return;
  }
 
@@ -634,13 +643,44 @@ void NcAstrolab2::SetExperiment(TString name)
   return;
  }
 
+ if (name=="ARA")
+ {
+  SetNameTitle("ARA","The Askaryan Radio Array at the South Pole");
+  SetLabPosition(0,-90,"deg"); // South Pole
+  // Right handed ARA local frame has Y-North (to Greenwich), X-East and Z-Zenith
+  SetLocalFrame(90,90,90,180,0,0);
+  return;
+ }
+
+ if (name=="RNO-G")
+ {
+  SetNameTitle("RNO-G","The Greenland Radio Neutrino Observatory at Summit Station");
+  l=-38.46;
+  b=72.58;
+  SetLabPosition(l,b,"deg"); // Summit Station
+  // Right handed RNO-G local frame has Y-North, X-East and Z-Zenith
+  SetLocalFrame(90,90,90,180,0,0);
+  return;
+ }
+
  cout << " *" << ClassName() << "::SetExperiment* Unsupported experiment name : " << name.Data() << endl;
  }
+///////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::SetLabTimeOffset(Double_t dt)
+{
+// Set the lab time offset (dt) w.r.t. UT in (fractional) hours.
+// Normally one should not use this function, but set the time offset automatically 
+// by invokation of the memberfunctions SetPosition() or SetExperiment().
+// This memberfunction is meant to investigate (systematic) effects in the case
+// of possible timing problems. 
+
+ fToffset=dt;
+}
 ///////////////////////////////////////////////////////////////////////////
 NcPosition NcAstrolab2::GetLabPosition() const
 {
 // Provide the lab position in the terrestrial coordinates.
-// The right handed reference frame is defined such that the North Pole
+// The right handed position reference frame is defined such that the North Pole
 // corresponds to a polar angle theta=0 and the Greenwich meridian corresponds
 // to an azimuth angle phi=0, with phi increasing eastwards.
 
@@ -670,6 +710,15 @@ void NcAstrolab2::GetLabPosition(Double_t& l,Double_t& b,TString u) const
  fLabPos.GetPosition(p,"sph",u);
  b=offset-p[1];
  l=p[2];
+}
+///////////////////////////////////////////////////////////////////////////
+Double_t NcAstrolab2::GetLabTimeOffset() const
+{
+// Provide the lab time offset (dt) w.r.t. UT in (fractional) hours.
+// This time offset is automatically set by invokation of the memberfunctions
+// SetPosition() or SetExperiment().
+
+ return fToffset;
 }
 ///////////////////////////////////////////////////////////////////////////
 void NcAstrolab2::SetRandomiser(Int_t iseed,Int_t cnt1,Int_t cnt2,NcTimestamp* ts)
@@ -1839,8 +1888,6 @@ NcSignal* NcAstrolab2::GetSignal(Double_t& d,Double_t& a,TString au,Double_t& b,
 //
 // The user is advised not to use the obsolete "jref=0" functionality anymore.
 //
-// Default values are jref=0 and type=0.
-//
 // The input parameter "frame" allows the user to specify the frame to which
 // the angular coordinates (a,b) refer. Available options are :
 //
@@ -1879,6 +1926,8 @@ NcSignal* NcAstrolab2::GetSignal(Double_t& d,Double_t& a,TString au,Double_t& b,
 // The correction methods used are the new IAU 2000 ones as described in the 
 // U.S. Naval Observatory (USNO) circular 179 (2005), which is available on
 // http://aa.usno,navy.mil/publications/docs/Circular_179.pdf.
+//
+// Default values are mode="T" and type=0.
 //
 // Note : In case ts=0 the current timestamp of the lab will be taken.
 
@@ -1959,8 +2008,6 @@ NcSignal* NcAstrolab2::GetSignal(Double_t& d,Double_t& a,TString au,Double_t& b,
 // type = 0 --> The requested data is a reference signal
 //        1 --> The requested data is a measured signal
 //
-// Default value is type=0.
-//
 // Notes :
 // -------
 // 1) In case the name specifies a solar system object which was not yet stored according to "type",
@@ -2009,6 +2056,8 @@ NcSignal* NcAstrolab2::GetSignal(Double_t& d,Double_t& a,TString au,Double_t& b,
 // The correction methods used are the new IAU 2000 ones as described in the 
 // U.S. Naval Observatory (USNO) circular 179 (2005), which is available on
 // http://aa.usno,navy.mil/publications/docs/Circular_179.pdf.
+//
+// Default values are mode="T" and type=0.
 //
 // Note : In case ts=0 the current timestamp of the lab will be taken.
 
@@ -2526,8 +2575,11 @@ void NcAstrolab2::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t n
   if (mode=="B" || mode=="b") mode="B1950";
   if (mode=="J" || mode=="j") mode="J2000";
   cout << "Equatorial (" << mode.Data() <<") a : "; PrintAngle(a,"rad","hms",ndig);
+  cout << " ("; PrintAngle(a,"rad","deg",ndig); cout << ")";
   cout << " d : "; PrintAngle(d,"deg","dms",ndig);
+  cout << " ("; PrintAngle(d,"deg","deg",ndig); cout << ")";
   cout << " " << slha.Data() << " : "; PrintAngle(lha,"deg","hms",ndig);
+  cout << " ("; PrintAngle(lha,"deg","deg",ndig); cout << ")";
   return;
  }
 
@@ -2539,6 +2591,7 @@ void NcAstrolab2::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t n
   cout << "Galactic l : "; PrintAngle(l,"deg","deg",ndig);
   cout << " b : "; PrintAngle(b,"deg","deg",ndig); 
   cout << " " << slha.Data() << " : "; PrintAngle(lha,"deg","hms",ndig);
+  cout << " ("; PrintAngle(lha,"deg","deg",ndig); cout << ")";
   return;
  }
 
@@ -2550,6 +2603,7 @@ void NcAstrolab2::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t n
   cout << "ICRS l : "; PrintAngle(a,"rad","hms",ndig);
   cout << " b : "; PrintAngle(d,"deg","dms",ndig);
   cout << " " << slha.Data() << " : "; PrintAngle(lha,"deg","hms",ndig);
+  cout << " ("; PrintAngle(lha,"deg","deg",ndig); cout << ")";
   return;
  }
 
@@ -2561,6 +2615,7 @@ void NcAstrolab2::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t n
   cout << "Geocentric ecliptic l : "; PrintAngle(a,"deg","deg",ndig);
   cout << " b : "; PrintAngle(d,"deg","deg",ndig);
   cout << " " << slha.Data() << " : "; PrintAngle(lha,"deg","hms",ndig);
+  cout << " ("; PrintAngle(lha,"deg","deg",ndig); cout << ")";
   return;
  }
 
@@ -2579,6 +2634,7 @@ void NcAstrolab2::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t n
   cout << "Horizontal azi : "; PrintAngle(azi,"deg","deg",ndig);
   cout << " alt : "; PrintAngle(alt,"deg","deg",ndig);
   cout << " " << slha.Data() << " : "; PrintAngle(lha,"deg","hms",ndig);
+  cout << " ("; PrintAngle(lha,"deg","deg",ndig); cout << ")";
   return;
  }
 
@@ -2589,6 +2645,7 @@ void NcAstrolab2::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t n
   cout << "Local-frame phi : "; PrintAngle(phi,"deg","deg",ndig);
   cout << " theta : "; PrintAngle(theta,"deg","deg",ndig);
   cout << " " << slha.Data() << " : "; PrintAngle(lha,"deg","hms",ndig);
+  cout << " ("; PrintAngle(lha,"deg","deg",ndig); cout << ")";
   return;
  }
 }
@@ -3215,10 +3272,10 @@ void NcAstrolab2::SetHmatrix(NcTimestamp* ts)
 ///////////////////////////////////////////////////////////////////////////
 void NcAstrolab2::SetLocalFrame(Double_t t1,Double_t p1,Double_t t2,Double_t p2,Double_t t3,Double_t p3)
 {
-// Specification of the orientations of the local-frame axes.
+// Specification of the orientations of the local reference frame axes.
 // The input arguments represent the angles (in degrees) of the local-frame axes
 // w.r.t. a so called Master Reference Frame (MRF), with the same convention
-// as the input arguments of TRotMatrix::SetAngles.
+// as the input arguments of the ROOT facility TRotMatrix::SetAngles.
 //
 // The right handed Master Reference Frame is defined as follows :
 //  Z-axis : Points to the local Zenith
@@ -3399,6 +3456,8 @@ Double_t NcAstrolab2::GetHourAngle(TString mode,NcTimestamp* ts,Int_t jref,Int_t
 {
 // Provide the Local Hour Angle (in fractional degrees) of a stored signal
 // object at the specified timestamp.
+// The hour angle is provided within the interval [-180,180], where
+// negative (positive) values indicate positions East (West) of the observers meridian.
 //
 // The input parameter "mode" allows the user to select either the
 // "mean" or "apparent" value for the returned Hour Angle.
@@ -3437,6 +3496,16 @@ Double_t NcAstrolab2::GetHourAngle(TString mode,NcTimestamp* ts,Int_t jref,Int_t
  if (mode=="M" || mode=="m") ha=ts->GetLMST(fToffset)-a;
  if (mode=="A" || mode=="a") ha=ts->GetLAST(fToffset)-a;
  ha*=15.; // Convert to (fractional) degrees
+
+ // Project to the interval [-180,180]
+ while (ha<-180)
+ {
+  ha+=360.;
+ }
+ while (ha>180)
+ {
+  ha-=360.;
+ }
 
  return ha;
 }
@@ -8213,7 +8282,8 @@ void NcAstrolab2::SetBurstParameter(TString name,Double_t value)
 // name  : Name of the parameter to be set
 // value : The parameter value to be set
 //
-// Default values will be initialized by the constructor of this class.
+// Default values will be initialized by the constructor of this class
+// and can be displayed by invokation of the member function ListBurstParameters(). 
 //
 // To reset all parameters to their default values please invoke with name="*".
 // This will also remove all the stored histograms related to burst investigations.
@@ -8222,9 +8292,9 @@ void NcAstrolab2::SetBurstParameter(TString name,Double_t value)
 // The available parameter names are :
 //
 // Nmax;     // Maximal number of bursts to be accepted for analysis (<0 : no limitation)
-// Declmin   // Minimal declination (in degrees) for burst position acceptance
-// Declmax   // Maximal declination (in degrees) for burst position acceptance
-// T90min    // Minimal duration (t90 in sec) for burst acceptance
+// Declmin   // Minimal declination (J2000 in degrees) for burst position acceptance
+// Declmax   // Maximal declination (J2000 in degrees) for burst position acceptance
+// T90min    // Minimal duration (t90 in sec) for burst acceptance (<0 : [|T90min|,T90max] with random T90 when T90 or T100 is unknown)
 // T90max    // Maximal duration (t90 in sec) for burst acceptance
 // Zmin      // Minimal redshift for burst acceptance (<0 : [|fZmin|,fZmax] with random z when redshift is unknown)
 // Zmax      // Maximal redshift for burst acceptance
@@ -8239,9 +8309,9 @@ void NcAstrolab2::SetBurstParameter(TString name,Double_t value)
 // Kinangle  // Neutrino-lepton kinematic opening angle selection for CC interactions (0=none 1=mean 2=median 3=draw from pdf)
 // Angres    // Detector angular resolution (degrees)
 // Timres    // Detector time resolution (sec)
-// Bkgrate   // Mean rate (in Hz) of bkg events
+// Bkgrate   // Mean rate (in Hz) of background events for the specified [Declmin,Declmax] interval (<0 : rate per steradian)
 // Dtwin     // Total search time window (in sec) centered at the burst trigger
-// Dawin     // Angular search circle (<0 is decl. band) in degrees or sigma around (above/below) the burst position
+// Dawin     // Angular search circle (<0 is local zenith band) in degrees or sigma around (above/below) the burst position
 // Datype    // Type of angular window specification (0=in degrees 1=in units of combined burst/track sigma) 
 // Nbkg      // Mean number of counts per bin for auto-binning
 // Tbint90   // Time bin size in units of average T90 (0 : Time bin size determined by Tbin) 
@@ -8360,6 +8430,44 @@ void NcAstrolab2::SetBurstParameter(TString name,Double_t value)
   fBurstHistos.Clear();
   fBurstHistos.SetOwner();
  }
+
+ ///////////////////////////////////
+ // Store some derived parameters //
+ ///////////////////////////////////
+
+ // The solid angle corresponding to the selected declination band
+ Float_t fDeclmin=fBurstParameters->GetSignal("Declmin");
+ Float_t fDeclmax=fBurstParameters->GetSignal("Declmax");
+ Float_t thlow=90.-fDeclmax;
+ Float_t thup=90.-fDeclmin;
+ Float_t OmegaDecl=GetSolidAngle(thlow,thup,"deg",0,360,"deg");
+ name="OmegaDecl";
+ fBurstParameters->AddNamedSlot(name);
+ fBurstParameters->SetSignal(OmegaDecl,name);
+
+ // Background event rate from the selected declination band
+ Float_t fBkgrate=fBurstParameters->GetSignal("Bkgrate");
+ Float_t RbkgDecl=fBkgrate;
+ if (fBkgrate<0)
+ {
+  RbkgDecl=fabs(fBkgrate)*OmegaDecl;
+ }
+ name="RbkgDecl";
+ fBurstParameters->AddNamedSlot(name);
+ fBurstParameters->SetSignal(RbkgDecl,name);
+
+ // Mean number of background events per hour from the selected declination band
+ Float_t NbkgHour=RbkgDecl*3600.;
+ name="NbkgHour";
+ fBurstParameters->AddNamedSlot(name);
+ fBurstParameters->SetSignal(NbkgHour,name);
+
+ // Mean number of background events in the search time window from the selected declination band
+ Float_t fDtwin=fBurstParameters->GetSignal("Dtwin");
+ Float_t NbkgWin=RbkgDecl*fDtwin;
+ name="NbkgWin";
+ fBurstParameters->AddNamedSlot(name);
+ fBurstParameters->SetSignal(NbkgWin,name);
 }
 ///////////////////////////////////////////////////////////////////////////
 NcDevice* NcAstrolab2::GetBurstParameters()
@@ -8372,6 +8480,7 @@ void NcAstrolab2::ListBurstParameters() const
 {
 // Listing of all the burst parameter settings
 
+ // User provided settings
  Int_t fNmax=fBurstParameters->GetSignal("Nmax");
  Float_t fDeclmin=fBurstParameters->GetSignal("Declmin");
  Float_t fDeclmax=fBurstParameters->GetSignal("Declmax");
@@ -8403,11 +8512,15 @@ void NcAstrolab2::ListBurstParameters() const
  Int_t fUsetott=fBurstParameters->GetSignal("Usetott");
  Int_t fGrbpos=fBurstParameters->GetSignal("Grbpos");
 
+ // Derived parameters
+ Float_t fOmegaDecl=fBurstParameters->GetSignal("OmegaDecl");
+ Float_t fRbkgDecl=fBurstParameters->GetSignal("RbkgDecl");
+ Float_t fNbkgHour=fBurstParameters->GetSignal("NbkgHour");
+ Float_t fNbkgWin=fBurstParameters->GetSignal("NbkgWin");
+
  // Internal statistics
  Int_t fNgrbs=fBurstParameters->GetSignal("Ngrbs");
  Float_t fMaxtotsigma=fBurstParameters->GetSignal("Maxtotsigma");
- Float_t fMup=fBurstParameters->GetSignal("Mup");
- Float_t fNmupday=fBurstParameters->GetSignal("Nmupday");
 
  cout << " ========================= User provided burst settings ===============================" << endl;
  if (fNmax<0)
@@ -8418,8 +8531,9 @@ void NcAstrolab2::ListBurstParameters() const
  {
   cout << " Maximal number of bursts to be accepted for analysis : " << fNmax << endl;
  }
- cout << " Declination interval (in degrees) for burst position acceptance : [" << fDeclmin << "," << fDeclmax << "]" << endl;
- cout << " Duration interval (t90 in sec) for burst acceptance : [" << fT90min << "," << fT90max << "]" << endl;
+ cout << " Declination interval (J2000 in degrees) for burst position acceptance : [" << fDeclmin << "," << fDeclmax << "]" << endl;
+ cout << " Duration interval (t90 in sec) for burst acceptance : [" << fabs(fT90min) << "," << fT90max << "]" << endl;
+ if (fT90min<0) cout << " Random values taken from T90-distribution in case T90 and T100 were missing" << endl;
  cout << " Redshift interval for burst acceptance : [" << fabs(fZmin) << "," << fZmax << "]" << endl;
  if (fZmin<0) cout << " Random redshift values taken from z-distribution in case of unknown redshift" << endl;
  if (fSigmagrb>=0) cout << " Fixed burst position uncertainty (sigma in degrees) : " << fSigmagrb << endl;
@@ -8456,7 +8570,7 @@ void NcAstrolab2::ListBurstParameters() const
  cout << " Neutrino-lepton kinematic opening angle selection for CC interactions (0=none 1=mean 2=median 3=draw from pdf) : " << fKinangle << endl;
  cout << " Angular resolution (degrees) of the detector : " << fAngres << endl;
  cout << " Time resolution (sec) of the detector : " << fTimres << endl;
- cout << " Mean rate (Hz) of bkg events in the detector : " << fBkgrate << endl;
+ cout << " Mean rate (Hz) of background events for the specified declination interval (<0 : rate per steradian) " << fBkgrate << endl;
  cout << " Total search time window (in sec) centered at the burst trigger : " << fDtwin << endl;
  if (fDawin>=0)
  {
@@ -8473,11 +8587,11 @@ void NcAstrolab2::ListBurstParameters() const
  {
   if (!fDatype)
   {
-   cout << " Angular declination band (in degrees) above/below the burst position : " << fabs(fDawin) << endl;
+   cout << " Angular local zenith band (in degrees) above/below the burst position : " << fabs(fDawin) << endl;
   }
   else
   {
-   cout << " Angular declination band (in combined burst/track sigma) above/below the burst position : " << fabs(fDawin) << endl;
+   cout << " Angular local zenith band (in combined burst/track sigma) above/below the burst position : " << fabs(fDawin) << endl;
   }
  }
  if (fTbin<0) cout << " Automatic time binning with as mean number of bkg counts/bin : " << fNbkg << endl;
@@ -8521,19 +8635,20 @@ void NcAstrolab2::ListBurstParameters() const
  {
   cout << " Random burst locations are used for bkg studies" << endl;
  }
- cout << " ======================================================================================" << endl;
  cout << endl;
+ cout << " ============================== Derived parameters ====================================" << endl;
+ cout << " Solid angle coverage (in steradian) corresponding to the selected declination band : " << fOmegaDecl << endl;
+ cout << " Background event rate (Hz) for the selected declination band : " << fRbkgDecl << endl;
+ cout << " Mean number of background events per hour from the selected declination band : " << fNbkgHour << endl;
+ cout << " Mean number of background events in the time window from the selected declination band : " << fNbkgWin << endl;
  if (fNgrbs>0)
  {
-  cout << " ============================== Derived parameters ====================================" << endl;
-  cout << " Mean number of bkg events in the time window in the detector : " << fMup << endl;
-  cout << " Mean number of bkg events per day in the detector : " << fNmupday << endl;
   cout << " Number of bursts accepted for analysis : " << fNgrbs << endl;
   cout << " Median redshift from the data sample : " << fabs(fAvgrbz) << endl;
   cout << " Median T90 duration from the data sample : " << fabs(fAvgrbt90) << endl;
-  cout << " ======================================================================================" << endl;
-  cout << endl;
  }
+ cout << " ======================================================================================" << endl;
+ cout << endl;
 }
 ///////////////////////////////////////////////////////////////////////////
 void NcAstrolab2::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t date2,Int_t nmax,TString type)
@@ -8543,14 +8658,15 @@ void NcAstrolab2::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t d
 // The input data has to be provided via a ROOT Tree which will be searched
 // for data on the variable names specified below.
 // In case data for a certain variable is not present, the non-physical value -999
-// will be stored. 
+// will be stored, unless the user has selected random generation of T90 and/or z
+// as specified via SetBurstParameter(). 
 //
 //  Name             Description
 // ---------------------------------------------------------------
 // "date"        Observation date as yyyymmdd
 // "ra"          Right ascension (J2000) in decimal degrees
 // "dec"         Declination (J2000) in decimal degrees
-// "sigpos"      The error on the burst position in decimal degrees
+// "sigmapos"    The error on the burst position in decimal degrees
 // "t90"         The T90 burst duration in seconds
 // "mjdtrig"     The (fractional) MJD of the burst trigger
 // "mjdt90start" The (fractional) MJD of the T90 start time
@@ -8597,6 +8713,7 @@ void NcAstrolab2::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t d
   {
    cout << " *" << ClassName() << "::LoadBurstGCNdata* Archival observed redshift distribution not found." << endl;
    cout << " A Landau fit from Swift GRB redshift data will be used to provide missing z values." << endl;
+   cout << endl;
 
    zdist=(TH1*)fBurstHistos.FindObject("hzfit");
    if (!zdist)
@@ -8611,6 +8728,33 @@ void NcAstrolab2::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t d
     zdist->GetYaxis()->SetTitle("Counts");
     fBurstHistos.Add(zdist);
    }
+  }
+ }
+
+ // Get access to a T90 distribution to draw randomly T90 values if needed
+ TH1* t90dist=0;
+ if (fT90min<0)
+ {
+  t90dist=(TH1*)fBurstHistos.FindObject("ht90");
+  if (!t90dist)
+  {
+   cout << " *" << ClassName() << "::LoadBurstGCNData* Observational T90 distribution not found." << endl;
+   cout << " A double Gaussian fit from Fermi GRB T90 data will be used to provide missing T90 values." << endl;
+   cout << endl;
+ 
+   t90dist=(TH1*)fBurstHistos.FindObject("ht90fit");
+   if (!t90dist)
+   {
+    TF1 ft("ft","44.39*TMath::Gaus(x,-0.131,0.481)+193.8*TMath::Gaus(x,1.447,0.4752)");
+    ft.SetRange(-5,5);
+    ft.SetNpx(10000);
+    TH1* hft=ft.GetHistogram();
+    t90dist=(TH1*)hft->Clone();
+    t90dist->SetNameTitle("ht90fit","Double Gauss fit for Fermi t90 data");
+    t90dist->GetXaxis()->SetTitle("GRB duration ^{10}log(T90) in sec.");
+    t90dist->GetYaxis()->SetTitle("Counts");
+    fBurstHistos.Add(t90dist);
+   } 
   }
  }
 
@@ -8687,8 +8831,9 @@ void NcAstrolab2::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t d
 
   t90grb=t90;
   if (t90grb<=0) t90grb=t100;
+  if (fT90min<0 && t90grb<0 && t90dist) t90grb=t90dist->GetRandom();
 
-  if (t90grb<fT90min || t90grb>fT90max) continue;
+  if (t90grb<fabs(fT90min) || t90grb>fT90max) continue;
 
   zgrb=z;
   if (fZmin<0 && zgrb<0 && zdist) zgrb=zdist->GetRandom();
@@ -8760,6 +8905,7 @@ void NcAstrolab2::GenBurstGCNdata(Int_t n,TString name)
  {
   cout << " *" << ClassName() << "::GenBurstGCNdata* Archival observed redshift distribution not found." << endl;
   cout << " A Landau fit from Swift GRB redshift data will be used to provide random z values." << endl;
+  cout << endl;
 
   zdist=(TH1*)fBurstHistos.FindObject("hzfit");
   if (!zdist)
@@ -8778,10 +8924,9 @@ void NcAstrolab2::GenBurstGCNdata(Int_t n,TString name)
 
  // Get access to a T90 distribution to draw randomly T90 values
  TH1* t90dist=(TH1*)fBurstHistos.FindObject("ht90");
- if (!t90dist) t90dist=(TH1*)fBurstHistos.FindObject("ht90fit");
  if (!t90dist)
  {
-  cout << " *" << ClassName() << "::GenBurstData* Observational T90 distribution not found." << endl;
+  cout << " *" << ClassName() << "::GenBurstGCNData* Observational T90 distribution not found." << endl;
   cout << " A double Gaussian fit from Fermi GRB T90 data will be used to provide random T90 values." << endl;
   cout << endl;
 
@@ -8830,7 +8975,7 @@ void NcAstrolab2::GenBurstGCNdata(Int_t n,TString name)
   phigrb=rgrb.GetX(3,"sph","deg");
 
   t90grb=-1;
-  while (t90grb<fT90min || t90grb>fT90max)
+  while (t90grb<fabs(fT90min) || t90grb>fT90max)
   {
    t90grb=t90dist->GetRandom();
    t90grb=pow(float(10),t90grb);
@@ -8879,7 +9024,7 @@ void NcAstrolab2::MakeBurstZdist(TString file,TString tree,TString name,Int_t nb
 // Read observed archival redshift data and create the corresponding distribution.
 // Also the corresponding distribution of the Proper Distance at the time of
 // observation (called the Physical Distance) will be created.
-// If this memberfunction is invoked before LoadBurstData() or GenBurstData(),
+// If this memberfunction is invoked before LoadBurstGCNdata() or GenBurstGCNdata(),
 // the plain observed redshift distribution will be used to draw random z values
 // (if requested) for the bursts without redshift information.
 //
@@ -8964,7 +9109,7 @@ void NcAstrolab2::MakeBurstZdist(TString file,TString tree,TString name,Int_t nb
 void NcAstrolab2::MakeBurstT90dist(TString file,TString tree,TString name,Int_t nb,Float_t xmin,Float_t xmax)
 {
 // Read observed archival T90 data and create a log10(T90) distribution.
-// If this memberfunction is invoked before LoadBurstData() or GenBurstData(),
+// If this memberfunction is invoked before LoadBurstGCNdata() or GenBurstGCNdata(),
 // the resulting log10(T90) distribution will be used to draw random T90 values
 // (if requested) for the bursts without T90 information.
 //
@@ -9038,8 +9183,8 @@ void NcAstrolab2::MakeBurstBkgEdist(TString file,TString tree,TString name1,TStr
 {
 // Create a background energy distribution on the interval [Emin,Emax] GeV
 // based on observed archival energy data. 
-// If this memberfunction is invoked before LoadBurstData() or GenBurstData(),
-// the resulting log10(E) distribution will be used to draw random Energy values
+// If this memberfunction is invoked before GenBurstSignals(), the resulting
+// log10(E) distribution will be used to draw random Energy values
 // for the background events.
 //
 // Note : Only those data will be used that correspond with the selected
@@ -9143,8 +9288,8 @@ void NcAstrolab2::MakeBurstEdist(TF1& spec,Double_t Emin,Double_t Emax,Int_t nbi
 {
 // Create an energy distribution on the interval [Emin,Emax] GeV based on the 
 // provided spectral function "spec" describing dN/dE.
-// If this memberfunction is invoked before LoadBurstData() or GenBurstData(),
-// the resulting energy distribution will be used to draw random energy values
+// If this memberfunction is invoked before GenBurstSignals(), the resulting 
+// energy distribution will be used to draw random energy values
 // for the burst induced signal events.
 //
 // Example: To make a dN/dE=E^-2 energy spectrum for 100 Gev < E < 10 PeV
@@ -9180,8 +9325,8 @@ void NcAstrolab2::MakeBurstEdist(Double_t gamma,Double_t Emin,Double_t Emax,Int_
 {
 // Create an energy distribution on the interval [Emin,Emax] GeV based on a 
 // a single power law with spectral index "gamma" describing dN/dE.
-// If this memberfunction is invoked before LoadBurstData() or GenBurstData(),
-// the resulting energy distribution will be used to draw random energy values
+// If this memberfunction is invoked before GenBurstSignals(), the resulting 
+// energy distribution will be used to draw random energy values
 // for the burst induced signal events.
 //
 // Example: To make a dN/dE=E^-2 energy spectrum for 100 Gev < E < 10 PeV
@@ -9327,11 +9472,18 @@ void NcAstrolab2::GenBurstSignals()
 {
 // Generate detector signals from transient bursts.
 
+ // If needed, initialise the randomiser with a "date/time driven" seed
+ // using the timestamp of the moment of this invokation of the member function.
+ // This will ensure different random sequences if the user repeats analyses
+ // with identical measurements and reference signals without explicit initialisation
+ // of the randomiser by the user at the start of the analysis.
+ if (!fRan) fRan=new NcRandom(-1);
+
  // Retreive the needed parameters
+ Float_t fDeclmin=fBurstParameters->GetSignal("Declmin");
+ Float_t fDeclmax=fBurstParameters->GetSignal("Declmax");
  Float_t fSigmagrb=fBurstParameters->GetSignal("Sigmagrb");
  Float_t fMaxtotsigma=fBurstParameters->GetSignal("Maxtotsigma");
- Float_t fT90min=fBurstParameters->GetSignal("T90min");
- Float_t fT90max=fBurstParameters->GetSignal("T90max");
  Float_t fTimres=fBurstParameters->GetSignal("Timres");
  Int_t fKinangle=fBurstParameters->GetSignal("Kinangle");
  Float_t fAngres=fBurstParameters->GetSignal("Angres");
@@ -9351,7 +9503,11 @@ void NcAstrolab2::GenBurstSignals()
  Float_t fDtnu=fBurstParameters->GetSignal("Dtnu");
  Float_t fDtnus=fBurstParameters->GetSignal("Dtnus");
 
- if (fT90min<0) fT90min=0;
+ // Derived parameters
+ Float_t fOmegaDecl=fBurstParameters->GetSignal("OmegaDecl");
+ Float_t fRbkgDecl=fBurstParameters->GetSignal("RbkgDecl");
+ Float_t fNbkgHour=fBurstParameters->GetSignal("NbkgHour");
+ Float_t fNbkgWin=fBurstParameters->GetSignal("NbkgWin");
 
  Float_t t90,z;
  TString name;
@@ -9413,13 +9569,7 @@ void NcAstrolab2::GenBurstSignals()
 
  Float_t pi=acos(-1.);
 
- // Mean number of upgoing bkg muons in search time window
- Float_t fMup=fBkgrate*fDtwin;
-
- // Mean number of upgoing bkg muons per day
- Float_t fNmupday=fBkgrate*24.*3600.;
-
- Float_t danglow=0;    // Lower value (in degrees) of angular difference histo
+ Float_t danglow=0;     // Lower value (in degrees) of angular difference histo
  Float_t dangup=fDawin; // Upper value (in degrees) of angular difference histo
  if (fDatype) dangup=fDawin*fabs(fMaxtotsigma);
  if (dangup<0 || dangup>180) dangup=180;
@@ -9440,7 +9590,7 @@ void NcAstrolab2::GenBurstSignals()
   }
   else // Automatic time binning to get the specified maximal bkg counts per bin
   {
-   ntbins=int(fMup*float(fNgrbs)/fNbkg);
+   ntbins=int(fNbkgWin*float(fNgrbs)/fNbkg);
   }
  }
  else // Variable time bins
@@ -9475,13 +9625,13 @@ void NcAstrolab2::GenBurstSignals()
 
  // Binning for the opening angle histo
  Int_t nabins=int((dangup-danglow)/fAbin);
- if (fAbin<0) nabins=int(((dangup-danglow)/180.)*fMup*float(fNgrbs)/fNbkg);
+ if (fAbin<0) nabins=int(((dangup-danglow)/180.)*fNbkgWin*float(fNgrbs)/fNbkg);
 
  // Binning for the cos(opening angle) histo
  Float_t upcos=cos(danglow*pi/180.);
  Float_t lowcos=cos(dangup*pi/180.);
  Int_t nabins2=int((upcos-lowcos)/(1.-cos(fAbin*pi/180.)));
- if (fAbin<0) nabins2=int(((upcos-lowcos)/2.)*fMup*float(fNgrbs)/fNbkg);
+ if (fAbin<0) nabins2=int(((upcos-lowcos)/2.)*fNbkgWin*float(fNgrbs)/fNbkg);
  if (nabins2<0) nabins2*=-1;
 
  if (ntbins<2) ntbins=2;
@@ -9577,25 +9727,23 @@ void NcAstrolab2::GenBurstSignals()
 
  Float_t t90grb=0;
  Double_t zgrb=0;
-//@@@ TString grbname;
  Float_t sigmagrb=0;
  Float_t totsigma=0;
  NcPosition rgrb;
- Int_t nmup;
+ Int_t nmu;
  Double_t thetagrb,phigrb;
- Float_t thetamu,phimu,cost;
+ Double_t dmu,thetamu,phimu,cost;
  Float_t dt=0;
  NcPosition rgrb2; // Actual GRB position from which the neutrinos/muons arrive
  NcPosition rmu;
  Float_t dang;
- Float_t ranlow,ranup;
  Float_t thlow,thup;
+ Float_t ranlow,ranup;
  Int_t nmugrb=0;
  NcTimestamp* tx=0;
- Float_t solidangle=0; // Total stacked solid angle 
-
- // Dummy invokation to ensure proper initialisation of the random number generator
- RandomPosition(rmu,90,180,0,360);
+ NcTimestamp tmu;
+ Float_t solidangle=0; // Total stacked solid angle
+ Float_t ramu,decmu;   // Temporary RA and DEC of muon for background creation
 
  // Obtain the (fictative) GRB space-time positions in the declination acceptance
  for (Int_t igrb=0; igrb<fNgrbs; igrb++)
@@ -9612,7 +9760,7 @@ void NcAstrolab2::GenBurstSignals()
   rgrb.SetPosition(zgrb,thetagrb,phigrb,"sph","deg");
 
   // Update the total stacked solid angle that is probed
-  if (fDawin<0) // Declination band
+  if (fDawin<0) // Local zenith band
   {
    if (!fDatype)
    {
@@ -9641,25 +9789,44 @@ void NcAstrolab2::GenBurstSignals()
 
   solidangle+=GetSolidAngle(thlow,thup,"deg",0,360,"deg");    
 
-  // Generate the upgoing bkg muons in the search time window 
+  // Generate the background events in the search time window 
   // for both this GRB angular cone and the corresponding "opposite RA" bkg patch
   for (Int_t bkgpatch=0; bkgpatch<=1; bkgpatch++)
   {
-   nmup=int(fRan->Poisson(fMup));
-   for (Int_t imup=0; imup<nmup; imup++)
+   nmu=int(fRan->Poisson(fNbkgWin));
+   for (Int_t imu=0; imu<nmu; imu++)
    {
     ranlow=-fDtwin/2.;
     ranup=fDtwin/2.;
     dt=fRan->Uniform(ranlow,ranup);
+/************
+@@@@@@@@@@@@
     // Smear the time difference with the Gaussian time resolution
     if (fTimres>0) dt=fRan->Gauss(dt,fTimres); //@@@ Is this needed ?
-    RandomPosition(rmu,90,180,0,360);
+**********/
+//@@@@@@@@    RandomPosition(rmu,90,180,0,360);
+    // Create a random background event within the user selected burst declination interval
+    // and convert to local detector coordinates to allow a local zenith band selection.
+    // For the conversion, a temp. reference signal will be created, since measurements may get scrambled.
+    thlow=90.-fDeclmax;
+    thup=90.-fDeclmin;
+    RandomPosition(rmu,thlow,thup,0,360);
+    decmu=90.-rmu.GetX(2,"sph","deg");
+    ramu=rmu.GetX(3,"sph","deg");
+    tmu=*tx;
+    tmu.AddSec(dt);
+    SetSignal(1,ramu,"deg",decmu,"deg","equ",&tmu,fNgrbs+1,"J","bkgtemp",0);
+    GetSignal(dmu,thetamu,"deg",phimu,"deg","loc",&tmu,fNgrbs+1);
+    rmu.SetPosition(1,thetamu,phimu,"sph","deg");
+/************
+@@@@@@@@@@
     // Smear the direction of the upgoing bkg muon according to  the detector resolution
     SmearPosition(rmu,fAngres); //@@@ Is this needed
-    thetamu=rmu.GetX(2,"sph","deg");
-    phimu=rmu.GetX(3,"sph","deg");
+*********/
+//@@@@    thetamu=rmu.GetX(2,"sph","deg");
+//@@@@    phimu=rmu.GetX(3,"sph","deg");
 
-    if (fDawin<0) // Declination band
+    if (fDawin<0) // Local zenith band
     {
      dang=fabs(thetagrb-thetamu);
     }
@@ -9703,9 +9870,9 @@ void NcAstrolab2::GenBurstSignals()
   rgrb2.Load(rgrb);
   SmearPosition(rgrb2,sigmagrb);
 
-  nmup=int(fabs(fGrbnu));
-  if (!nmup && fRan->Uniform()<fabs(fGrbnu)) nmup=1;
-  for (Int_t imup2=0; imup2<nmup; imup2++)
+  nmu=int(fabs(fGrbnu));
+  if (!nmu && fRan->Uniform()<fabs(fGrbnu)) nmu=1;
+  for (Int_t imu=0; imu<nmu; imu++)
   {
    nmugrb++;
    if (!fInburst) // Neutrino and gamma production decoupled
@@ -9764,6 +9931,8 @@ void NcAstrolab2::GenBurstSignals()
   }
  } // End of loop over the individual GRBs
 
+ // Remove the temporary storage of the background event
+ if (fNgrbs>0) RemoveSignal(fNgrbs+1,0,0);
 
  // Compensate statistical underfluctuation in number of GRB signal events if requested by fGrbnu<0
  if (fGrbnu<0) BurstCompensate(nmugrb,fGrbnu,fNgrbs,fInburst,fDtnu,fDtnus,fAngres,fTimres,fDatype,fDawin);
@@ -9796,10 +9965,6 @@ void NcAstrolab2::GenBurstSignals()
  cout << endl; 
 
  // Update internal statistics
- fBurstParameters->AddNamedSlot("Mup");
- fBurstParameters->SetSignal(fMup,"Mup");
- fBurstParameters->AddNamedSlot("Nmupday");
- fBurstParameters->SetSignal(fNmupday,"Nmupday");
  fBurstParameters->SetSignal(fAvgrbz,"Avgrbz");
  fBurstParameters->SetSignal(fAvgrbt90,"Avgrbt90");
  fBurstParameters->SetSignal(fTbin,"Tbin");
@@ -9822,7 +9987,7 @@ void NcAstrolab2::BurstCompensate(Int_t& nmugrb,Float_t fGrbnu,Float_t fNgrbs,In
  // Retreive the needed parameters
  Int_t fKinangle=fBurstParameters->GetSignal("Kinangle");
 
- Int_t nmup=int(fabs(fGrbnu)*float(fNgrbs));
+ Int_t nmu=int(fabs(fGrbnu)*float(fNgrbs));
  Int_t jgrb=0;
  NcSignal* sx=0;
  NcTimestamp* tx=0;
@@ -9846,7 +10011,7 @@ void NcAstrolab2::BurstCompensate(Int_t& nmugrb,Float_t fGrbnu,Float_t fNgrbs,In
 
  Double_t pi=acos(-1.);
 
- while (nmugrb<nmup)
+ while (nmugrb<nmu)
  {
   // Pick randomly one of the stored GRBs
    jgrb=int(fRan->Uniform(0.,float(fNgrbs)));

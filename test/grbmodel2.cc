@@ -21,12 +21,17 @@
  grb.SetRandomiser(-1); // Use the UT timestamp to generate a seed
  grb.Data();
 
+ Float_t pi=acos(-1.);
+ Float_t bkgrate=-0.003/(2.*pi);
+ grb.SetBurstParameter("Bkgrate",bkgrate);
+
 // grb.SetBurstParameter("Nmax",20);
  grb.SetBurstParameter("Declmin",5);
  grb.SetBurstParameter("Declmax",85);
  grb.SetBurstParameter("Grbnu",-0.03);
 // grb.SetBurstParameter("Tbint90",1.5);
  grb.SetBurstParameter("Kinangle",3);
+/// grb.SetBurstParameter("Kinangle",2);
 
  NcDevice* params=grb.GetBurstParameters();
  if (params) params->Data();

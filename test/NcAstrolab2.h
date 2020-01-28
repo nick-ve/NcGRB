@@ -45,8 +45,10 @@ class NcAstrolab2 : public TTask,public NcTimestamp
   void SetLabPosition(Nc3Vector& r);                                  // Set lab position in terrestrial frame
   void SetLabPosition(Double_t l,Double_t b,TString u="deg");         // Set lab terrestrial position
   void SetExperiment(TString name);                                   // Set position and local frame for the specified experiment
+  void SetLabTimeOffset(Double_t dt);                                 // Set the lab time offset w.r.t. UT
   NcPosition GetLabPosition() const;                                  // Provide the lab terrestrial position 
   void GetLabPosition(Double_t& l,Double_t& b,TString u="deg") const; // Provide the lab terrestrial position
+  Double_t GetLabTimeOffset() const;                                  // Provide the lab time offset w.r.t. UT
   void SetRandomiser(Int_t iseed,Int_t cnt1=0,Int_t cnt2=0,NcTimestamp* ts=0); // (Re)initialise the internal NcRandom randomisation facility 
   NcRandom* GetRandomiser(Int_t& iseed,Int_t& cnt1,Int_t& cnt2) const;         // Provide the current internal NcRandom randomiser parameters
   using NcTimestamp::GetLT;
