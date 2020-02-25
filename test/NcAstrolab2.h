@@ -102,7 +102,7 @@ class NcAstrolab2 : public TTask,public NcTimestamp
   void DisplaySignal(TString frame,TString mode,NcTimestamp* ts,TString name,TString proj="ham",Int_t clr=0,Int_t type=0); // Display stored signal
   void DisplaySignals(TString frame,TString mode,NcTimestamp* ts,TString proj="ham",Int_t clr=0,Int_t nmax=-1,Int_t j=-1,Int_t type=-1); // Display all stored signals
   void SetMarkerSize(Float_t size,Int_t type); // Set size for the marker symbols of the skymaps and related histograms 
-  void SetCentralMeridian(Double_t phi,TString u="deg");  // Set central meridian for the sky display
+  void SetCentralMeridian(Int_t mode=0,Double_t phi=0,TString u="deg");  // Set central meridian and orientation for the sky display
   void SetPhysicalParameter(TString name,Double_t value); // Facility to modify physical parameter values
   Double_t GetPhysicalParameter(TString name) const;      // Provide the (modified) value of a physical parameter
   Double_t GetPhysicalDistance(Double_t z,TString u="Mpc",Int_t t=1) const; // Provide physical distance of an object with redshift z in a flat universe
@@ -203,7 +203,7 @@ class NcAstrolab2 : public TTask,public NcTimestamp
   Double_t GetDifference(Int_t i,Int_t j,TString au,Double_t& dt,TString tu,Int_t mode=1); // Provide space and time difference
 
   // The skymap display facilities
-  Int_t fUsMeridian;      // Flag to denote that the user has selected the central meridian (1) or not (0)
+  Int_t fUsMeridian;      // Flag to denote the (user) selection of the central meridian and display mode
   Double_t fMeridian;     //! Central meridian (in rad) for the sky display
   TString fProj;          //! Projection which is currently in use
   TCanvas* fCanvas;       //! The canvas for the skymap

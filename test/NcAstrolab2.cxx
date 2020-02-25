@@ -171,7 +171,7 @@ NcAstrolab2::NcAstrolab2(const char* name,const char* title) : TTask(name,title)
  fGal=0;
  fIndices=0;
  fUsMeridian=0;
- fMeridian=-999;
+ fMeridian=0;
  fProj="none";
  fCanvas=0;
  fHist[0]=0;
@@ -590,7 +590,7 @@ void NcAstrolab2::SetExperiment(TString name)
 // Currently the supported experiment names are :
 //
 // Amanda  : Antarctic Muon And Neutrino Detector Array
-// IceCube : The IceCube neutrino observatory (incl. Amanda) at the South Pole
+// IceCube : The IceCube neutrino observatory at the South Pole
 // WSRT    : The Westerbork Synthesis Radio Telescope in the Netherlands
 // Astron  : The Netherlands Institute for Radio Astronomy in Dwingeloo
 // ARA     : The Askaryan Radio Array at the South Pole
@@ -616,6 +616,7 @@ void NcAstrolab2::SetExperiment(TString name)
 
  if (name=="IceCube")
  {
+  // Exact location : 89d 59' 23.977" (S) and 63d 37' 21.432" (W)
   SetNameTitle("IceCube","The South Pole Neutrino Observatory");
   l=-63.453056;
   b=-89.99;
@@ -2589,7 +2590,9 @@ void NcAstrolab2::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t n
   b=90.-r.GetX(2,"sph","deg");
   l=r.GetX(3,"sph","deg");
   cout << "Galactic l : "; PrintAngle(l,"deg","deg",ndig);
+  cout << " ("; PrintAngle(l,"deg","dms",ndig); cout << ")";
   cout << " b : "; PrintAngle(b,"deg","deg",ndig); 
+  cout << " ("; PrintAngle(b,"deg","dms",ndig); cout << ")";
   cout << " " << slha.Data() << " : "; PrintAngle(lha,"deg","hms",ndig);
   cout << " ("; PrintAngle(lha,"deg","deg",ndig); cout << ")";
   return;
@@ -2597,11 +2600,13 @@ void NcAstrolab2::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t n
 
  if (frame=="icr")
  {
-  Double_t a,d;
-  d=90.-r.GetX(2,"sph","deg");
-  a=r.GetX(3,"sph","rad");
-  cout << "ICRS l : "; PrintAngle(a,"rad","hms",ndig);
-  cout << " b : "; PrintAngle(d,"deg","dms",ndig);
+  Double_t l,b;
+  b=90.-r.GetX(2,"sph","deg");
+  l=r.GetX(3,"sph","deg");
+  cout << "ICRS l : "; PrintAngle(l,"deg","deg",ndig);
+  cout << " ("; PrintAngle(l,"deg","dms",ndig); cout << ")";
+  cout << " b : "; PrintAngle(b,"deg","deg",ndig);
+  cout << " ("; PrintAngle(b,"deg","dms",ndig); cout << ")";
   cout << " " << slha.Data() << " : "; PrintAngle(lha,"deg","hms",ndig);
   cout << " ("; PrintAngle(lha,"deg","deg",ndig); cout << ")";
   return;
@@ -2609,11 +2614,13 @@ void NcAstrolab2::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t n
 
  if (frame=="ecl")
  {
-  Double_t a,d;
-  d=90.-r.GetX(2,"sph","deg");
-  a=r.GetX(3,"sph","deg");
-  cout << "Geocentric ecliptic l : "; PrintAngle(a,"deg","deg",ndig);
-  cout << " b : "; PrintAngle(d,"deg","deg",ndig);
+  Double_t l,b;
+  b=90.-r.GetX(2,"sph","deg");
+  l=r.GetX(3,"sph","deg");
+  cout << "Geocentric ecliptic l : "; PrintAngle(l,"deg","deg",ndig);
+  cout << " ("; PrintAngle(l,"deg","dms",ndig); cout << ")";
+  cout << " b : "; PrintAngle(b,"deg","deg",ndig);
+  cout << " ("; PrintAngle(b,"deg","dms",ndig); cout << ")";
   cout << " " << slha.Data() << " : "; PrintAngle(lha,"deg","hms",ndig);
   cout << " ("; PrintAngle(lha,"deg","deg",ndig); cout << ")";
   return;
@@ -2632,7 +2639,9 @@ void NcAstrolab2::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t n
    azi+=360.;
   }
   cout << "Horizontal azi : "; PrintAngle(azi,"deg","deg",ndig);
+  cout << " ("; PrintAngle(azi,"deg","dms",ndig); cout << ")";
   cout << " alt : "; PrintAngle(alt,"deg","deg",ndig);
+  cout << " ("; PrintAngle(alt,"deg","dms",ndig); cout << ")";
   cout << " " << slha.Data() << " : "; PrintAngle(lha,"deg","hms",ndig);
   cout << " ("; PrintAngle(lha,"deg","deg",ndig); cout << ")";
   return;
@@ -2643,7 +2652,9 @@ void NcAstrolab2::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t n
   Double_t theta=r.GetX(2,"sph","deg");
   Double_t phi=r.GetX(3,"sph","deg");
   cout << "Local-frame phi : "; PrintAngle(phi,"deg","deg",ndig);
+  cout << " ("; PrintAngle(phi,"deg","dms",ndig); cout << ")";
   cout << " theta : "; PrintAngle(theta,"deg","deg",ndig);
+  cout << " ("; PrintAngle(theta,"deg","dms",ndig); cout << ")";
   cout << " " << slha.Data() << " : "; PrintAngle(lha,"deg","hms",ndig);
   cout << " ("; PrintAngle(lha,"deg","deg",ndig); cout << ")";
   return;
@@ -4678,15 +4689,22 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t
  }
 
  // Automatic choice of central meridian if not selected by the user
- if (!fUsMeridian)
+ if (!fUsMeridian || abs(fUsMeridian)>1)
  {
-  if (frame=="gal")
-  {
-   fMeridian=0;
-  }
-  else
+  if (frame=="equ")
   {
    fMeridian=pi;
+   fUsMeridian=-2;
+  }
+  if (frame=="gal" || frame=="icr" || frame=="ecl")
+  {
+   fMeridian=0;
+   fUsMeridian=-2;
+  }
+  if (frame=="hor" || frame=="loc")
+  {
+   fMeridian=0;
+   fUsMeridian=2;
   }
  }
 
@@ -4694,6 +4712,9 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t
  Double_t x=0;
  Double_t y=0;
  Project(phi,theta,proj,x,y);
+
+ // X-axis inversion of the display
+ if (fUsMeridian<0) x*=-1.;
 
  Int_t hist=0;
  if (proj=="hamh" || proj=="aith" || proj=="merh" || proj=="cylh" || proj=="angh") hist=1;
@@ -4747,7 +4768,7 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t
  Int_t angmax,hmin,hmax,dmin,dmax;
  TString corr;
  TString scenter="";
- if (frame=="equ" || frame=="icr")
+ if (frame=="equ")
  {
   ang=int(ConvertAngle(fMeridian,"rad","hms"));
   angmax=ang+120000;
@@ -4775,9 +4796,23 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t
    corr="+";
   }
   sright+=corr;
-  sright+=hmax;
+  if (fUsMeridian<0)
+  {
+   sright+=hmin;
+  }
+  else
+  {
+   sright+=hmax;
+  }
   sright+="h";
-  sleft+=hmin;
+  if (fUsMeridian<0)
+  {
+   sleft+=hmax;
+  }
+  else
+  {
+   sleft+=hmin;
+  }
   sleft+="h";
   scenter+=h;
   scenter+="h";
@@ -4810,9 +4845,23 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t
    corr="+";
   }
   sright+=corr;
-  sright+=dmax;
+  if (fUsMeridian<0)
+  {
+   sright+=dmin;
+  }
+  else
+  {
+   sright+=dmax;
+  }
   sright+="#circ";
-  sleft+=dmin;
+  if (fUsMeridian<0)
+  {
+   sleft+=dmax;
+  }
+  else
+  {
+   sleft+=dmin;
+  }
   sleft+="#circ";
   scenter+=d;
   scenter+="#circ";
@@ -4902,6 +4951,7 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t
    {
     gtheta=pi/2.-(gtharr[ith]*pi/180.);
     igs=int(90.-gtharr[ith]);
+    if (frame=="loc") igs=int(gtharr[ith]);
     gs="";
     gs+=igs;
     gs+="#circ";
@@ -5042,6 +5092,7 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t
     Double_t xgc=0;
     Double_t ygc=0;
     Project(phigc,thetagc,proj,xgc,ygc);
+    if (fUsMeridian<0) xgc*=-1.;
     marker=new TMarker(xgc,ygc,fMarkerStyle[2]);
     marker->SetMarkerSize(fMarkerSize[2]);
     marker->SetMarkerColor(fMarkerColor[2]);
@@ -5063,7 +5114,7 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t
  {
   Float_t xfac=90;
   Float_t yfac=90;
-  if (frame=="equ" || frame=="icr") xfac=6;
+  if (frame=="equ") xfac=6;
   if (proj=="angh") yfac=1;
   // Reset the histogram if needed
   if (clr==1 || proj!=fProj || !fHist[type])
@@ -5101,7 +5152,7 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t
     fHist[type]->SetBins(1000,-181,181,500,-91,91);
     fHist[type]->GetYaxis()->SetTitle("Projected Latitude in degrees");
    }
-   if (frame=="equ" || frame=="icr")
+   if (frame=="equ")
    {
     fHist[type]->GetXaxis()->SetTitle("Hours from central Meridian");
     if (proj=="angh")
@@ -5134,7 +5185,7 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t
     }
     else
     {
-     fHist[type]->GetYaxis()->SetTitle("Projected Theta in degrees");
+     fHist[type]->GetYaxis()->SetTitle("Projected degrees from the equator");
     }
    }
    fProj=proj;
@@ -5395,28 +5446,34 @@ void NcAstrolab2::SetMarkerSize(Float_t size,Int_t type)
  fMarkerSize[type]=size;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab2::SetCentralMeridian(Double_t phi,TString u)
+void NcAstrolab2::SetCentralMeridian(Int_t mode,Double_t phi,TString u)
 {
-// Set the central meridian for the sky display.
-// Setting a value smaller than -180 degrees (-pi rad) will induce
-// automatic meridian setting in the display.
+// Set the central meridian and the orientation for the sky display.
 // By default the central meridian is set at -999 in the constructor.
 //
-// The string argument "u" allows to choose between different angular units
-// u = "rad" : angle provided in radians
-//     "deg" : angle provided in degrees
-//     "dms" : angle provided in dddmmss.sss
-//     "hms" : angle provided in hhmmss.sss
+// Input arguments :
+// -----------------
+// mode =  0 : Automatic meridian and display setting.
+//             For this mode the actual values of "phi" and "u" are irrelevant.
+//             This is also the default setting in the constructor of this class.
+//         1 : The horizontal scale will increase from left to right (e.g. 0h->24h) 
+//        -1 : The horizontal scale will decrease from left to right (e.g. 24h->0h) 
+// phi  :  Specification of the central meridian
+// u    =  "rad" : phi angle provided in radians
+//         "deg" : phi angle provided in degrees
+//         "dms" : phi angle provided in dddmmss.sss
+//         "hms" : phi angle provided in hhmmss.sss
 //
-// The default is u="deg".
+// The default values are mode=0, phi=0 and u="deg".
 //
 // This routine is based on initial work by Garmt de Vries-Uiterweerd.
 
  fMeridian=ConvertAngle(phi,u,"rad");
- fUsMeridian=1;
+ fUsMeridian=0;
+ if (mode>0) fUsMeridian=1;
+ if (mode<0) fUsMeridian=-1;
  Double_t pi=acos(-1.);
  Double_t twopi=2.*pi;
- if (fMeridian<-pi) fUsMeridian=0;
  // Set range to 0 <= meridian < 2pi
  while (fMeridian>=twopi)
  {
