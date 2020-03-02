@@ -152,7 +152,7 @@
 // lab.DisplaySignals("equ","J",0,"ham",1);
 //
 //--- Author: Nick van Eijndhoven 15-mar-2007 Utrecht University
-//- Modified: Nick van Eijndhoven February 27, 2019 12:09 IIHE-VUB, Brussel
+//- Modified: Nick van Eijndhoven March 2, 2020  11:46 IIHE-VUB, Brussel
 ///////////////////////////////////////////////////////////////////////////
 
 #include "NcAstrolab2.h"
@@ -8334,6 +8334,10 @@ void NcAstrolab2::SetBurstParameter(TString name,Double_t value)
 {
 // Specification of a certain transient burst parameter setting.
 //
+// **********************************************************************************
+// * This is a beta test version, so currently no backward compatibility guaranteed *
+// **********************************************************************************
+//
 // Input arguments :
 // -----------------
 // name  : Name of the parameter to be set
@@ -8530,12 +8534,21 @@ void NcAstrolab2::SetBurstParameter(TString name,Double_t value)
 NcDevice* NcAstrolab2::GetBurstParameters()
 {
 // Provide a link to the device containing all transient burst parameter settings.
+//
+// **********************************************************************************
+// * This is a beta test version, so currently no backward compatibility guaranteed *
+// **********************************************************************************
+
  return fBurstParameters;
 }
 ///////////////////////////////////////////////////////////////////////////
 void NcAstrolab2::ListBurstParameters() const
 {
 // Listing of all the burst parameter settings
+//
+// **********************************************************************************
+// * This is a beta test version, so currently no backward compatibility guaranteed *
+// **********************************************************************************
 
  // User provided settings
  Int_t fNmax=fBurstParameters->GetSignal("Nmax");
@@ -8712,6 +8725,11 @@ void NcAstrolab2::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t d
 {
 // Load observed burst GCN data, e.g. GRB data from GCN notices as available from
 // https://icecube.wisc.edu/~grbweb_public.
+//
+// **********************************************************************************
+// * This is a beta test version, so currently no backward compatibility guaranteed *
+// **********************************************************************************
+//
 // The input data has to be provided via a ROOT Tree which will be searched
 // for data on the variable names specified below.
 // In case data for a certain variable is not present, the non-physical value -999
@@ -8939,6 +8957,10 @@ void NcAstrolab2::GenBurstGCNdata(Int_t n,TString name)
 // where "name" can be "GRB", "GW", "IC", ....
 //
 // The default value is name="GRB".
+//
+// **********************************************************************************
+// * This is a beta test version, so currently no backward compatibility guaranteed *
+// **********************************************************************************
 
  // Retreive the needed parameters
  Int_t fNmax=fBurstParameters->GetSignal("Nmax");
@@ -9085,6 +9107,10 @@ void NcAstrolab2::MakeBurstZdist(TString file,TString tree,TString name,Int_t nb
 // the plain observed redshift distribution will be used to draw random z values
 // (if requested) for the bursts without redshift information.
 //
+// **********************************************************************************
+// * This is a beta test version, so currently no backward compatibility guaranteed *
+// **********************************************************************************
+//
 // The input data has to be provided via a ROOT Tree which contains at least
 // the specified variable name indicated below.
 //
@@ -9170,6 +9196,10 @@ void NcAstrolab2::MakeBurstT90dist(TString file,TString tree,TString name,Int_t 
 // the resulting log10(T90) distribution will be used to draw random T90 values
 // (if requested) for the bursts without T90 information.
 //
+// **********************************************************************************
+// * This is a beta test version, so currently no backward compatibility guaranteed *
+// **********************************************************************************
+//
 // The input data has to be provided via a ROOT Tree which contains at least
 // the specified variable name indicated below.
 //
@@ -9246,6 +9276,10 @@ void NcAstrolab2::MakeBurstBkgEdist(TString file,TString tree,TString name1,TStr
 //
 // Note : Only those data will be used that correspond with the selected
 //        declination interval for the burst investigations.
+//
+// **********************************************************************************
+// * This is a beta test version, so currently no backward compatibility guaranteed *
+// **********************************************************************************
 //
 // The input data has to be provided via a ROOT Tree which contains at least
 // the specified variable names indicated below.
@@ -9349,6 +9383,10 @@ void NcAstrolab2::MakeBurstEdist(TF1& spec,Double_t Emin,Double_t Emax,Int_t nbi
 // energy distribution will be used to draw random energy values
 // for the burst induced signal events.
 //
+// **********************************************************************************
+// * This is a beta test version, so currently no backward compatibility guaranteed *
+// **********************************************************************************
+//
 // Example: To make a dN/dE=E^-2 energy spectrum for 100 Gev < E < 10 PeV
 //
 // TF1 spec("spec","pow(x,-2.)");
@@ -9386,6 +9424,10 @@ void NcAstrolab2::MakeBurstEdist(Double_t gamma,Double_t Emin,Double_t Emax,Int_
 // energy distribution will be used to draw random energy values
 // for the burst induced signal events.
 //
+// **********************************************************************************
+// * This is a beta test version, so currently no backward compatibility guaranteed *
+// **********************************************************************************
+//
 // Example: To make a dN/dE=E^-2 energy spectrum for 100 Gev < E < 10 PeV
 //
 // gamma=2;
@@ -9405,6 +9447,10 @@ Double_t NcAstrolab2::GetBurstSignalEnergy(Double_t Emin,Double_t Emax) const
 {
 // Provide the energy in the interval [Emin,Emax] GeV for a Burst signal 
 // from the user provided energy spectrum as produced by MakeBurstEdist().
+//
+// **********************************************************************************
+// * This is a beta test version, so currently no backward compatibility guaranteed *
+// **********************************************************************************
 //
 // If Emin<0 the lower boundary of the provided spectrum will be used as Emin. 
 // If Emax<0 the upper boundary of the provided spectrum will be used as Emax.
@@ -9468,6 +9514,10 @@ Double_t NcAstrolab2::GetBurstBackgroundEnergy(Double_t Emin,Double_t Emax) cons
 // Provide the energy in the interval [Emin,Emax] GeV for backgound events
 // from the user provided energy spectrum as produced by MakeBurstBkgEdist().
 //
+// **********************************************************************************
+// * This is a beta test version, so currently no backward compatibility guaranteed *
+// **********************************************************************************
+//
 // If Emin<0 the lower boundary of the provided spectrum will be used as Emin. 
 // If Emax<0 the upper boundary of the provided spectrum will be used as Emax.
 //
@@ -9528,6 +9578,10 @@ Double_t NcAstrolab2::GetBurstBackgroundEnergy(Double_t Emin,Double_t Emax) cons
 void NcAstrolab2::GenBurstSignals()
 {
 // Generate detector signals from transient bursts.
+//
+// **********************************************************************************
+// * This is a beta test version, so currently no backward compatibility guaranteed *
+// **********************************************************************************
 
  // If needed, initialise the randomiser with a "date/time driven" seed
  // using the timestamp of the moment of this invokation of the member function.
@@ -10151,6 +10205,10 @@ TH1* NcAstrolab2::GetBurstBayesianSignalRate(Double_t p,Double_t& rlow,Double_t&
 // Provide the transient burst Bayesian signal rate and the lower and upper bounds of the
 // Bayesian "p%" credible interval [rlow,rup] around the mode of the signal PDF.
 //
+// **********************************************************************************
+// * This is a beta test version, so currently no backward compatibility guaranteed *
+// **********************************************************************************
+//
 // Input arguments :
 // -----------------
 // p    : The percentage of the PDF to be covered by the credible interval around the mode.
@@ -10233,6 +10291,10 @@ Double_t NcAstrolab2::GetBurstLiMaSignificance() const
 // Provide the transient burst Li-Ma signal significance in terms of the amount of
 // standard deviations w.r.t. the "on source" and "off source" observations.
 //
+// **********************************************************************************
+// * This is a beta test version, so currently no backward compatibility guaranteed *
+// **********************************************************************************
+//
 // In case of inconsistent data the value 0 is returned.
 
  Double_t sigma=0;
@@ -10279,6 +10341,10 @@ void NcAstrolab2::GetBurstBayesianPsiStatistics(TString type,Int_t ndt,Double_t 
 {
 // Provide the transient burst Bayesian Psi statistics for the (stacked) distributions of the
 // observed arrival times and opening angles w.r.t. the corresponding bursts.
+//
+// **********************************************************************************
+// * This is a beta test version, so currently no backward compatibility guaranteed *
+// **********************************************************************************
 //
 // Consider a hypothesis B_m representing a counting experiment with m different
 // possible outcomes and which is completely defined by the probabilities
@@ -10716,6 +10782,10 @@ void NcAstrolab2::GetBurstChi2Statistics(TString type,Int_t ndt)
 // Provide the transient burst Chi-squared statistics for the (stacked) distributions
 // of the observed arrival times and opening angles w.r.t. the corresponding bursts.
 //
+// **********************************************************************************
+// * This is a beta test version, so currently no backward compatibility guaranteed *
+// **********************************************************************************
+//
 // Input arguments :
 // -----------------
 // type : "time"  --> Provide statistics for the observed arrival times
@@ -10923,6 +10993,10 @@ void NcAstrolab2::GetBurstChi2Statistics(TString type,Int_t ndt)
 void NcAstrolab2::ListBurstHistograms() const
 {
 // Provide a list of all the stored transient burst histograms
+//
+// **********************************************************************************
+// * This is a beta test version, so currently no backward compatibility guaranteed *
+// **********************************************************************************
 
  Int_t nh=fBurstHistos.GetEntries();
  cout << endl;
@@ -10939,6 +11013,10 @@ void NcAstrolab2::ListBurstHistograms() const
 void NcAstrolab2::WriteBurstHistograms(TString filename)
 {
 // Write all the generated transient burst histograms to a ROOT file with the specified filename.
+//
+// **********************************************************************************
+// * This is a beta test version, so currently no backward compatibility guaranteed *
+// **********************************************************************************
 
  // The output file for the produced histograms
  TFile fout(filename.Data(),"RECREATE","NcAstrolab2 analysis results");
