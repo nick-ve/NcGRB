@@ -86,7 +86,7 @@
 //
 // // Note : The above lab initialisation could also have been performed as follows :
 // // NcAstrolab2 lab;
-// // lab.SetExperiment("IceCube");
+// // lab.SetExperiment("IceCube"); // Set more precise IceCube location and orientation
 //
 // // Print laboratory parameters
 // lab.Data(1,"dms");
@@ -152,7 +152,7 @@
 // lab.DisplaySignals("equ","J",0,"ham",1);
 //
 //--- Author: Nick van Eijndhoven 15-mar-2007 Utrecht University
-//- Modified: Nick van Eijndhoven March 2, 2020  11:46 IIHE-VUB, Brussel
+//- Modified: Nick van Eijndhoven, IIHE-VUB, Brussel, March 2, 2020  11:46
 ///////////////////////////////////////////////////////////////////////////
 
 #include "NcAstrolab2.h"

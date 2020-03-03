@@ -3,8 +3,6 @@
 // Copyright(c) 1997-2019, NCFS/IIHE, All Rights Reserved.
 // See cxx source for full Copyright notice.
 
-// $Id: NcAstrolab2.h 139 2017-09-20 08:30:45Z nickve $
-
 #include <math.h>
 
 #include "TTask.h"
@@ -264,6 +262,6 @@ class NcAstrolab2 : public TTask,public NcTimestamp
   // Internal function for transient burst investigations
   void BurstCompensate(Int_t& nmugrb,Float_t Grbnu,Float_t Ngrbs,Int_t Inburst,Float_t Dtnu,Float_t Dtnus,Float_t Angres,Float_t Timres,Float_t Datype,Float_t Dawin);
  
- ClassDef(NcAstrolab2,30) // Virtual lab to provide (astro)physical parameters, treat data and relate observations with astrophysical phenomena
+ ClassDef(NcAstrolab2,31) // Virtual lab to provide (astro)physical parameters, treat data and relate observations with astrophysical phenomena
 };
 #endif
