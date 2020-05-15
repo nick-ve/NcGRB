@@ -16,14 +16,20 @@
  NcSample sample;
 
  // Arrival time window in seconds
- Float_t xmin=-1000;
- Float_t xmax=1000;
- Int_t nbins=200000;
+ Float_t xmin=-500;
+ Float_t xmax=500;
+ Int_t nbins=100000;
 
- Float_t brate=0.020; // The background event rate in Hz
+ // The arival time window histogram
+ TH1F* ht=new TH1F("ht","Arrival times;Arrival time;Counts",nbins,xmin,xmax);
+ Double_t tbin=ht.GetXaxis()->GetBinWidth(1);
+ Double_t tmin=ht.GetXaxis()->GetXmin();
+ Double_t tmax=ht.GetXaxis()->GetXmax();
+
+ Float_t brate=0.030; // The background event rate in Hz
  Float_t srate=0.000; // The signal event rate in Hz 
- Float_t tsig=300;    // The central signal arrival time
- Float_t dtsig=0.1;   // Spread of the signal arrival time
+ Float_t tsig=0;      // The central signal arrival time
+ Float_t dtsig=tbin*5.;  // Spread of the signal arrival time
  Int_t nevtdt=2;      // Number of events within a dt cell for which the inter-event dt statistics will be performed 
 
  Float_t rate=brate+srate;          // Total event rate
@@ -35,14 +41,9 @@
  Double_t nrandom=1e3; // (Maximum) number of randomised configurations for direct psi P-value determination (0 means n=1e19)
  Int_t ncut=10;        // Number of obtained psi>psi0 entries at which randomisations will be terminated (0= no early termination)
 
- // Fill a histogram with uniform event arrival times
+ // Fill the time window histogram with uniform event arrival times
  // This will mimic a Poissonian background
  // Also a filling with identical time differences is possible
-
- TH1F* ht=new TH1F("ht","Arrival times;Arrival time;Counts",nbins,xmin,xmax);
- Double_t tbin=ht.GetXaxis()->GetBinWidth(1);
- Double_t tmin=ht.GetXaxis()->GetXmin();
- Double_t tmax=ht.GetXaxis()->GetXmax();
 
  Float_t step=(xmax-xmin)/float(nevt);
  Float_t x=xmin;
@@ -66,44 +67,26 @@
  // Create the delta t histogram
 
 /// TH1F hdt=lab.GetDxHistogram(ht,nevtdt,1,0,-1);
-//// TH1F hdt=lab.GetDxHistogram(ht,nevtdt,0,0,-1);
+/// TH1F hdt=lab.GetDxHistogram(ht,nevtdt,0,0,-1);
 ///// TH1F hdt=lab.GetDxHistogram(ht,nevtdt,0,tbin,-1);
- TH1F hdt=GetDxHistogram2(ht,nevtdt,0,0,-1,0);
+/// TH1F hdt=GetDxHistogram2(ht,nevtdt,0,0,-1,0);
+ TH1F hdt=GetDxHistogram3(ht,nevtdt,-1,0,-1,1);
+ 
+ TCanvas* c2=new TCanvas("c2","c2");
+ hdt.Draw();
 
  Int_t nbdt=hdt.GetNbinsX();
  Double_t deltatbin=hdt.GetXaxis()->GetBinWidth(1);
  Double_t deltatmin=hdt.GetXaxis()->GetXmin();
  Double_t deltatmax=hdt.GetXaxis()->GetXmax();
 
-/*********
- // Create title and labels for the delta t histogram
- TString title;
- TString s;
- title="Delta t distribution to contain exactly ";
- title+=nevtdt;
- title+=" events";
- title+=";#Deltat (in sec);Counts per bin of size %-10.3g";
- s=title.Format(title.Data(),deltatbin);
-
- hdt.SetTitle(s.Data());
-***********/
- 
- TCanvas* c2=new TCanvas("c2","c2");
- hdt.Draw();
-
  // Creation of the Poisson based dt PDF for a background only hypothesis
  TF1 fdtbkg=math.PoissonDtDist(rate,nevtdt);
-
-/*********
- // Alternative pdf for hit-empty Deta t-hit
- TF1 fdtbkg("fdtbkg","[0]*[0]*exp(-[0]*x)");
- fdtbkg.SetParameter(0,rate);
-**********/
-
  fdtbkg.SetRange(0,deltatmax);
 
  // Provide the dt PDF histogram with the same binning as the Delta t distribution
  fdtbkg.SetNpx(1000);
+//// fdtbkg.SetNpx(nbdt);
  TH1* hpdfbkgdt=(TH1*)fdtbkg.GetHistogram()->Clone();
  hpdfbkgdt->SetName("hpdfbkgdt");
 
