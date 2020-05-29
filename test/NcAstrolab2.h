@@ -1,5 +1,5 @@
-#ifndef NcAstrolab2_h
-#define NcAstrolab2_h
+#ifndef NcAstrolab_h
+#define NcAstrolab_h
 // Copyright(c) 1997-2019, NCFS/IIHE, All Rights Reserved.
 // See cxx source for full Copyright notice.
 
@@ -32,12 +32,12 @@
 #include "NcMath.h"
 #include "NcSample.h"
  
-class NcAstrolab2 : public TTask,public NcTimestamp
+class NcAstrolab : public TTask,public NcTimestamp
 {
  public:
-  NcAstrolab2(const char* name="NcAstrolab2",const char* title="Generic lab"); // Constructor
-  virtual ~NcAstrolab2();                                              // Destructor
-  NcAstrolab2(const NcAstrolab2& t);                                    // Copy constructor
+  NcAstrolab(const char* name="NcAstrolab",const char* title="Generic lab"); // Constructor
+  virtual ~NcAstrolab();                                              // Destructor
+  NcAstrolab(const NcAstrolab& t);                                    // Copy constructor
   virtual TObject* Clone(const char* name="") const;                  // Make a deep copy and provide its pointer
   void Data(Int_t mode=1,TString u="deg",Bool_t utc=kTRUE);           // Lab info in angular units u
   void SetLabPosition(Nc3Vector& r);                                  // Set lab position in terrestrial frame
@@ -116,7 +116,7 @@ class NcAstrolab2 : public TTask,public NcTimestamp
   void RandomPosition(Nc3Vector& v,Double_t thetamin,Double_t thetamax,Double_t phimin,Double_t phimax); // Random angular position according to an isotropic solid angle distribution
   void SmearPosition(Nc3Vector& v,Double_t sigma); // Smear angular position according to the specified angular accuracy
   void ShiftPosition(Nc3Vector& v,Double_t angle); // Shift the position with the specified angular offset to a random location on a cone around the original position
-  TH1F GetDxHistogram(TH1* hx,Int_t nc,Double_t dxbin=-1,Double_t dxmin=-1,Double_t dxmax=-1) const; // Provide dx distribution of histogram entries 
+  TH1F GetDxHistogram(TH1* hx,Int_t nc,Double_t dxbin=-1,Double_t dxmin=-1,Double_t dxmax=-1,Int_t mode=1,Double_t fact=1); // Provide dx distribution of histogram entries 
   TH1F GetDifHistogram(TH1* hin,Int_t mode,TString s="",TF1* f=0) const;  // Construct the differential dy/dx vs. x histogram from a 1D y vs. x histogram
   TH1F GetCountsHistogram(TF1& spec,Int_t nbins,Double_t xmin, Double_t xmax,Int_t mode,TString s="") const;  // Construct the counts (N) vs. x histogram from a 1D differential spectrum dN/dx
   TH1F GetLogHistogram(TH1* hin,Int_t mode,TString s="") const; // Construct the Log10(y) or Ln(y) vs. x histogram from a 1D y vs. x histogram
@@ -149,9 +149,9 @@ class NcAstrolab2 : public TTask,public NcTimestamp
   Double_t GetBurstSignalEnergy(Double_t Emin=-1,Double_t Emax=-1) const;
   Double_t GetBurstBackgroundEnergy(Double_t Emin=-1,Double_t Emax=-1) const;
   TH1* GetBurstBayesianSignalRate(Double_t p,Double_t& rlow,Double_t& rup,Int_t n=1000); // Provide transient burst Bayesian signal rate and credible interval 
-  Double_t GetBurstLiMaSignificance() const;                         // Provide the transient burst Li-Ma signal significance
-  void GetBurstBayesianPsiStatistics(TString type,Int_t ndt=2,Double_t nr=-1,Int_t ncut=10,Int_t freq=0); // Provide transient burst Bayesian Psi statistics
-  void GetBurstChi2Statistics(TString type,Int_t ndt=2);             // Provide the transient burst Chi-squared statistics
+  Double_t GetBurstLiMaSignificance() const; // Provide the transient burst Li-Ma signal significance
+  void GetBurstBayesianPsiStatistics(TString type,Double_t nr=-1,Int_t ncut=10,Int_t ndt=2,Int_t mode=1,Double_t fact=1,Int_t freq=0); // Provide transient burst Bayesian Psi statistics
+  void GetBurstChi2Statistics(TString type,Int_t ndt=2,Int_t mode=1,Double_t fact=1); // Provide the transient burst Chi-squared statistics
  
  protected:
   NcPosition fLabPos;    // Position of the lab in the terrestrial longitude-latitude frame
@@ -262,6 +262,6 @@ class NcAstrolab2 : public TTask,public NcTimestamp
   // Internal function for transient burst investigations
   void BurstCompensate(Int_t& nmugrb,Float_t Grbnu,Float_t Ngrbs,Int_t Inburst,Float_t Dtnu,Float_t Dtnus,Float_t Angres,Float_t Timres,Float_t Datype,Float_t Dawin);
  
- ClassDef(NcAstrolab2,31) // Virtual lab to provide (astro)physical parameters, treat data and relate observations with astrophysical phenomena
+ ClassDef(NcAstrolab,31) // Virtual lab to provide (astro)physical parameters, treat data and relate observations with astrophysical phenomena
 };
 #endif
