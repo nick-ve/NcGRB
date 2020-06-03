@@ -28,14 +28,14 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 ///////////////////////////////////////////////////////////////////////////
-// Class NcAstrolab
+// Class NcAstrolab2
 // Virtual lab to provide (astro)physical parameters, treat data and relate observations with astrophysical phenomena
 //
 // This class is derived from TTask, but the only reason for this
 // is to enable this class to serve as a base class for other TTask
 // derived classes (e.g. NcEventSelector) without the need for
 // multiple virtual inheritance.
-// So, this NcAstrolab class itself does not provide any TTask
+// So, this NcAstrolab2 class itself does not provide any TTask
 // related functionality.
 //
 // The lab can be given a terrestrial location via the usual longitude
@@ -57,7 +57,7 @@
 //
 // Various external (astrophysical) phenomena may be entered as
 // so-called reference signals.
-// This NcAstrolab class provides facilities (e.g. MatchSignals) to check
+// This NcAstrolab2 class provides facilities (e.g. MatchSignals) to check
 // correlations of the stored measurements with these reference signals.
 // The memberfunction SetTimeScramble provides a facility to scramble
 // the timestamp of an observation or time differences with reference signals.
@@ -66,7 +66,7 @@
 // These facilities will enable a background c.q. blind analysis in studying
 // correlations with external (astrophysical) phenomena.
 //
-// By default different random sequences are ensured for different NcAstrolab instances,
+// By default different random sequences are ensured for different NcAstrolab2 instances,
 // even with identical stored measurements and reference signals.  
 // In case the user wants to control the random sequence (e.g. to obtain reproducible results),
 // the randomiser has to be explicitly initialised via the member function SetRandomiser().
@@ -78,14 +78,14 @@
 // ----------------
 // gSystem->Load("ncfspack");
 //
-// NcAstrolab lab("IceCube","The South Pole Neutrino Observatory");
+// NcAstrolab2 lab("IceCube","The South Pole Neutrino Observatory");
 // lab.SetLabPosition(0,-90,"deg"); // South Pole
 //
 // // Right handed Amanda/IceCube local frame has Y-North, X-East and Z-Zenith
 // lab.SetLocalFrame(90,90,90,180,0,0);
 //
 // // Note : The above lab initialisation could also have been performed as follows :
-// // NcAstrolab lab;
+// // NcAstrolab2 lab;
 // // lab.SetExperiment("IceCube"); // Set more precise IceCube location and orientation
 //
 // // Print laboratory parameters
@@ -155,12 +155,12 @@
 //- Modified: Nick van Eijndhoven, IIHE-VUB, Brussel, March 2, 2020  11:46
 ///////////////////////////////////////////////////////////////////////////
 
-#include "NcAstrolab.h"
+#include "NcAstrolab2.h"
 #include "Riostream.h"
  
-ClassImp(NcAstrolab) // Class implementation to enable ROOT I/O
+ClassImp(NcAstrolab2) // Class implementation to enable ROOT I/O
  
-NcAstrolab::NcAstrolab(const char* name,const char* title) : TTask(name,title),NcTimestamp()
+NcAstrolab2::NcAstrolab2(const char* name,const char* title) : TTask(name,title),NcTimestamp()
 {
 // Default constructor
 
@@ -251,7 +251,7 @@ NcAstrolab::NcAstrolab(const char* name,const char* title) : TTask(name,title),N
 
 }
 ///////////////////////////////////////////////////////////////////////////
-NcAstrolab::~NcAstrolab()
+NcAstrolab2::~NcAstrolab2()
 {
 // Destructor to delete all allocated memory.
 
@@ -330,7 +330,7 @@ NcAstrolab::~NcAstrolab()
  if (fTasks) fTasks->Clear();
 }
 ///////////////////////////////////////////////////////////////////////////
-NcAstrolab::NcAstrolab(const NcAstrolab& t) : TTask(t),NcTimestamp(t)
+NcAstrolab2::NcAstrolab2(const NcAstrolab2& t) : TTask(t),NcTimestamp(t)
 {
 // Copy constructor
 
@@ -409,7 +409,7 @@ NcAstrolab::NcAstrolab(const NcAstrolab& t) : TTask(t),NcTimestamp(t)
  if (dx) fBurstParameters=(NcDevice*)dx->Clone();
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::Data(Int_t mode,TString u,Bool_t utc)
+void NcAstrolab2::Data(Int_t mode,TString u,Bool_t utc)
 {
 // Provide lab information.
 //
@@ -525,13 +525,13 @@ void NcAstrolab::Data(Int_t mode,TString u,Bool_t utc)
  {
   cout << " *** The internal NcRandom randomiser is currently not intialised ***" << endl;
   cout << " Automatic initialisation will be performed with the actual timestamp at the first random number request." << endl;
-  cout << " This will ensure different random sequences for different NcAstrolab instances." << endl;
+  cout << " This will ensure different random sequences for different NcAstrolab2 instances." << endl;
   cout << " To obtain reproducible scrambled results, please invoke SetRandomiser() before the first SetSignal() invokation." << endl;
  }
  cout << " ------------------" << endl;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::SetLabPosition(Nc3Vector& p)
+void NcAstrolab2::SetLabPosition(Nc3Vector& p)
 {
 // Set the lab position in the terrestrial coordinates and its corresponding
 // time offset w.r.t. UT.
@@ -548,7 +548,7 @@ void NcAstrolab::SetLabPosition(Nc3Vector& p)
  fToffset=l/15.;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::SetLabPosition(Double_t l,Double_t b,TString u)
+void NcAstrolab2::SetLabPosition(Double_t l,Double_t b,TString u)
 {
 // Set the lab position in the terrestrial longitude (l) and latitude (b)
 // and its corresponding time offset w.r.t. UT.
@@ -582,7 +582,7 @@ void NcAstrolab::SetLabPosition(Double_t l,Double_t b,TString u)
  fToffset=l/15.;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::SetExperiment(TString name)
+void NcAstrolab2::SetExperiment(TString name)
 {
 // Set position, local frame definition and time offset w.r.t. UT
 // for the experiment as specified via the argument "name".
@@ -596,7 +596,7 @@ void NcAstrolab::SetExperiment(TString name)
 // ARA     : The Askaryan Radio Array at the South Pole
 // RNO-G   : The Greenland Radio Neutrino Observatory at Summit Station
 //
-// Note : The name and title for the NcAstrolab object are updated automatically
+// Note : The name and title for the NcAstrolab2 object are updated automatically
 //        according to the specified experiment name at invokation of this
 //        memberfunction.
 //        In case a different name and/or title is required, please use the 
@@ -667,7 +667,7 @@ void NcAstrolab::SetExperiment(TString name)
  cout << " *" << ClassName() << "::SetExperiment* Unsupported experiment name : " << name.Data() << endl;
  }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::SetLabTimeOffset(Double_t dt)
+void NcAstrolab2::SetLabTimeOffset(Double_t dt)
 {
 // Set the lab time offset (dt) w.r.t. UT in (fractional) hours.
 // Normally one should not use this function, but set the time offset automatically 
@@ -678,7 +678,7 @@ void NcAstrolab::SetLabTimeOffset(Double_t dt)
  fToffset=dt;
 }
 ///////////////////////////////////////////////////////////////////////////
-NcPosition NcAstrolab::GetLabPosition() const
+NcPosition NcAstrolab2::GetLabPosition() const
 {
 // Provide the lab position in the terrestrial coordinates.
 // The right handed position reference frame is defined such that the North Pole
@@ -688,7 +688,7 @@ NcPosition NcAstrolab::GetLabPosition() const
  return fLabPos;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::GetLabPosition(Double_t& l,Double_t& b,TString u) const
+void NcAstrolab2::GetLabPosition(Double_t& l,Double_t& b,TString u) const
 {
 // Provide the lab position in the terrestrial longitude (l) and latitude (b).
 // Positions north of the equator have b>0, whereas b<0 indicates
@@ -713,7 +713,7 @@ void NcAstrolab::GetLabPosition(Double_t& l,Double_t& b,TString u) const
  l=p[2];
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::GetLabTimeOffset() const
+Double_t NcAstrolab2::GetLabTimeOffset() const
 {
 // Provide the lab time offset (dt) w.r.t. UT in (fractional) hours.
 // This time offset is automatically set by invokation of the memberfunctions
@@ -722,7 +722,7 @@ Double_t NcAstrolab::GetLabTimeOffset() const
  return fToffset;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::SetRandomiser(Int_t iseed,Int_t cnt1,Int_t cnt2,NcTimestamp* ts)
+void NcAstrolab2::SetRandomiser(Int_t iseed,Int_t cnt1,Int_t cnt2,NcTimestamp* ts)
 {
 // (Re)initialise the internal NcRandom randomisation facility.
 //
@@ -730,14 +730,14 @@ void NcAstrolab::SetRandomiser(Int_t iseed,Int_t cnt1,Int_t cnt2,NcTimestamp* ts
 // ------
 // This member function provides the user a handle to (re)initialise the internal randomisation
 // facility in order to obtain reproducible scrambled results or to define unique random sequences
-// for various NcAstrolab instances.
+// for various NcAstrolab2 instances.
 // If not initialised by the user, the randomisation facility is internally automatically "date/time driven"
 // initialised by the actual timestamp of the moment the first need for a randomisation arises.
-// This will ensure different random sequences for different NcAstrolab instances (if created at least 0.01 sec. apart),
+// This will ensure different random sequences for different NcAstrolab2 instances (if created at least 0.01 sec. apart),
 // even in the case of identical stored measurements and reference signals.
 // For details about the atomatically generated seed value please refer to the NcRandom documentation.
 //
-// So, in case there is no need for reproducible scrambled results among NcAstrolab instances that are created
+// So, in case there is no need for reproducible scrambled results among NcAstrolab2 instances that are created
 // at time intervals of more than 0.01 second, the user is advised NOT to invoke this member function.
 //
 // Input arguments :
@@ -748,18 +748,18 @@ void NcAstrolab::SetRandomiser(Int_t iseed,Int_t cnt1,Int_t cnt2,NcTimestamp* ts
 //                For allowed seed values and info on the parameters "cnt1" and "cnt2"
 //                please refer to the docs of NcRandom.
 //       < 0  --> Use the provided NcTimestamp "ts" to generate a seed for the internal NcRandom object.
-//                If ts=0 the current timestamp of this NcAstrolab instance is used.
+//                If ts=0 the current timestamp of this NcAstrolab2 instance is used.
 //                The values of "cnt1" and "cnt2" are irrelevant, since the random sequence will always
 //                be started from scratch.
 //
 // Note :
 // ------
-// Reproducible scrambled results among different NcAstrolab instances is only possible if they are
+// Reproducible scrambled results among different NcAstrolab2 instances is only possible if they are
 // all initialised with the same parameters for the internal randomiser.
 // This implies that when initialisation is performed via a timestamp, this timestamp should be the
-// same for all the corresponding NcAstrolab instances. This can be obtained via an explicit SetUT()
-// invokation of the provided timestamp or NcAstrolab instance.
-// By providing a specific iseed>=0 (and optionally "cnt1" and "cnt2") for all NcAstrolab instances,
+// same for all the corresponding NcAstrolab2 instances. This can be obtained via an explicit SetUT()
+// invokation of the provided timestamp or NcAstrolab2 instance.
+// By providing a specific iseed>=0 (and optionally "cnt1" and "cnt2") for all NcAstrolab2 instances,
 // reproducibility is automatically obtained if the stored signals are identical.
 //
 // The default values are cnt1=0, cnt2=0 and ts=0.
@@ -771,7 +771,7 @@ void NcAstrolab::SetRandomiser(Int_t iseed,Int_t cnt1,Int_t cnt2,NcTimestamp* ts
  fRan=new NcRandom(iseed,cnt1,cnt2,ts);
 }
 ///////////////////////////////////////////////////////////////////////////
-NcRandom* NcAstrolab::GetRandomiser(Int_t& iseed,Int_t& cnt1,Int_t& cnt2) const
+NcRandom* NcAstrolab2::GetRandomiser(Int_t& iseed,Int_t& cnt1,Int_t& cnt2) const
 {
 // Provide the current "iseed", "cnt1" and "cnt2" parameters of the internal NcRandom randomiser.
 // For detailed information about these parameters please refer to the docs of NcRandom. 
@@ -792,7 +792,7 @@ NcRandom* NcAstrolab::GetRandomiser(Int_t& iseed,Int_t& cnt1,Int_t& cnt2) const
  return fRan;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::SetMaxDt(Double_t s)
+void NcAstrolab2::SetMaxDt(Double_t s)
 {
 // Set the maximum time difference (in sec) for returning a timestamp related
 // (reference) signal via GetSignal.
@@ -805,7 +805,7 @@ void NcAstrolab::SetMaxDt(Double_t s)
  fMaxDt=s;
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::GetMaxDt() const
+Double_t NcAstrolab2::GetMaxDt() const
 {
 // Provide the maximum time difference (in sec) for returning a timestamp related
 // (reference) signal via GetSignal.
@@ -816,7 +816,7 @@ Double_t NcAstrolab::GetMaxDt() const
  return fMaxDt;
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::GetLT()
+Double_t NcAstrolab2::GetLT()
 {
 // Provide the Lab's local time in fractional hours.
 // A mean solar day lasts 24h (i.e. 86400s).
@@ -827,7 +827,7 @@ Double_t NcAstrolab::GetLT()
  return h;
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::GetLMST()
+Double_t NcAstrolab2::GetLMST()
 {
 // Provide the Lab's Local Mean Sidereal Time (LMST) in fractional hours.
 // A sidereal day corresponds to 23h 56m 04.09s (i.e. 86164.09s) mean solar time.
@@ -841,7 +841,7 @@ Double_t NcAstrolab::GetLMST()
  return h;
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::GetLAST()
+Double_t NcAstrolab2::GetLAST()
 {
 // Provide the Lab's Local Apparent Sidereal Time (LAST) in fractional hours.
 // A sidereal day corresponds to 23h 56m 04.09s (i.e. 86164.09s) mean solar time.
@@ -855,7 +855,7 @@ Double_t NcAstrolab::GetLAST()
  return h;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::PrintAngle(Double_t a,TString in,TString out,Int_t ndig) const
+void NcAstrolab2::PrintAngle(Double_t a,TString in,TString out,Int_t ndig) const
 {
 // Printing of angles in various formats.
 //
@@ -973,7 +973,7 @@ void NcAstrolab::PrintAngle(Double_t a,TString in,TString out,Int_t ndig) const
  }
 }
 ///////////////////////////////////////////////////////////////////////////
-NcSignal* NcAstrolab::SetSignal(Nc3Vector* r,TString frame,TString mode,NcTimestamp* ts,Int_t jref,TString name,Int_t type)
+NcSignal* NcAstrolab2::SetSignal(Nc3Vector* r,TString frame,TString mode,NcTimestamp* ts,Int_t jref,TString name,Int_t type)
 {
 // Internal memberfunction for generic storage of a signal as specified by the position r and the timestamp ts.
 // The pointer to the stored signal is returned (0 in case of incompatible data).
@@ -996,11 +996,11 @@ NcSignal* NcAstrolab::SetSignal(Nc3Vector* r,TString frame,TString mode,NcTimest
 //                    where the "sph" components of r correspond to theta=(pi/2)-b and phi=l.
 //          "ecl" ==> Geocentric ecliptic coordinates with longitude (l) and latitude (b),
 //                    where the "sph" components of r correspond to theta=(pi/2)-b and phi=l.
-//          "hor" ==> Horizontal coordinates at the NcAstrolab location, where the "sph"
+//          "hor" ==> Horizontal coordinates at the NcAstrolab2 location, where the "sph"
 //                    components of r correspond to theta=zenith angle and phi=pi-azimuth.
 //          "icr" ==> ICRS coordinates with longitude (l) and latitude (b),
 //                    where the "sph" components of r correspond to theta=(pi/2)-b and phi=l.
-//          "loc" ==> Local coordinates at the NcAstrolab location, where the "sph"
+//          "loc" ==> Local coordinates at the NcAstrolab2 location, where the "sph"
 //                    components of r correspond to the usual theta and phi angles.
 //
 // In case the coordinates are the equatorial right ascension and declination (a,d),
@@ -1366,7 +1366,7 @@ NcSignal* NcAstrolab::SetSignal(Nc3Vector* r,TString frame,TString mode,NcTimest
  return sx;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::SetSolarSystem(TString name,NcTimestamp* ts,Int_t type)
+void NcAstrolab2::SetSolarSystem(TString name,NcTimestamp* ts,Int_t type)
 {
 // Internal memberfunction to set c.q. update coordinates for solar system objects
 // according to timestamp "ts".
@@ -1384,7 +1384,7 @@ void NcAstrolab::SetSolarSystem(TString name,NcTimestamp* ts,Int_t type)
 // All geocentric name specifications as indicated in the docs of NcTimestamp::Almanac()
 // are supported here.
 //
-// Note : In case ts=0 the current timestamp of this NcAstrolab instance will be taken.
+// Note : In case ts=0 the current timestamp of this NcAstrolab2 instance will be taken.
 //
 // The default value is type=0 for backward compatibility.
 
@@ -1409,7 +1409,7 @@ void NcAstrolab::SetSolarSystem(TString name,NcTimestamp* ts,Int_t type)
  if (set && jref) SetSignal(rx,lx,"deg",bx,"deg","ecl",ts,jref,"M",name,type);
 }
 ///////////////////////////////////////////////////////////////////////////
-NcSignal* NcAstrolab::SetSignal(Double_t d,Double_t a,TString au,Double_t b,TString bu,TString frame,NcTimestamp* ts,Int_t jref,TString mode,TString name,Int_t type)
+NcSignal* NcAstrolab2::SetSignal(Double_t d,Double_t a,TString au,Double_t b,TString bu,TString frame,NcTimestamp* ts,Int_t jref,TString mode,TString name,Int_t type)
 {
 // Store a signal as specified by the distance d, angular position (a,b) and the timestamp ts.
 // The pointer to the stored signal is returned (0 in case of incompatible data).
@@ -1441,9 +1441,9 @@ NcSignal* NcAstrolab::SetSignal(Double_t d,Double_t a,TString au,Double_t b,TStr
 //  frame = "equ" ==> Equatorial coordinates with right ascension (a) and declination (b).
 //          "gal" ==> Galactic coordinates with longitude (a) and latitude (b).
 //          "ecl" ==> Geocentric ecliptic coordinates with longitude (a) and latitude (b).
-//          "hor" ==> Horizontal coordinates at the NcAstrolab location, with azimuth angle (a) and zenith angle (b).
+//          "hor" ==> Horizontal coordinates at the NcAstrolab2 location, with azimuth angle (a) and zenith angle (b).
 //          "icr" ==> ICRS coordinates with longitude (a) and latitude (b).
-//          "loc" ==> Local coordinates at the NcAstrolab location, with usual spherical angles theta (a) and phi (b).
+//          "loc" ==> Local coordinates at the NcAstrolab2 location, with usual spherical angles theta (a) and phi (b).
 //
 // In case the coordinates are the equatorial right ascension and declination (a,b),
 // they can represent so-called "mean", "true" or reference "epoch" values.
@@ -1544,7 +1544,7 @@ NcSignal* NcAstrolab::SetSignal(Double_t d,Double_t a,TString au,Double_t b,TStr
  return sx;
 }
 ///////////////////////////////////////////////////////////////////////////
-NcSignal* NcAstrolab::SetSignal(Double_t d,Double_t a,TString au,Double_t b,TString bu,TString frame,TString s,Double_t e,Int_t jref,TString mode,TString name,Int_t type)
+NcSignal* NcAstrolab2::SetSignal(Double_t d,Double_t a,TString au,Double_t b,TString bu,TString frame,TString s,Double_t e,Int_t jref,TString mode,TString name,Int_t type)
 {
 // Store a signal as specified by the distance d, angular position (a,b) and the specified epoch.
 // The pointer to the stored signal is returned (0 in case of incompatible data).
@@ -1576,9 +1576,9 @@ NcSignal* NcAstrolab::SetSignal(Double_t d,Double_t a,TString au,Double_t b,TStr
 //  frame = "equ" ==> Equatorial coordinates with right ascension (a) and declination (b).
 //          "gal" ==> Galactic coordinates with longitude (a) and latitude (b).
 //          "ecl" ==> Geocentric ecliptic coordinates with longitude (a) and latitude (b).
-//          "hor" ==> Horizontal coordinates at the NcAstrolab location, with azimuth angle (a) and zenith angle (b).
+//          "hor" ==> Horizontal coordinates at the NcAstrolab2 location, with azimuth angle (a) and zenith angle (b).
 //          "icr" ==> ICRS coordinates with longitude (a) and latitude (b).
-//          "loc" ==> Local coordinates at the NcAstrolab location, with usual spherical angles theta (a) and phi (b).
+//          "loc" ==> Local coordinates at the NcAstrolab2 location, with usual spherical angles theta (a) and phi (b).
 //
 // The time of the observation is specified by the following epoch input arguments :
 //
@@ -1630,7 +1630,7 @@ NcSignal* NcAstrolab::SetSignal(Double_t d,Double_t a,TString au,Double_t b,TStr
  return sx;
 }
 ///////////////////////////////////////////////////////////////////////////
-Int_t NcAstrolab::GetNRefSignals(Int_t mode) const
+Int_t NcAstrolab2::GetNRefSignals(Int_t mode) const
 {
 // ************************************************************************************
 // *** This memberfunction is obsolete and is only kept for backward compatibility. ***
@@ -1658,7 +1658,7 @@ Int_t NcAstrolab::GetNRefSignals(Int_t mode) const
  return n;
 }
 ///////////////////////////////////////////////////////////////////////////
-Int_t NcAstrolab::GetNsignals(Int_t type,Int_t mode) const
+Int_t NcAstrolab2::GetNsignals(Int_t type,Int_t mode) const
 {
 // Provide the (max. index) number of stored signals of type "type".
 //
@@ -1697,7 +1697,7 @@ Int_t NcAstrolab::GetNsignals(Int_t type,Int_t mode) const
  return n;
 }
 ///////////////////////////////////////////////////////////////////////////
-NcSignal* NcAstrolab::GetSignal(Nc3Vector& r,TString frame,TString mode,NcTimestamp* ts,Int_t jref,Int_t type)
+NcSignal* NcAstrolab2::GetSignal(Nc3Vector& r,TString frame,TString mode,NcTimestamp* ts,Int_t jref,Int_t type)
 {
 // Internal memberfunction to provide the frame specific coordinates of a signal at the specified timestamp ts.
 // The coordinates are returned via the vector argument "r".
@@ -1718,11 +1718,11 @@ NcSignal* NcAstrolab::GetSignal(Nc3Vector& r,TString frame,TString mode,NcTimest
 //                    where the "sph" components of r correspond to theta=(pi/2)-b and phi=l.
 //          "ecl" ==> Geocentric ecliptic coordinates with longitude (l) and latitude (b),
 //                    where the "sph" components of r correspond to theta=(pi/2)-b and phi=l.
-//          "hor" ==> Horizontal coordinates at the NcAstrolab location, where the "sph"
+//          "hor" ==> Horizontal coordinates at the NcAstrolab2 location, where the "sph"
 //                    components of r correspond to theta=zenith angle and phi=pi-azimuth.
 //          "icr" ==> ICRS coordinates with longitude (l) and latitude (b),
 //                    where the "sph" components of r correspond to theta=(pi/2)-b and phi=l.
-//          "loc" ==> Local coordinates at the NcAstrolab location, where the "sph"
+//          "loc" ==> Local coordinates at the NcAstrolab2 location, where the "sph"
 //                    components of r correspond to the usual theta and phi angles.
 //
 // In case the coordinates are the equatorial right ascension and declination (a,d),
@@ -1863,7 +1863,7 @@ NcSignal* NcAstrolab::GetSignal(Nc3Vector& r,TString frame,TString mode,NcTimest
  return sx;
 }
 ///////////////////////////////////////////////////////////////////////////
-NcSignal* NcAstrolab::GetSignal(Double_t& d,Double_t& a,TString au,Double_t& b,TString bu,TString frame,NcTimestamp* ts,Int_t jref,TString mode,Int_t type)
+NcSignal* NcAstrolab2::GetSignal(Double_t& d,Double_t& a,TString au,Double_t& b,TString bu,TString frame,NcTimestamp* ts,Int_t jref,TString mode,Int_t type)
 {
 // Provide celestial position data (d,a,b) of the signal specified by "jref" and "type" at the specific timestamp ts.
 // For angular celestial positions it is quite common to use unit vectors, i.e. d=1.
@@ -1895,9 +1895,9 @@ NcSignal* NcAstrolab::GetSignal(Double_t& d,Double_t& a,TString au,Double_t& b,T
 //  frame = "equ" ==> Equatorial coordinates with right ascension (a) and declination (b).
 //          "gal" ==> Galactic coordinates with longitude (a) and latitude (b).
 //          "ecl" ==> Geocentric ecliptic coordinates with longitude (a) and latitude (b).
-//          "hor" ==> Horizontal coordinates at the NcAstrolab location, with azimuth angle (a) and zenith angle (b).
+//          "hor" ==> Horizontal coordinates at the NcAstrolab2 location, with azimuth angle (a) and zenith angle (b).
 //          "icr" ==> ICRS coordinates with longitude (a) and latitude (b).
-//          "loc" ==> Local coordinates at the NcAstrolab location, with usual spherical angles theta (a) and phi (b).
+//          "loc" ==> Local coordinates at the NcAstrolab2 location, with usual spherical angles theta (a) and phi (b).
 //
 // The string input arguments "au" and "bu" allow the user to specifiy the units in which
 // the angular coordinates "a" and "b" are provided. The convention is the following :
@@ -1992,7 +1992,7 @@ NcSignal* NcAstrolab::GetSignal(Double_t& d,Double_t& a,TString au,Double_t& b,T
  return sx;
 }
 ///////////////////////////////////////////////////////////////////////////
-NcSignal* NcAstrolab::GetSignal(Double_t& d,Double_t& a,TString au,Double_t& b,TString bu,TString frame,NcTimestamp* ts,TString name,TString mode,Int_t type)
+NcSignal* NcAstrolab2::GetSignal(Double_t& d,Double_t& a,TString au,Double_t& b,TString bu,TString frame,NcTimestamp* ts,TString name,TString mode,Int_t type)
 {
 // Provide celestial position data (d,a,b) of the signal specified by "name" and "type" at the specific timestamp ts.
 // For angular celestial positions it is quite common to use unit vectors, i.e. d=1.
@@ -2025,9 +2025,9 @@ NcSignal* NcAstrolab::GetSignal(Double_t& d,Double_t& a,TString au,Double_t& b,T
 //  frame = "equ" ==> Equatorial coordinates with right ascension (a) and declination (b).
 //          "gal" ==> Galactic coordinates with longitude (a) and latitude (b).
 //          "ecl" ==> Geocentric ecliptic coordinates with longitude (a) and latitude (b).
-//          "hor" ==> Horizontal coordinates at the NcAstrolab location, with azimuth angle (a) and zenith angle (b).
+//          "hor" ==> Horizontal coordinates at the NcAstrolab2 location, with azimuth angle (a) and zenith angle (b).
 //          "icr" ==> ICRS coordinates with longitude (a) and latitude (b).
-//          "loc" ==> Local coordinates at the NcAstrolab location, with usual spherical angles theta (a) and phi (b).
+//          "loc" ==> Local coordinates at the NcAstrolab2 location, with usual spherical angles theta (a) and phi (b).
 //
 // The string input arguments "au" and "bu" allow the user to specifiy the units in which
 // the angular coordinates "a" and "b" are provided. The convention is the following :
@@ -2071,7 +2071,7 @@ NcSignal* NcAstrolab::GetSignal(Double_t& d,Double_t& a,TString au,Double_t& b,T
  return sx;
 }
 ///////////////////////////////////////////////////////////////////////////
-NcSignal* NcAstrolab::GetSignal(Double_t& d,Double_t& a,TString au,Double_t& b,TString bu,TString frame,TString s,Double_t e,Int_t jref,TString mode,Int_t type)
+NcSignal* NcAstrolab2::GetSignal(Double_t& d,Double_t& a,TString au,Double_t& b,TString bu,TString frame,TString s,Double_t e,Int_t jref,TString mode,Int_t type)
 {
 // Provide celestial position data (d,a,b) of the signal specified by "jref" and "type" at the specified epoch.
 // For angular celestial positions it is quite common to use unit vectors, i.e. d=1.
@@ -2105,9 +2105,9 @@ NcSignal* NcAstrolab::GetSignal(Double_t& d,Double_t& a,TString au,Double_t& b,T
 //  frame = "equ" ==> Equatorial coordinates with right ascension (a) and declination (b).
 //          "gal" ==> Galactic coordinates with longitude (a) and latitude (b).
 //          "ecl" ==> Geocentric ecliptic coordinates with longitude (a) and latitude (b).
-//          "hor" ==> Horizontal coordinates at the NcAstrolab location, with azimuth angle (a) and zenith angle (b).
+//          "hor" ==> Horizontal coordinates at the NcAstrolab2 location, with azimuth angle (a) and zenith angle (b).
 //          "icr" ==> ICRS coordinates with longitude (a) and latitude (b).
-//          "loc" ==> Local coordinates at the NcAstrolab location, with usual spherical angles theta (a) and phi (b).
+//          "loc" ==> Local coordinates at the NcAstrolab2 location, with usual spherical angles theta (a) and phi (b).
 //
 // The string input arguments "au" and "bu" allow the user to specifiy the units in which
 // the angular coordinates "a" and "b" are provided. The convention is the following :
@@ -2157,7 +2157,7 @@ NcSignal* NcAstrolab::GetSignal(Double_t& d,Double_t& a,TString au,Double_t& b,T
  return sx;
 }
 ///////////////////////////////////////////////////////////////////////////
-NcSignal* NcAstrolab::GetSignal(Double_t& d,Double_t& a,TString au,Double_t& b,TString bu,TString frame,TString s,Double_t e,TString name,TString mode,Int_t type)
+NcSignal* NcAstrolab2::GetSignal(Double_t& d,Double_t& a,TString au,Double_t& b,TString bu,TString frame,TString s,Double_t e,TString name,TString mode,Int_t type)
 {
 // Provide celestial position data (d,a,b) of the signal specified by "name" and "type" at the specified epoch.
 // For angular celestial positions it is quite common to use unit vectors, i.e. d=1.
@@ -2192,9 +2192,9 @@ NcSignal* NcAstrolab::GetSignal(Double_t& d,Double_t& a,TString au,Double_t& b,T
 //  frame = "equ" ==> Equatorial coordinates with right ascension (a) and declination (b).
 //          "gal" ==> Galactic coordinates with longitude (a) and latitude (b).
 //          "ecl" ==> Geocentric ecliptic coordinates with longitude (a) and latitude (b).
-//          "hor" ==> Horizontal coordinates at the NcAstrolab location, with azimuth angle (a) and zenith angle (b).
+//          "hor" ==> Horizontal coordinates at the NcAstrolab2 location, with azimuth angle (a) and zenith angle (b).
 //          "icr" ==> ICRS coordinates with longitude (a) and latitude (b).
-//          "loc" ==> Local coordinates at the NcAstrolab location, with usual spherical angles theta (a) and phi (b).
+//          "loc" ==> Local coordinates at the NcAstrolab2 location, with usual spherical angles theta (a) and phi (b).
 //
 // The string input arguments "au" and "bu" allow the user to specifiy the units in which
 // the angular coordinates "a" and "b" are provided. The convention is the following :
@@ -2242,7 +2242,7 @@ NcSignal* NcAstrolab::GetSignal(Double_t& d,Double_t& a,TString au,Double_t& b,T
  return sx;
 }
 ///////////////////////////////////////////////////////////////////////////
-NcSignal* NcAstrolab::GetSignal(Int_t jref,Int_t type)
+NcSignal* NcAstrolab2::GetSignal(Int_t jref,Int_t type)
 {
 // Provide the pointer to a stored signal object.
 //
@@ -2284,7 +2284,7 @@ NcSignal* NcAstrolab::GetSignal(Int_t jref,Int_t type)
  return sx;
 }
 ///////////////////////////////////////////////////////////////////////////
-NcSignal* NcAstrolab::GetSignal(TString name,Int_t type,NcTimestamp* ts)
+NcSignal* NcAstrolab2::GetSignal(TString name,Int_t type,NcTimestamp* ts)
 {
 // Provide the pointer to the stored signal object with the specified name and type.
 //
@@ -2295,7 +2295,7 @@ NcSignal* NcAstrolab::GetSignal(TString name,Int_t type,NcTimestamp* ts)
 // Note : In case the name specifies a solar system object which was not yet stored,
 //        the corresponding signal will be created according to "type" and the provided
 //        timestamp "ts".
-//        In case ts=0, the current timestamp of this NcAstrolab instance will be used.
+//        In case ts=0, the current timestamp of this NcAstrolab2 instance will be used.
 //        All geocentric name specifications for solar system objects as indicated in the
 //        docs of NcTimestamp::Almanac() are supported.
 //
@@ -2314,7 +2314,7 @@ NcSignal* NcAstrolab::GetSignal(TString name,Int_t type,NcTimestamp* ts)
  return sx;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::RemoveRefSignal(Int_t j,Int_t compress)
+void NcAstrolab2::RemoveRefSignal(Int_t j,Int_t compress)
 {
 // ***********************************************************************************
 // *** This memberfunction is obsolete and is only kept for backward compatibility ***
@@ -2354,7 +2354,7 @@ void NcAstrolab::RemoveRefSignal(Int_t j,Int_t compress)
  if (compress) fRefs->Compress();
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::RemoveRefSignal(TString name,Int_t compress)
+void NcAstrolab2::RemoveRefSignal(TString name,Int_t compress)
 {
 // ***********************************************************************************
 // *** This memberfunction is obsolete and is only kept for backward compatibility ***
@@ -2375,7 +2375,7 @@ void NcAstrolab::RemoveRefSignal(TString name,Int_t compress)
  if (j>0) RemoveRefSignal(j,compress);
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::RemoveSignal(Int_t j,Int_t type,Int_t compress)
+void NcAstrolab2::RemoveSignal(Int_t j,Int_t type,Int_t compress)
 {
 // Remove the signal of type "type" which was stored at the j-th position (j=1 is first).
 // Note : j=0 means that all stored signals of type "type" will be removed.
@@ -2416,7 +2416,7 @@ void NcAstrolab::RemoveSignal(Int_t j,Int_t type,Int_t compress)
  if (compress) arr->Compress();
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::RemoveSignal(TString name,Int_t type,Int_t compress)
+void NcAstrolab2::RemoveSignal(TString name,Int_t type,Int_t compress)
 {
 // Remove the signal with the specified name and type.
 //
@@ -2438,7 +2438,7 @@ void NcAstrolab::RemoveSignal(TString name,Int_t type,Int_t compress)
  if (j>0) RemoveSignal(j,type,compress);
 }
 ///////////////////////////////////////////////////////////////////////////
-Int_t NcAstrolab::GetSignalIndex(TString name,Int_t type)
+Int_t NcAstrolab2::GetSignalIndex(TString name,Int_t type)
 {
 // Provide storage index of the signal with the specified name.
 //
@@ -2471,7 +2471,7 @@ Int_t NcAstrolab::GetSignalIndex(TString name,Int_t type)
  return index;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t ndig,Int_t jref,TString emode,Int_t type)
+void NcAstrolab2::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t ndig,Int_t jref,TString emode,Int_t type)
 {
 // Print data of a stored signal in user specified coordinates at the specific timestamp ts.
 // In case ts=0 the actual timestamp of the stored signal will be taken.
@@ -2496,11 +2496,11 @@ void NcAstrolab::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t nd
 //
 //          "ecl" ==> Geocentric ecliptic coordinates with longitude (l) and latitude (b).
 //
-//          "hor" ==> Horizontal azimuth and altitude coordinates at the NcAstrolab location.
+//          "hor" ==> Horizontal azimuth and altitude coordinates at the NcAstrolab2 location.
 //
 //          "icr" ==> ICRS coordinates with longitude (l) and latitude (b).
 //
-//          "loc" ==> Local spherical angles theta and phi at the NcAstrolab location.
+//          "loc" ==> Local spherical angles theta and phi at the NcAstrolab2 location.
 //
 // In case the coordinates are the equatorial right ascension and declination (a,d),
 // they can represent so-called "mean", "true" and reference "epoch" values.
@@ -2661,7 +2661,7 @@ void NcAstrolab::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t nd
  }
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t ndig,TString name,TString emode,Int_t type)
+void NcAstrolab2::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t ndig,TString name,TString emode,Int_t type)
 {
 // Print data of the stored signal with the specified name and type in user specified coordinates
 // at the specific timestamp ts.
@@ -2675,7 +2675,7 @@ void NcAstrolab::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t nd
 // Note : In case the name specifies a solar system object which was not yet stored according to "type",
 //        the corresponding signal will be created and stored with the specified timestamp.
 //        In case ts=0 the solar system object will be stored with the current timestamp of
-//        this NcAstrolab instance.
+//        this NcAstrolab2 instance.
 //        All geocentric name specifications for solar system objects as indicated in the
 //        docs of NcTimestamp::Almanac() are supported.
 //
@@ -2697,11 +2697,11 @@ void NcAstrolab::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t nd
 //
 //          "ecl" ==> Geocentric ecliptic coordinates with longitude (l) and latitude (b).
 //
-//          "hor" ==> Horizontal azimuth and altitude coordinates at the NcAstrolab location.
+//          "hor" ==> Horizontal azimuth and altitude coordinates at the NcAstrolab2 location.
 //
 //          "icr" ==> ICRS coordinates with longitude (l) and latitude (b).
 //
-//          "loc" ==> Local spherical angles theta and phi at the NcAstrolab location.
+//          "loc" ==> Local spherical angles theta and phi at the NcAstrolab2 location.
 //
 // In case the coordinates are the equatorial right ascension and declination (a,d),
 // they can represent so-called "mean", "true" or reference "epoch" values.
@@ -2736,7 +2736,7 @@ void NcAstrolab::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t nd
  if (j>=0) PrintSignal(frame,mode,ts,ndig,j,emode,type);
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::ListSignals(TString frame,TString mode,Int_t ndig,TString emode,Int_t nmax,Int_t j,Int_t type)
+void NcAstrolab2::ListSignals(TString frame,TString mode,Int_t ndig,TString emode,Int_t nmax,Int_t j,Int_t type)
 {
 // List stored measurements and/or reference signals in user specified coordinates
 // at a specific timestamp.
@@ -2774,11 +2774,11 @@ void NcAstrolab::ListSignals(TString frame,TString mode,Int_t ndig,TString emode
 //
 //          "ecl" ==> Geocentric ecliptic coordinates with longitude (l) and latitude (b).
 //
-//          "hor" ==> Horizontal azimuth and altitude coordinates at the NcAstrolab location.
+//          "hor" ==> Horizontal azimuth and altitude coordinates at the NcAstrolab2 location.
 //
 //          "icr" ==> ICRS coordinates with longitude (l) and latitude (b).
 //
-//          "loc" ==> Local spherical angles theta and phi at the NcAstrolab location.
+//          "loc" ==> Local spherical angles theta and phi at the NcAstrolab2 location.
 //
 // In case the coordinates are the equatorial right ascension and declination (a,d),
 // they can represent so-called "mean", "true" and reference "epoch" values.
@@ -2964,7 +2964,7 @@ void NcAstrolab::ListSignals(TString frame,TString mode,Int_t ndig,TString emode
  }
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::Precess(Nc3Vector& r,NcTimestamp* ts1,NcTimestamp* ts2)
+void NcAstrolab2::Precess(Nc3Vector& r,NcTimestamp* ts1,NcTimestamp* ts2)
 {
 // Correct mean right ascension and declination (as given for timestamp ts1)
 // for the earth's precession, corresponding to the specified timestamp ts2.
@@ -2998,7 +2998,7 @@ void NcAstrolab::Precess(Nc3Vector& r,NcTimestamp* ts1,NcTimestamp* ts2)
  r=r0.GetPrimed(&fP);
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::Nutate(Nc3Vector& r,NcTimestamp* ts)
+void NcAstrolab2::Nutate(Nc3Vector& r,NcTimestamp* ts)
 {
 // Correct mean right ascension and declination for the earth's nutation
 // corresponding to the specified timestamp.
@@ -3022,7 +3022,7 @@ void NcAstrolab::Nutate(Nc3Vector& r,NcTimestamp* ts)
  r=r.GetPrimed(&fN);
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::SetBmatrix()
+void NcAstrolab2::SetBmatrix()
 {
 // Set the frame bias matrix elements.
 // The formulas and numerical constants used are the ones from the 
@@ -3056,7 +3056,7 @@ void NcAstrolab::SetBmatrix()
  fBias=1;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::SetPmatrix(NcTimestamp* ts)
+void NcAstrolab2::SetPmatrix(NcTimestamp* ts)
 {
 // Set precession matrix elements for Julian date jd w.r.t. J2000.
 // The formulas and numerical constants used are the ones from the 
@@ -3112,7 +3112,7 @@ void NcAstrolab::SetPmatrix(NcTimestamp* ts)
  fP.SetMatrix(mat);
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::SetNmatrix(NcTimestamp* ts)
+void NcAstrolab2::SetNmatrix(NcTimestamp* ts)
 {
 // Set nutation matrix elements for the specified Julian date jd.
 // The formulas and numerical constants used are the ones from the 
@@ -3156,7 +3156,7 @@ void NcAstrolab::SetNmatrix(NcTimestamp* ts)
  fN.SetMatrix(mat);
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::SetGmatrix(TString mode)
+void NcAstrolab2::SetGmatrix(TString mode)
 {
 // Set the mean equatorial to galactic coordinate conversion matrix.
 // The B1950 parameters were taken from section 22.3 of the book
@@ -3214,7 +3214,7 @@ void NcAstrolab::SetGmatrix(TString mode)
               z.GetX(2,"sph","deg"),z.GetX(3,"sph","deg"));
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::SetEmatrix(NcTimestamp* ts)
+void NcAstrolab2::SetEmatrix(NcTimestamp* ts)
 {
 // Set the mean equatorial to ecliptic coordinate conversion matrix
 // for the specified timestamp.
@@ -3239,7 +3239,7 @@ void NcAstrolab::SetEmatrix(NcTimestamp* ts)
  fE.SetAngles(theta1,phi1,theta2,phi2,theta3,phi3);
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::SetHmatrix(NcTimestamp* ts)
+void NcAstrolab2::SetHmatrix(NcTimestamp* ts)
 {
 // Set the mean equatorial to horizontal coordinate conversion matrix
 // for the specified timestamp.
@@ -3281,7 +3281,7 @@ void NcAstrolab::SetHmatrix(NcTimestamp* ts)
               z.GetX(2,"sph","deg"),z.GetX(3,"sph","deg"));
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::SetLocalFrame(Double_t t1,Double_t p1,Double_t t2,Double_t p2,Double_t t3,Double_t p3)
+void NcAstrolab2::SetLocalFrame(Double_t t1,Double_t p1,Double_t t2,Double_t p2,Double_t t3,Double_t p3)
 {
 // Specification of the orientations of the local reference frame axes.
 // The input arguments represent the angles (in degrees) of the local-frame axes
@@ -3303,7 +3303,7 @@ void NcAstrolab::SetLocalFrame(Double_t t1,Double_t p1,Double_t t2,Double_t p2,D
  fL.SetAngles(t1,p1,t2,p2,t3,p3);
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::ConvertAngle(Double_t a,TString in,TString out) const
+Double_t NcAstrolab2::ConvertAngle(Double_t a,TString in,TString out) const
 {
 // Conversion of various angular formats.
 //
@@ -3437,7 +3437,7 @@ Double_t NcAstrolab::ConvertAngle(Double_t a,TString in,TString out) const
  return b;
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::GetSolidAngle(Double_t thetamin,Double_t thetamax,TString tu,Double_t phimin,Double_t phimax,TString pu) const
+Double_t NcAstrolab2::GetSolidAngle(Double_t thetamin,Double_t thetamax,TString tu,Double_t phimin,Double_t phimax,TString pu) const
 {
 // Provide the solid angle (in sr) between the specified boundaries.
 //
@@ -3463,7 +3463,7 @@ Double_t NcAstrolab::GetSolidAngle(Double_t thetamin,Double_t thetamax,TString t
  return omega;
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::GetHourAngle(TString mode,NcTimestamp* ts,Int_t jref,Int_t type)
+Double_t NcAstrolab2::GetHourAngle(TString mode,NcTimestamp* ts,Int_t jref,Int_t type)
 {
 // Provide the Local Hour Angle (in fractional degrees) of a stored signal
 // object at the specified timestamp.
@@ -3521,7 +3521,7 @@ Double_t NcAstrolab::GetHourAngle(TString mode,NcTimestamp* ts,Int_t jref,Int_t 
  return ha;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::SetLT(Int_t y,Int_t m,Int_t d,Int_t hh,Int_t mm,Int_t ss,Int_t ns,Int_t ps)
+void NcAstrolab2::SetLT(Int_t y,Int_t m,Int_t d,Int_t hh,Int_t mm,Int_t ss,Int_t ns,Int_t ps)
 {
 // Set the NcTimestamp parameters corresponding to the local date and time (LT)
 // in the Gregorian calendar as specified by the input arguments.
@@ -3545,7 +3545,7 @@ void NcAstrolab::SetLT(Int_t y,Int_t m,Int_t d,Int_t hh,Int_t mm,Int_t ss,Int_t 
  SetLT(fToffset,y,m,d,hh,mm,ss,ns,ps);
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::SetLT(Int_t y,Int_t m,Int_t d,Int_t hh,Int_t mm,Double_t s)
+void NcAstrolab2::SetLT(Int_t y,Int_t m,Int_t d,Int_t hh,Int_t mm,Double_t s)
 {
 // Set the NcTimestamp parameters corresponding to the local date and time (LT)
 // in the Gregorian calendar as specified by the input arguments.
@@ -3567,7 +3567,7 @@ void NcAstrolab::SetLT(Int_t y,Int_t m,Int_t d,Int_t hh,Int_t mm,Double_t s)
  SetLT(fToffset,y,m,d,hh,mm,s);
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::SetLT(Int_t y,Int_t m,Int_t d,TString time)
+void NcAstrolab2::SetLT(Int_t y,Int_t m,Int_t d,TString time)
 {
 // Set the NcTimestamp parameters corresponding to the local date and time (LT)
 // in the Gregorian calendar as specified by the input arguments.
@@ -3587,7 +3587,7 @@ void NcAstrolab::SetLT(Int_t y,Int_t m,Int_t d,TString time)
  SetLT(fToffset,y,m,d,time);
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::SetLT(TString date,TString time,Int_t mode)
+void NcAstrolab2::SetLT(TString date,TString time,Int_t mode)
 {
 // Set the NcTimestamp parameters corresponding to the local date and time (LT)
 // in the Gregorian calendar as specified by the input arguments.
@@ -3609,7 +3609,7 @@ void NcAstrolab::SetLT(TString date,TString time,Int_t mode)
  SetLT(fToffset,date,time,mode);
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::SetLT(Int_t y,Int_t d,Int_t s,Int_t ns,Int_t ps)
+void NcAstrolab2::SetLT(Int_t y,Int_t d,Int_t s,Int_t ns,Int_t ps)
 {
 // Set the NcTimestamp parameters corresponding to the specified elapsed
 // timespan since the beginning of the new LT year.
@@ -3635,7 +3635,7 @@ void NcAstrolab::SetLT(Int_t y,Int_t d,Int_t s,Int_t ns,Int_t ps)
  SetLT(fToffset,y,d,s,ns,ps);
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::GetDifference(Int_t j,TString au,Double_t& dt,TString tu,Int_t mode,Int_t* ia,Int_t* it)
+Double_t NcAstrolab2::GetDifference(Int_t j,TString au,Double_t& dt,TString tu,Int_t mode,Int_t* ia,Int_t* it)
 {
 // ************************************************************************************
 // *** This memberfunction is obsolete and is only kept for backward compatibility. ***
@@ -3727,7 +3727,7 @@ Double_t NcAstrolab::GetDifference(Int_t j,TString au,Double_t& dt,TString tu,In
  return da;
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::GetDifference(Int_t i,Int_t j,TString au,Double_t& dt,TString tu,Int_t mode)
+Double_t NcAstrolab2::GetDifference(Int_t i,Int_t j,TString au,Double_t& dt,TString tu,Int_t mode)
 {
 // Internal memberfunction to provide space and time difference between the i-th and j-th stored signal.
 // This memberfunction serves the MatchSignals() facility.
@@ -3887,7 +3887,7 @@ Double_t NcAstrolab::GetDifference(Int_t i,Int_t j,TString au,Double_t& dt,TStri
  return dang;
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::GetDifference(TString name,TString au,Double_t& dt,TString tu,Int_t mode)
+Double_t NcAstrolab2::GetDifference(TString name,TString au,Double_t& dt,TString tu,Int_t mode)
 {
 // ************************************************************************************
 // *** This memberfunction is obsolete and is only kept for backward compatibility. ***
@@ -3899,7 +3899,7 @@ Double_t NcAstrolab::GetDifference(TString name,TString au,Double_t& dt,TString 
 //
 // Note : In case the name specifies a solar system object supported by SetSolarSystem()
 //        which was not yet stored as a reference signal, the corresponding reference signal
-//        will be created and stored with the current timestamp of this NcAstrolab instance. 
+//        will be created and stored with the current timestamp of this NcAstrolab2 instance. 
 // 
 // The return value of this memberfunction provides the positional angular
 // difference, whereas the output argument "dt" provides the time difference.
@@ -3935,7 +3935,7 @@ Double_t NcAstrolab::GetDifference(TString name,TString au,Double_t& dt,TString 
  return dang;
 }
 ///////////////////////////////////////////////////////////////////////////
-TArrayI* NcAstrolab::MatchRefSignal(Double_t da,TString au,Double_t dt,TString tu,Int_t mode)
+TArrayI* NcAstrolab2::MatchRefSignal(Double_t da,TString au,Double_t dt,TString tu,Int_t mode)
 {
 // ***********************************************************************************
 // *** This memberfunction is obsolete and is only kept for backward compatibility ***
@@ -3994,7 +3994,7 @@ TArrayI* NcAstrolab::MatchRefSignal(Double_t da,TString au,Double_t dt,TString t
  return fIndices;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::MatchSignals(NcDevice& matches,Double_t da,TString au,Double_t dt,TString tu,Int_t mode,Int_t i1,Int_t i2,Int_t itype,Int_t j1,Int_t j2,Int_t jtype)
+void NcAstrolab2::MatchSignals(NcDevice& matches,Double_t da,TString au,Double_t dt,TString tu,Int_t mode,Int_t i1,Int_t i2,Int_t itype,Int_t j1,Int_t j2,Int_t jtype)
 {
 // Provide information about the matching in space and time of the stored
 // reference signal(s) and/or measurement(s).
@@ -4066,7 +4066,7 @@ void NcAstrolab::MatchSignals(NcDevice& matches,Double_t da,TString au,Double_t 
 //
 // Usage example :
 // ---------------
-// NcAstrolab lab;
+// NcAstrolab2 lab;
 // // Enter various measurements and reference signals into "lab"
 // lab.SetSignal(...);
 // lab.SetSignal(...);
@@ -4105,7 +4105,7 @@ void NcAstrolab::MatchSignals(NcDevice& matches,Double_t da,TString au,Double_t 
  matches.SetHitCopy(1);
 
  TString name="Matches";
- TString title="Space and time matchings of NcAstrolab stored signals";
+ TString title="Space and time matchings of NcAstrolab2 stored signals";
  matches.SetNameTitle(name.Data(),title.Data());
  TString namedamin="psimin in "; 
  namedamin+=au;
@@ -4231,7 +4231,7 @@ void NcAstrolab::MatchSignals(NcDevice& matches,Double_t da,TString au,Double_t 
  matches.SetSignal(idtmin,"idt");
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::MatchSignals(NcDevice& matches,TString name,Double_t da,TString au,Double_t dt,TString tu,Int_t mode,Int_t itype,Int_t j1,Int_t j2,Int_t jtype)
+void NcAstrolab2::MatchSignals(NcDevice& matches,TString name,Double_t da,TString au,Double_t dt,TString tu,Int_t mode,Int_t itype,Int_t j1,Int_t j2,Int_t jtype)
 {
 // Provide information about the matching in space and time of the stored
 // reference signal(s) and/or measurement(s).
@@ -4248,7 +4248,7 @@ void NcAstrolab::MatchSignals(NcDevice& matches,TString name,Double_t da,TString
 //
 // Note : In case the name specifies a solar system object which was not yet stored,
 //        the corresponding signal will be created according to "itype" and initially
-//        stored with the current timestamp of this NcAstrolab instance.
+//        stored with the current timestamp of this NcAstrolab2 instance.
 //        In the matching process the location of the solar system object will be updated
 //        according to the timestamp of the other signal. 
 //        All geocentric name specifications for solar system objects as indicated in the
@@ -4295,7 +4295,7 @@ void NcAstrolab::MatchSignals(NcDevice& matches,TString name,Double_t da,TString
 //
 // Usage example :
 // ---------------
-// NcAstrolab lab;
+// NcAstrolab2 lab;
 // // Enter various measurements and reference signals into "lab"
 // lab.SetSignal(...);
 // lab.SetSignal(...);
@@ -4344,7 +4344,7 @@ void NcAstrolab::MatchSignals(NcDevice& matches,TString name,Double_t da,TString
  fSolUpdate=0;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::SetTimeScramble(Int_t mode,Double_t tmin,Double_t tmax,TF1* frndm)
+void NcAstrolab2::SetTimeScramble(Int_t mode,Double_t tmin,Double_t tmax,TF1* frndm)
 {
 // Set parameters for time scrambling of the measurements.
 // This scrambling facility is very useful for studying (accidental) background
@@ -4363,7 +4363,7 @@ void NcAstrolab::SetTimeScramble(Int_t mode,Double_t tmin,Double_t tmax,TF1* frn
 //              As such, this scrambling mode is very useful for scrambling entries in
 //              specific time windows (see e.g. NvE, Astroparticle Physics 28 (2008) 540).
 //              This time difference scrambling will only affect the outcome of the memberfunctions
-//              GetDifference(), MatchRefSignal() and MatchSignals() of this class NcAstrolab.
+//              GetDifference(), MatchRefSignal() and MatchSignals() of this class NcAstrolab2.
 //              So, the actual (stored) event timestamps and the NcTimestamp::GetDifference()
 //              are not affected by the scrambling.
 //              This implies that setting mode=0 will reproduce again the unscrambled values.
@@ -4373,7 +4373,7 @@ void NcAstrolab::SetTimeScramble(Int_t mode,Double_t tmin,Double_t tmax,TF1* frn
 //              A value is randomly selected from the interval [tmin,tmax] and added to the 
 //              actual timestamp of the measurement.
 //              As such, this scrambling is irreversible but will always provide reproducible results.
-//              Note : In case the measurement is entered in NcAstrolab specific coordinates
+//              Note : In case the measurement is entered in NcAstrolab2 specific coordinates
 //                     (i.e. local or horizontal position coordinates) then this mode=2 scrambling
 //                     will also result in a corresponding scrambling of e.g. the right ascension.
 //
@@ -4383,7 +4383,7 @@ void NcAstrolab::SetTimeScramble(Int_t mode,Double_t tmin,Double_t tmax,TF1* frn
 //
 // The default is frndm=0.
 //
-// In the NcAstrolab constructor the time scrambling is switched off
+// In the NcAstrolab2 constructor the time scrambling is switched off
 // by setting mode=0 explicitly.
 
  fTscmode=mode;
@@ -4397,7 +4397,7 @@ void NcAstrolab::SetTimeScramble(Int_t mode,Double_t tmin,Double_t tmax,TF1* frn
  if (frndm) fTscfunc=new TF1(*frndm);
 }
 ///////////////////////////////////////////////////////////////////////////
-Int_t NcAstrolab::GetTimeScramble(Double_t* tmin,Double_t* tmax,TF1* frndm)
+Int_t NcAstrolab2::GetTimeScramble(Double_t* tmin,Double_t* tmax,TF1* frndm)
 {
 // Provide parameters which are used for time scrambling of the measurements.
 //
@@ -4419,7 +4419,7 @@ Int_t NcAstrolab::GetTimeScramble(Double_t* tmin,Double_t* tmax,TF1* frndm)
 //
 // Invokation example :
 // --------------------
-// NcAstrolab lab;
+// NcAstrolab2 lab;
 // Int_t mode;
 // Double_t tlow,tup;
 // TF1 func;
@@ -4432,7 +4432,7 @@ Int_t NcAstrolab::GetTimeScramble(Double_t* tmin,Double_t* tmax,TF1* frndm)
  return fTscmode; 
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::SetPositionScramble(Int_t mode,Double_t dmin,Double_t dmax,TF1* df,Double_t thmin,Double_t thmax,TF1* thf,Double_t phimin,Double_t phimax,TF1* phif)
+void NcAstrolab2::SetPositionScramble(Int_t mode,Double_t dmin,Double_t dmax,TF1* df,Double_t thmin,Double_t thmax,TF1* thf,Double_t phimin,Double_t phimax,TF1* phif)
 {
 // Set parameters for position scrambling of the measurements in local coordinates.
 // This scrambling facility is very useful for studying (accidental) background
@@ -4458,7 +4458,7 @@ void NcAstrolab::SetPositionScramble(Int_t mode,Double_t dmin,Double_t dmax,TF1*
 //              This scrambling mode is very useful for scrambling entries in specific
 //              angular cones (see e.g. NvE, Astroparticle Physics 28 (2008) 540).
 //              This angular difference scrambling will only affect the outcome of the memberfunctions
-//              GetDifference(), MatchRefSignal() and MatchSignals() of this class NcAstrolab.
+//              GetDifference(), MatchRefSignal() and MatchSignals() of this class NcAstrolab2.
 //              So, the actual (stored) event positions are not affected by the scrambling.
 //              This implies that setting mode=0 will reproduce again the unscrambled values.
 //              Note : Every time an angular difference is requested, a new random value is produced.
@@ -4484,7 +4484,7 @@ void NcAstrolab::SetPositionScramble(Int_t mode,Double_t dmin,Double_t dmax,TF1*
 //
 // The defaults are df=0, thmin=0, thmax=0, thf=0, phimin=0, phimax=0 and phif=0.
 //
-// In the NcAstrolab constructor the position scrambling is switched off
+// In the NcAstrolab2 constructor the position scrambling is switched off
 // by setting mode=0 explicitly.
 
  // Keep parameters within physical bounds for angular difference scrambling (mode=1)
@@ -4523,7 +4523,7 @@ void NcAstrolab::SetPositionScramble(Int_t mode,Double_t dmin,Double_t dmax,TF1*
  if (phif) fPhiscfunc=new TF1(*phif);
 }
 ///////////////////////////////////////////////////////////////////////////
-Int_t NcAstrolab::GetPositionScramble(Double_t* dmin,Double_t* dmax,TF1* df,Double_t* thmin,Double_t* thmax,TF1* thf,Double_t* phimin,Double_t* phimax,TF1* phif)
+Int_t NcAstrolab2::GetPositionScramble(Double_t* dmin,Double_t* dmax,TF1* df,Double_t* thmin,Double_t* thmax,TF1* thf,Double_t* phimin,Double_t* phimax,TF1* phif)
 {
 // Provide parameters which are used for position scrambling of the measurements.
 //
@@ -4551,7 +4551,7 @@ Int_t NcAstrolab::GetPositionScramble(Double_t* dmin,Double_t* dmax,TF1* df,Doub
 //
 // Invokation example :
 // --------------------
-// NcAstrolab lab;
+// NcAstrolab2 lab;
 // Int_t mode;
 // Double_t dlow,dup;
 // TF1 func;
@@ -4570,7 +4570,7 @@ Int_t NcAstrolab::GetPositionScramble(Double_t* dmin,Double_t* dmax,TF1* df,Doub
  return fRscmode; 
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t j,TString proj,Int_t clr)
+void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t j,TString proj,Int_t clr)
 {
 // Display a stored signal in a user specified coordinate projection
 // at the specific timestamp ts.
@@ -4607,11 +4607,11 @@ void NcAstrolab::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t 
 //
 //          "ecl" ==> Geocentric ecliptic coordinates with longitude (l) and latitude (b).
 //
-//          "hor" ==> Horizontal azimuth and altitude coordinates at the NcAstrolab location.
+//          "hor" ==> Horizontal azimuth and altitude coordinates at the NcAstrolab2 location.
 //
 //          "icr" ==> ICRS coordinates with longitude (l) and latitude (b).
 //
-//          "loc" ==> Local spherical angles theta and phi at the NcAstrolab location.
+//          "loc" ==> Local spherical angles theta and phi at the NcAstrolab2 location.
 //
 // In case the coordinates are the equatorial right ascension and declination (a,d),
 // they can represent so-called "mean", "true" or reference "epoch" values.
@@ -4722,7 +4722,7 @@ void NcAstrolab::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t 
  // Update the display for this signal position
 
  // Create a new canvas if needed
- if (!fCanvas) fCanvas=new TCanvas("NcAstrolab","Skymap");
+ if (!fCanvas) fCanvas=new TCanvas("NcAstrolab2","Skymap");
 
  // Construct the various strings for this map
  TString titleup;  // The upper title string
@@ -5210,7 +5210,7 @@ void NcAstrolab::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t 
  }
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,TString name,TString proj,Int_t clr,Int_t type)
+void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,TString name,TString proj,Int_t clr,Int_t type)
 {
 // Display the stored signal according to "type" with the specified name in a user specified
 // coordinate projection at the specific timestamp ts.
@@ -5240,11 +5240,11 @@ void NcAstrolab::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,TStrin
 //
 //          "ecl" ==> Geocentric ecliptic coordinates with longitude (l) and latitude (b).
 //
-//          "hor" ==> Horizontal azimuth and altitude coordinates at the NcAstrolab location.
+//          "hor" ==> Horizontal azimuth and altitude coordinates at the NcAstrolab2 location.
 //
 //          "icr" ==> ICRS coordinates with longitude (l) and latitude (b).
 //
-//          "loc" ==> Local spherical angles theta and phi at the NcAstrolab location.
+//          "loc" ==> Local spherical angles theta and phi at the NcAstrolab2 location.
 //
 // In case the coordinates are the equatorial right ascension and declination (a,d),
 // they can represent so-called "mean", "true" or reference "epoch" values.
@@ -5289,7 +5289,7 @@ void NcAstrolab::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,TStrin
  }
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::DisplaySignals(TString frame,TString mode,NcTimestamp* ts,TString proj,Int_t clr,Int_t nmax,Int_t j,Int_t type)
+void NcAstrolab2::DisplaySignals(TString frame,TString mode,NcTimestamp* ts,TString proj,Int_t clr,Int_t nmax,Int_t j,Int_t type)
 {
 // Display of stored signals in a user specified coordinate projection at the specific timestamp.
 //
@@ -5327,11 +5327,11 @@ void NcAstrolab::DisplaySignals(TString frame,TString mode,NcTimestamp* ts,TStri
 //
 //          "ecl" ==> Geocentric ecliptic coordinates with longitude (l) and latitude (b).
 //
-//          "hor" ==> Horizontal azimuth and altitude coordinates at the NcAstrolab location.
+//          "hor" ==> Horizontal azimuth and altitude coordinates at the NcAstrolab2 location.
 //
 //          "icr" ==> ICRS coordinates with longitude (l) and latitude (b).
 //
-//          "loc" ==> Local spherical angles theta and phi at the NcAstrolab location.
+//          "loc" ==> Local spherical angles theta and phi at the NcAstrolab2 location.
 //
 // In case the coordinates are the equatorial right ascension and declination (a,d),
 // they can represent so-called "mean", "true" or reference "epoch" values.
@@ -5431,10 +5431,10 @@ void NcAstrolab::DisplaySignals(TString frame,TString mode,NcTimestamp* ts,TStri
  }
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::SetMarkerSize(Float_t size,Int_t type)
+void NcAstrolab2::SetMarkerSize(Float_t size,Int_t type)
 {
 // Set the size of the marker symbols for skymaps and related histograms.
-// By default all sizes are set to 1 in the constructor of this NcAstrolab class. 
+// By default all sizes are set to 1 in the constructor of this NcAstrolab2 class. 
 //
 // type = 0 --> Set marker size for reference signals
 //        1 --> Set marker size for measurements
@@ -5446,7 +5446,7 @@ void NcAstrolab::SetMarkerSize(Float_t size,Int_t type)
  fMarkerSize[type]=size;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::SetCentralMeridian(Int_t mode,Double_t phi,TString u)
+void NcAstrolab2::SetCentralMeridian(Int_t mode,Double_t phi,TString u)
 {
 // Set the central meridian and the orientation for the sky display.
 // By default the central meridian is set at -999 in the constructor.
@@ -5487,7 +5487,7 @@ void NcAstrolab::SetCentralMeridian(Int_t mode,Double_t phi,TString u)
  if (fMeridian>0) fMeridian+=1.e-6;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::Project(Double_t l,Double_t b,TString proj,Double_t& x,Double_t& y)
+void NcAstrolab2::Project(Double_t l,Double_t b,TString proj,Double_t& x,Double_t& y)
 {
 // Generic interface for projection of a (long,lat) pair onto a (x,y) pair.
 //
@@ -5546,7 +5546,7 @@ void NcAstrolab::Project(Double_t l,Double_t b,TString proj,Double_t& x,Double_t
  }
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::ProjectCylindrical(Double_t l,Double_t b,Double_t& x, Double_t& y)
+void NcAstrolab2::ProjectCylindrical(Double_t l,Double_t b,Double_t& x, Double_t& y)
 {
 // Equirectangular cylindrical projection of a (long,lat) coordinate pair 
 // We adopt here a scale factor such that the range for x becomes [-2,2].
@@ -5558,7 +5558,7 @@ void NcAstrolab::ProjectCylindrical(Double_t l,Double_t b,Double_t& x, Double_t&
  y=2.*b/pi;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::ProjectHammer(Double_t l,Double_t b,Double_t& x,Double_t& y)
+void NcAstrolab2::ProjectHammer(Double_t l,Double_t b,Double_t& x,Double_t& y)
 {
 // Hammer-Aitoff projection of a (long,lat) coordinate pair. 
 // This is an equal-area projection.
@@ -5571,7 +5571,7 @@ void NcAstrolab::ProjectHammer(Double_t l,Double_t b,Double_t& x,Double_t& y)
  y=k*sin(b);
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::ProjectAitoff(Double_t l,Double_t b,Double_t& x,Double_t& y)
+void NcAstrolab2::ProjectAitoff(Double_t l,Double_t b,Double_t& x,Double_t& y)
 {
 // Aitoff projection of a (long,lat) coordinate pair. 
 // We adopt here a scale factor such that the range for x becomes [-2,2].
@@ -5589,7 +5589,7 @@ void NcAstrolab::ProjectAitoff(Double_t l,Double_t b,Double_t& x,Double_t& y)
  }
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::ProjectMercator(Double_t l,Double_t b,Double_t& x,Double_t& y)
+void NcAstrolab2::ProjectMercator(Double_t l,Double_t b,Double_t& x,Double_t& y)
 {
 // Mercator projection of a (long,lat) coordinate pair.
 // At the poles this projection yields an infinite value for the y-coordinate.
@@ -5612,7 +5612,7 @@ void NcAstrolab::ProjectMercator(Double_t l,Double_t b,Double_t& x,Double_t& y)
  y=0.5*log((1.+sin(b))/(1.-sin(b)))/pi;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::SetPhysicalParameter(TString name,Double_t value)
+void NcAstrolab2::SetPhysicalParameter(TString name,Double_t value)
 {
 // Facility to modify the value of a physical parameter.
 // In the constructor of this class the various parameters have been
@@ -5719,7 +5719,7 @@ void NcAstrolab::SetPhysicalParameter(TString name,Double_t value)
  if (name=="OmegaC") fOmegaC=value;
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::GetPhysicalParameter(TString name) const
+Double_t NcAstrolab2::GetPhysicalParameter(TString name) const
 {
 // Provide the (modified) value of a (astro)physical parameter.
 //
@@ -5784,7 +5784,7 @@ Double_t NcAstrolab::GetPhysicalParameter(TString name) const
  return 0;
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::GetPhysicalDistance(Double_t z,TString u,Int_t t) const
+Double_t NcAstrolab2::GetPhysicalDistance(Double_t z,TString u,Int_t t) const
 {
 // Provide the physical distance of an object observed with redshift z
 // for a flat Friedmann-Lemaitre universe.
@@ -5847,7 +5847,7 @@ Double_t NcAstrolab::GetPhysicalDistance(Double_t z,TString u,Int_t t) const
  return val;
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::GetProperDistance(Double_t z,TString u,Int_t t) const
+Double_t NcAstrolab2::GetProperDistance(Double_t z,TString u,Int_t t) const
 {
 // Provide the proper distance of an object observed with redshift z
 // for a flat Friedmann-Lemaitre universe.
@@ -5884,7 +5884,7 @@ Double_t NcAstrolab::GetProperDistance(Double_t z,TString u,Int_t t) const
  return val;
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::GetComovingDistance(Double_t z,TString u) const
+Double_t NcAstrolab2::GetComovingDistance(Double_t z,TString u) const
 {
 // Provide the comoving coordinate distance of an object observed with redshift z
 // for a flat Friedmann-Lemaitre universe.
@@ -5918,7 +5918,7 @@ Double_t NcAstrolab::GetComovingDistance(Double_t z,TString u) const
  return val;
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::GetLuminosityDistance(Double_t z,TString u) const
+Double_t NcAstrolab2::GetLuminosityDistance(Double_t z,TString u) const
 {
 // Provide the luminosity distance of an object observed with redshift z
 // for a flat Friedmann-Lemaitre universe.
@@ -5956,7 +5956,7 @@ Double_t NcAstrolab::GetLuminosityDistance(Double_t z,TString u) const
  return val;
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::GetLightTravelDistance(Double_t z,TString u) const
+Double_t NcAstrolab2::GetLightTravelDistance(Double_t z,TString u) const
 {
 // Provide the light-travel distance of an object observed with redshift z
 // for a flat Friedmann-Lemaitre universe.
@@ -6017,7 +6017,7 @@ Double_t NcAstrolab::GetLightTravelDistance(Double_t z,TString u) const
  return val;
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::GetLightTravelTime(Double_t z) const
+Double_t NcAstrolab2::GetLightTravelTime(Double_t z) const
 {
 // Provide the light-travel time (in years) of an object observed with redshift z
 // for a flat Friedmann-Lemaitre universe.
@@ -6038,7 +6038,7 @@ Double_t NcAstrolab::GetLightTravelTime(Double_t z) const
  return val;
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::GetHubbleParameter(Double_t z,TString u) const
+Double_t NcAstrolab2::GetHubbleParameter(Double_t z,TString u) const
 {
 // Provide the Hubble parameter H(z) at a certain redshift z
 // for a flat Friedmann-Lemaitre universe.
@@ -6084,7 +6084,7 @@ Double_t NcAstrolab::GetHubbleParameter(Double_t z,TString u) const
  return val;
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::GetNuclearMass(Int_t z,Int_t n,Int_t mode) const
+Double_t NcAstrolab2::GetNuclearMass(Int_t z,Int_t n,Int_t mode) const
 {
 // Provide the nuclear mass or binding energy of a specified nucleus
 // with "z" protons and "n" neutrons.
@@ -6206,7 +6206,7 @@ Double_t NcAstrolab::GetNuclearMass(Int_t z,Int_t n,Int_t mode) const
  return value;
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::GetNeutrinoXsection(Int_t mode,Int_t type,Double_t egev,Double_t xscale,Double_t* eprimgev,Double_t* alpha) const
+Double_t NcAstrolab2::GetNeutrinoXsection(Int_t mode,Int_t type,Double_t egev,Double_t xscale,Double_t* eprimgev,Double_t* alpha) const
 {
 // Provide the neutrino cross section and (optional) the average energy
 // and opening angle of the produced charged lepton (CC) or (anti)neutrino (NC).
@@ -6454,7 +6454,7 @@ Double_t NcAstrolab::GetNeutrinoXsection(Int_t mode,Int_t type,Double_t egev,Dou
  return xsec;
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::GetNeutrinoAngle(Double_t E,TString u,Int_t mode,TF1* f)
+Double_t NcAstrolab2::GetNeutrinoAngle(Double_t E,TString u,Int_t mode,TF1* f)
 {
 // Provide the kinematic opening angle between a neutrino and the corresponding lepton,
 // as produced in a CC interaction on a target at rest.
@@ -6542,7 +6542,7 @@ Double_t NcAstrolab::GetNeutrinoAngle(Double_t E,TString u,Int_t mode,TF1* f)
  return value;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::RandomPosition(Nc3Vector& v,Double_t thetamin,Double_t thetamax,Double_t phimin,Double_t phimax)
+void NcAstrolab2::RandomPosition(Nc3Vector& v,Double_t thetamin,Double_t thetamax,Double_t phimin,Double_t phimax)
 {
 // Provide a random angular position for the vector "v" according to an isotropic solid angle distribution.
 // The random position will be located in [thetamin,thetamax] and [phimin,phimax].
@@ -6586,7 +6586,7 @@ void NcAstrolab::RandomPosition(Nc3Vector& v,Double_t thetamin,Double_t thetamax
  if (ier) v.SetErrors(err,"car");
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::SmearPosition(Nc3Vector& v,Double_t sigma)
+void NcAstrolab2::SmearPosition(Nc3Vector& v,Double_t sigma)
 {
 // Smear the angular position for the vector "v" according to the specified
 // pointing accuracy "sigma" in degrees.
@@ -6662,7 +6662,7 @@ void NcAstrolab::SmearPosition(Nc3Vector& v,Double_t sigma)
  if (ier) v.SetErrors(err,"car");
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::ShiftPosition(Nc3Vector& v,Double_t angle)
+void NcAstrolab2::ShiftPosition(Nc3Vector& v,Double_t angle)
 {
 // Shift the angular position for the vector "v" with the specified angular
 // offset "angle" in degrees.
@@ -6724,7 +6724,7 @@ void NcAstrolab::ShiftPosition(Nc3Vector& v,Double_t angle)
  if (ier) v.SetErrors(err,"car");
 }
 ///////////////////////////////////////////////////////////////////////////
-TH1F NcAstrolab::GetDxHistogram(TH1* hx,Int_t nc,Double_t dxbin,Double_t dxmin,Double_t dxmax,Int_t mode,Double_t fact)
+TH1F NcAstrolab2::GetDxHistogram(TH1* hx,Int_t nc,Double_t dxbin,Double_t dxmin,Double_t dxmax,Int_t mode,Double_t fact)
 {
 // Provide the interval size (dx) distribution of X-axis intervals between a certain
 // fixed amount of consecutive histogram entries of the specified input histogram.
@@ -6994,7 +6994,7 @@ TH1F NcAstrolab::GetDxHistogram(TH1* hx,Int_t nc,Double_t dxbin,Double_t dxmin,D
  return hdx;
 }
 ///////////////////////////////////////////////////////////////////////////
-TH1F NcAstrolab::GetDifHistogram(TH1* hin,Int_t mode,TString s,TF1* f) const
+TH1F NcAstrolab2::GetDifHistogram(TH1* hin,Int_t mode,TString s,TF1* f) const
 {
 // Construct a differential dy/dx vs. x histogram from a 1D regular y vs. x input histogram.
 // Such a returned histogram allows an easy fitting of differential exponential and power spectra
@@ -7138,7 +7138,7 @@ TH1F NcAstrolab::GetDifHistogram(TH1* hin,Int_t mode,TString s,TF1* f) const
  return hout;
 }
 ///////////////////////////////////////////////////////////////////////////
-TH1F NcAstrolab::GetCountsHistogram(TF1& spec,Int_t nbins,Double_t xmin,Double_t xmax,Int_t mode,TString s) const
+TH1F NcAstrolab2::GetCountsHistogram(TF1& spec,Int_t nbins,Double_t xmin,Double_t xmax,Int_t mode,TString s) const
 {
 // Construct the counts (N) vs. x histogram from a 1D input function describing the differential spectrum dN/dx.
 // Such a returned histogram allows an easy way to for instance obtain a primary particle distribution N(E)
@@ -7230,7 +7230,7 @@ TH1F NcAstrolab::GetCountsHistogram(TF1& spec,Int_t nbins,Double_t xmin,Double_t
  return hout;
 }
 ///////////////////////////////////////////////////////////////////////////
-TH1F NcAstrolab::GetLogHistogram(TH1* hin,Int_t mode,TString s) const
+TH1F NcAstrolab2::GetLogHistogram(TH1* hin,Int_t mode,TString s) const
 {
 // Construct a log10(y) or Ln(y) vs. x histogram from a 1D regular y vs. x input histogram.
 // Such a returned histogram allows an easy (linear) fitting of exponential and power spectra.  
@@ -7318,7 +7318,7 @@ TH1F NcAstrolab::GetLogHistogram(TH1* hin,Int_t mode,TString s) const
  return hout;
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::GetBackgroundRateProb(Double_t* vars,Double_t* pars)
+Double_t NcAstrolab2::GetBackgroundRateProb(Double_t* vars,Double_t* pars)
 {
 // Provide the posterior Bayesian probability for a certain background rate "b"
 // given some specified background (c.q. "off source") observations.
@@ -7382,7 +7382,7 @@ Double_t NcAstrolab::GetBackgroundRateProb(Double_t* vars,Double_t* pars)
  return prob;
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::GetSignalRateProb(Double_t* vars,Double_t* pars)
+Double_t NcAstrolab2::GetSignalRateProb(Double_t* vars,Double_t* pars)
 {
 // Provide the posterior Bayesian probability for a certain source signal rate "s"
 // given some specified "on source" and "off source" observations.
@@ -7487,7 +7487,7 @@ Double_t NcAstrolab::GetSignalRateProb(Double_t* vars,Double_t* pars)
  return prob;
 }
 ///////////////////////////////////////////////////////////////////////////
-TF1 NcAstrolab::GetBackgroundRatePDF(Int_t Noff,Double_t Toff,Double_t bmax,Double_t prec)
+TF1 NcAstrolab2::GetBackgroundRatePDF(Int_t Noff,Double_t Toff,Double_t bmax,Double_t prec)
 {
 // Provide the posterior Bayesian PDF for a background rate "b"
 // given the specified background ("off source") observations.
@@ -7519,7 +7519,7 @@ TF1 NcAstrolab::GetBackgroundRatePDF(Int_t Noff,Double_t Toff,Double_t bmax,Doub
  if (bmax<0) bmax=100.*rNoff/Toff;
 
  Int_t npar=4;
- TF1 pdf("BkgRatePDF",this,&NcAstrolab::GetBackgroundRateProb,0,bmax,npar,"NcAstrolab","GetBackgroundRateProb");
+ TF1 pdf("BkgRatePDF",this,&NcAstrolab2::GetBackgroundRateProb,0,bmax,npar,"NcAstrolab2","GetBackgroundRateProb");
 
  pdf.SetParName(0,"Noff");
  pdf.SetParName(1,"Toff");
@@ -7537,7 +7537,7 @@ TF1 NcAstrolab::GetBackgroundRatePDF(Int_t Noff,Double_t Toff,Double_t bmax,Doub
  return pdf;
 }
 ///////////////////////////////////////////////////////////////////////////
-TF1 NcAstrolab::GetSignalRatePDF(Int_t Non,Double_t Ton,Int_t Noff,Double_t Toff,Double_t Ra,Double_t Re,Double_t smax,Double_t bmax,Double_t prec)
+TF1 NcAstrolab2::GetSignalRatePDF(Int_t Non,Double_t Ton,Int_t Noff,Double_t Toff,Double_t Ra,Double_t Re,Double_t smax,Double_t bmax,Double_t prec)
 {
 // Provide the posterior Bayesian PDF for a source signal rate "s"
 // given the specified "on source" and "off source" observations.
@@ -7587,7 +7587,7 @@ TF1 NcAstrolab::GetSignalRatePDF(Int_t Non,Double_t Ton,Int_t Noff,Double_t Toff
  if (bmax<0) bmax=100.*rNoff/Toff;
 
  Int_t npar=7;
- TF1 pdf("SignalRatePDF",this,&NcAstrolab::GetSignalRateProb,0,smax,npar,"NcAstrolab","GetSignalRateProb");
+ TF1 pdf("SignalRatePDF",this,&NcAstrolab2::GetSignalRateProb,0,smax,npar,"NcAstrolab2","GetSignalRateProb");
 
  pdf.SetParName(0,"Non");
  pdf.SetParName(1,"Ton");
@@ -7611,7 +7611,7 @@ TF1 NcAstrolab::GetSignalRatePDF(Int_t Non,Double_t Ton,Int_t Noff,Double_t Toff
  return pdf;
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::GetUpperLimit(TF1 pdf,Double_t p)
+Double_t NcAstrolab2::GetUpperLimit(TF1 pdf,Double_t p)
 {
 // Provide the Bayesian "p%" upperlimit for the specified PDF.
 //
@@ -7641,7 +7641,7 @@ Double_t NcAstrolab::GetUpperLimit(TF1 pdf,Double_t p)
  return ul;
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::GetUpperLimit(TH1* his,Double_t p)
+Double_t NcAstrolab2::GetUpperLimit(TH1* his,Double_t p)
 {
 // Provide the Bayesian "p%" upperlimit for the specified histogram.
 //
@@ -7667,7 +7667,7 @@ Double_t NcAstrolab::GetUpperLimit(TH1* his,Double_t p)
  return ul;
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::GetCredibleInterval(TF1 pdf,Double_t p,Double_t& xlow,Double_t& xup,Int_t n)
+Double_t NcAstrolab2::GetCredibleInterval(TF1 pdf,Double_t p,Double_t& xlow,Double_t& xup,Int_t n)
 {
 // Provide lower and upper bounds of the Bayesian "p%" credible interval
 // around the mode of the specified PDF.
@@ -7805,7 +7805,7 @@ Double_t NcAstrolab::GetCredibleInterval(TF1 pdf,Double_t p,Double_t& xlow,Doubl
  return intfrac;
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::GetCredibleInterval(TF1 pdf,Double_t p,Float_t& xlow,Float_t& xup,Int_t n)
+Double_t NcAstrolab2::GetCredibleInterval(TF1 pdf,Double_t p,Float_t& xlow,Float_t& xup,Int_t n)
 {
 // Provide lower and upper bounds of the Bayesian "p%" credible interval
 // around the mode of the specified PDF.
@@ -7846,7 +7846,7 @@ Double_t NcAstrolab::GetCredibleInterval(TF1 pdf,Double_t p,Float_t& xlow,Float_
  return val;
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::GetCredibleInterval(TH1* his,Double_t p,Double_t& xlow,Double_t& xup)
+Double_t NcAstrolab2::GetCredibleInterval(TH1* his,Double_t p,Double_t& xlow,Double_t& xup)
 {
 // Provide lower and upper bounds of the Bayesian "p%" credible interval
 // around the mode of the specified histogram.
@@ -7956,7 +7956,7 @@ Double_t NcAstrolab::GetCredibleInterval(TH1* his,Double_t p,Double_t& xlow,Doub
  return intfrac;
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::GetCredibleInterval(TH1* his,Double_t p,Float_t& xlow,Float_t& xup)
+Double_t NcAstrolab2::GetCredibleInterval(TH1* his,Double_t p,Float_t& xlow,Float_t& xup)
 {
 // Provide lower and upper bounds of the Bayesian "p%" credible interval
 // around the mode of the specified histogram.
@@ -7987,7 +7987,7 @@ Double_t NcAstrolab::GetCredibleInterval(TH1* his,Double_t p,Float_t& xlow,Float
  return val;
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::KolmogorovTest(TString mode,TH1* h1,TH1* h2,TF1* pdf,Double_t nr,TH1F* ksh,Int_t ncut,Double_t* nrx,Int_t mark)
+Double_t NcAstrolab2::KolmogorovTest(TString mode,TH1* h1,TH1* h2,TF1* pdf,Double_t nr,TH1F* ksh,Int_t ncut,Double_t* nrx,Int_t mark)
 {
 // Perform the Kolmogorov-Smirnov (KS) test on a 1-dimensional histogram "h1",
 // e.g. an observed distribution which may contain a signal, and a reference
@@ -8279,7 +8279,7 @@ Double_t NcAstrolab::KolmogorovTest(TString mode,TH1* h1,TH1* h2,TF1* pdf,Double
  return value;
 }
 ///////////////////////////////////////////////////////////////////////////
-TH1F NcAstrolab::GetCumulHistogram(TH1* h,TString name,TString mode) const
+TH1F NcAstrolab2::GetCumulHistogram(TH1* h,TString name,TString mode) const
 {
 // Provide the Cumulative Distribution Hstogram from the input 1-D histogram "h".
 //
@@ -8366,7 +8366,7 @@ TH1F NcAstrolab::GetCumulHistogram(TH1* h,TString name,TString mode) const
  return hcd;
 }
 ///////////////////////////////////////////////////////////////////////////
-TH1F NcAstrolab::GetCumulHistogram(TF1* f,TString name,Int_t nbins,Double_t xmin,Double_t xmax,TString mode) const
+TH1F NcAstrolab2::GetCumulHistogram(TF1* f,TString name,Int_t nbins,Double_t xmin,Double_t xmax,TString mode) const
 {
 // Provide the Cumulative Distribution Histogram from the input 1-D function "f".
 //
@@ -8428,7 +8428,7 @@ TH1F NcAstrolab::GetCumulHistogram(TF1* f,TString name,Int_t nbins,Double_t xmin
  return hcd;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::SetBurstParameter(TString name,Double_t value)
+void NcAstrolab2::SetBurstParameter(TString name,Double_t value)
 {
 // Specification of a certain transient burst parameter setting.
 //
@@ -8617,7 +8617,7 @@ void NcAstrolab::SetBurstParameter(TString name,Double_t value)
  fBurstParameters->SetSignal(NbkgWin,name);
 }
 ///////////////////////////////////////////////////////////////////////////
-NcDevice* NcAstrolab::GetBurstParameters()
+NcDevice* NcAstrolab2::GetBurstParameters()
 {
 // Provide a link to the device containing all transient burst parameter settings.
 //
@@ -8628,7 +8628,7 @@ NcDevice* NcAstrolab::GetBurstParameters()
  return fBurstParameters;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::ListBurstParameters() const
+void NcAstrolab2::ListBurstParameters() const
 {
 // Listing of all the burst parameter settings
 //
@@ -8787,7 +8787,7 @@ void NcAstrolab::ListBurstParameters() const
  cout << endl;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t date2,Int_t nmax,TString type)
+void NcAstrolab2::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t date2,Int_t nmax,TString type)
 {
 // Load observed burst GCN data, e.g. GRB data from GCN notices as available from
 // https://icecube.wisc.edu/~grbweb_public.
@@ -9017,7 +9017,7 @@ void NcAstrolab::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t da
  cout << " Total number of stored bursts : " << fNgrbs << endl;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::GenBurstGCNdata(Int_t n,TString name)
+void NcAstrolab2::GenBurstGCNdata(Int_t n,TString name)
 {
 // Generate fictative burst GCN data for "n" bursts of (alert) type "name",
 // where "name" can be "GRB", "GW", "IC", ....
@@ -9164,7 +9164,7 @@ void NcAstrolab::GenBurstGCNdata(Int_t n,TString name)
  cout << " Total number of stored bursts : " << fNgrbs << endl;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::MakeBurstZdist(TString file,TString tree,TString name,Int_t nb,Float_t zmin,Float_t zmax)
+void NcAstrolab2::MakeBurstZdist(TString file,TString tree,TString name,Int_t nb,Float_t zmin,Float_t zmax)
 {
 // Read observed archival redshift data and create the corresponding distribution.
 // Also the corresponding distribution of the Proper Distance at the time of
@@ -9255,7 +9255,7 @@ void NcAstrolab::MakeBurstZdist(TString file,TString tree,TString name,Int_t nb,
       << " of Tree:" << tree << " in file(s):" << file << endl;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::MakeBurstT90dist(TString file,TString tree,TString name,Int_t nb,Float_t xmin,Float_t xmax)
+void NcAstrolab2::MakeBurstT90dist(TString file,TString tree,TString name,Int_t nb,Float_t xmin,Float_t xmax)
 {
 // Read observed archival T90 data and create a log10(T90) distribution.
 // If this memberfunction is invoked before LoadBurstGCNdata() or GenBurstGCNdata(),
@@ -9332,7 +9332,7 @@ void NcAstrolab::MakeBurstT90dist(TString file,TString tree,TString name,Int_t n
       << " of Tree:" << tree << " in file(s):" << file << endl;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::MakeBurstBkgEdist(TString file,TString tree,TString name1,TString name2,TString u,Double_t Emin,Double_t Emax,Int_t nb)
+void NcAstrolab2::MakeBurstBkgEdist(TString file,TString tree,TString name1,TString name2,TString u,Double_t Emin,Double_t Emax,Int_t nb)
 {
 // Create a background energy distribution on the interval [Emin,Emax] GeV
 // based on observed archival energy data. 
@@ -9441,7 +9441,7 @@ void NcAstrolab::MakeBurstBkgEdist(TString file,TString tree,TString name1,TStri
       << " of Tree:" << tree << " in file(s):" << file << endl;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::MakeBurstEdist(TF1& spec,Double_t Emin,Double_t Emax,Int_t nbins)
+void NcAstrolab2::MakeBurstEdist(TF1& spec,Double_t Emin,Double_t Emax,Int_t nbins)
 {
 // Create an energy distribution on the interval [Emin,Emax] GeV based on the 
 // provided spectral function "spec" describing dN/dE.
@@ -9482,7 +9482,7 @@ void NcAstrolab::MakeBurstEdist(TF1& spec,Double_t Emin,Double_t Emax,Int_t nbin
  fBurstHistos.Add(hpdfE);
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::MakeBurstEdist(Double_t gamma,Double_t Emin,Double_t Emax,Int_t nbins)
+void NcAstrolab2::MakeBurstEdist(Double_t gamma,Double_t Emin,Double_t Emax,Int_t nbins)
 {
 // Create an energy distribution on the interval [Emin,Emax] GeV based on a 
 // a single power law with spectral index "gamma" describing dN/dE.
@@ -9509,7 +9509,7 @@ void NcAstrolab::MakeBurstEdist(Double_t gamma,Double_t Emin,Double_t Emax,Int_t
  MakeBurstEdist(spec,Emin,Emax,nbins);
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::GetBurstSignalEnergy(Double_t Emin,Double_t Emax) const
+Double_t NcAstrolab2::GetBurstSignalEnergy(Double_t Emin,Double_t Emax) const
 {
 // Provide the energy in the interval [Emin,Emax] GeV for a Burst signal 
 // from the user provided energy spectrum as produced by MakeBurstEdist().
@@ -9575,7 +9575,7 @@ Double_t NcAstrolab::GetBurstSignalEnergy(Double_t Emin,Double_t Emax) const
  return E;
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::GetBurstBackgroundEnergy(Double_t Emin,Double_t Emax) const
+Double_t NcAstrolab2::GetBurstBackgroundEnergy(Double_t Emin,Double_t Emax) const
 {
 // Provide the energy in the interval [Emin,Emax] GeV for backgound events
 // from the user provided energy spectrum as produced by MakeBurstBkgEdist().
@@ -9641,7 +9641,7 @@ Double_t NcAstrolab::GetBurstBackgroundEnergy(Double_t Emin,Double_t Emax) const
  return E;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::GenBurstSignals()
+void NcAstrolab2::GenBurstSignals()
 {
 // Generate detector signals from transient bursts.
 //
@@ -10157,7 +10157,7 @@ void NcAstrolab::GenBurstSignals()
  fBurstParameters->SetSignal(ratebkg,"ratebkg");
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::BurstCompensate(Int_t& nmugrb,Float_t fGrbnu,Float_t fNgrbs,Int_t fInburst,Float_t fDtnu,Float_t fDtnus,Float_t fAngres,Float_t fTimres,Float_t fDatype,Float_t fDawin)
+void NcAstrolab2::BurstCompensate(Int_t& nmugrb,Float_t fGrbnu,Float_t fNgrbs,Int_t fInburst,Float_t fDtnu,Float_t fDtnus,Float_t fAngres,Float_t fTimres,Float_t fDatype,Float_t fDawin)
 {
 // Compensate statistical underfluctuation in the number of transient burst muons.
 
@@ -10266,7 +10266,7 @@ void NcAstrolab::BurstCompensate(Int_t& nmugrb,Float_t fGrbnu,Float_t fNgrbs,Int
  }
 }
 ///////////////////////////////////////////////////////////////////////////
-TH1* NcAstrolab::GetBurstBayesianSignalRate(Double_t p,Double_t& rlow,Double_t& rup,Int_t n)
+TH1* NcAstrolab2::GetBurstBayesianSignalRate(Double_t p,Double_t& rlow,Double_t& rup,Int_t n)
 {
 // Provide the transient burst Bayesian signal rate and the lower and upper bounds of the
 // Bayesian "p%" credible interval [rlow,rup] around the mode of the signal PDF.
@@ -10352,7 +10352,7 @@ TH1* NcAstrolab::GetBurstBayesianSignalRate(Double_t p,Double_t& rlow,Double_t& 
  return hpdfsigr;
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab::GetBurstLiMaSignificance() const
+Double_t NcAstrolab2::GetBurstLiMaSignificance() const
 {
 // Provide the transient burst Li-Ma signal significance in terms of the amount of
 // standard deviations w.r.t. the "on source" and "off source" observations.
@@ -10403,7 +10403,7 @@ Double_t NcAstrolab::GetBurstLiMaSignificance() const
  return sigma;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::GetBurstBayesianPsiStatistics(TString type,Double_t nr,Int_t ncut,Int_t ndt,Int_t mode, Double_t fact,Int_t freq)
+void NcAstrolab2::GetBurstBayesianPsiStatistics(TString type,Double_t nr,Int_t ncut,Int_t ndt,Int_t mode, Double_t fact,Int_t freq)
 {
 // Provide the transient burst Bayesian Psi statistics for the (stacked) distributions of the
 // observed arrival times and opening angles w.r.t. the corresponding bursts.
@@ -10689,14 +10689,11 @@ void NcAstrolab::GetBurstBayesianPsiStatistics(TString type,Double_t nr,Int_t nc
   namebkg+=ndt;
   TH1F* htotdt=(TH1F*)fBurstHistos.FindObject(nametot.Data());
   TH1F* hbkgdt=(TH1F*)fBurstHistos.FindObject(namebkg.Data());
-  Double_t deltatbin=0, deltatmin=0, deltatmax=0;
   if (!htotdt && !hbkgdt)
   {
    htotdt=(TH1F*)(GetDxHistogram(tot,ndt,-1,0,-1,mode,fact).Clone(nametot.Data()));
-   deltatbin=htotdt->GetXaxis()->GetBinWidth(1);
-   deltatmin=htotdt->GetXaxis()->GetXmin();
-   deltatmax=htotdt->GetXaxis()->GetXmax();
-   hbkgdt=(TH1F*)(GetDxHistogram(bkg,ndt,deltatbin,deltatmin,deltatmax,mode,fact).Clone(namebkg.Data()));
+   Double_t deltatbin=htotdt->GetXaxis()->GetBinWidth(1);
+   hbkgdt=(TH1F*)(GetDxHistogram(bkg,ndt,deltatbin,0,-1,mode,fact).Clone(namebkg.Data()));
 
    // Create titles and labels for the delta t histograms
    TString title="Time intervals between ";
@@ -10758,13 +10755,15 @@ void NcAstrolab::GetBurstBayesianPsiStatistics(TString type,Double_t nr,Int_t nc
   // Provide the dt PDFs as histograms in the output file
   if (!hpdftotdt && !hpdfbkgdt)
   {
-   deltatmax=htotdt->GetXaxis()->GetXmax();
-   fdttot.SetRange(0,deltatmax);
+   Double_t deltatmax=htotdt->GetXaxis()->GetXmax();
+   Double_t xmaxfdt=deltatmax;
+   deltatmax=hbkgdt->GetXaxis()->GetXmax();
+   if (deltatmax>xmaxfdt) xmaxfdt=deltatmax;
+   fdttot.SetRange(0,xmaxfdt);
    fdttot.SetNpx(10000);
    hpdftotdt=(TH1*)fdttot.GetHistogram()->Clone();
    hpdftotdt->SetName(nametot.Data());
-   deltatmax=hbkgdt->GetXaxis()->GetXmax();
-   fdtbkg.SetRange(0,deltatmax);
+   fdtbkg.SetRange(0,xmaxfdt);
    fdtbkg.SetNpx(10000);
    hpdfbkgdt=(TH1*)fdtbkg.GetHistogram()->Clone();
    hpdfbkgdt->SetName(namebkg.Data());
@@ -10849,7 +10848,7 @@ void NcAstrolab::GetBurstBayesianPsiStatistics(TString type,Double_t nr,Int_t nc
  }
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::GetBurstChi2Statistics(TString type,Int_t ndt,Int_t mode,Double_t fact)
+void NcAstrolab2::GetBurstChi2Statistics(TString type,Int_t ndt,Int_t mode,Double_t fact)
 {
 // Provide the transient burst Chi-squared statistics for the (stacked) distributions
 // of the observed arrival times and opening angles w.r.t. the corresponding bursts.
@@ -11068,7 +11067,7 @@ void NcAstrolab::GetBurstChi2Statistics(TString type,Int_t ndt,Int_t mode,Double
  cout << " For the \"off source\" stacked patches : P-value = " << pbkg << " (" << sigmabkg << " sigma)" << endl;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::ListBurstHistograms() const
+void NcAstrolab2::ListBurstHistograms() const
 {
 // Provide a list of all the stored transient burst histograms
 //
@@ -11088,7 +11087,7 @@ void NcAstrolab::ListBurstHistograms() const
  cout << " ===============================================================================" << endl;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab::WriteBurstHistograms(TString filename)
+void NcAstrolab2::WriteBurstHistograms(TString filename)
 {
 // Write all the generated transient burst histograms to a ROOT file with the specified filename.
 //
@@ -11097,7 +11096,7 @@ void NcAstrolab::WriteBurstHistograms(TString filename)
 // **********************************************************************************
 
  // The output file for the produced histograms
- TFile fout(filename.Data(),"RECREATE","NcAstrolab analysis results");
+ TFile fout(filename.Data(),"RECREATE","NcAstrolab2 analysis results");
 
  // Write all the histos to the output file
  Int_t nh=fBurstHistos.GetEntries();
@@ -11115,14 +11114,14 @@ void NcAstrolab::WriteBurstHistograms(TString filename)
  ListBurstHistograms();
 }
 ///////////////////////////////////////////////////////////////////////////
-TObject* NcAstrolab::Clone(const char* name) const
+TObject* NcAstrolab2::Clone(const char* name) const
 {
 // Make a deep copy of the current object and provide the pointer to the copy.
 // This memberfunction enables automatic creation of new objects of the
 // correct type depending on the object type, a feature which may be very useful
 // for containers when adding objects in case the container owns the objects.
 
- NcAstrolab* lab=new NcAstrolab(*this);
+ NcAstrolab2* lab=new NcAstrolab2(*this);
  if (name)
  {
   if (strlen(name)) lab->SetName(name);

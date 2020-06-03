@@ -1,5 +1,5 @@
-#ifndef NcAstrolab_h
-#define NcAstrolab_h
+#ifndef NcAstrolab2_h
+#define NcAstrolab2_h
 // Copyright(c) 1997-2019, NCFS/IIHE, All Rights Reserved.
 // See cxx source for full Copyright notice.
 
@@ -32,12 +32,12 @@
 #include "NcMath.h"
 #include "NcSample.h"
  
-class NcAstrolab : public TTask,public NcTimestamp
+class NcAstrolab2 : public TTask,public NcTimestamp
 {
  public:
-  NcAstrolab(const char* name="NcAstrolab",const char* title="Generic lab"); // Constructor
-  virtual ~NcAstrolab();                                              // Destructor
-  NcAstrolab(const NcAstrolab& t);                                    // Copy constructor
+  NcAstrolab2(const char* name="NcAstrolab2",const char* title="Generic lab"); // Constructor
+  virtual ~NcAstrolab2();                                              // Destructor
+  NcAstrolab2(const NcAstrolab2& t);                                    // Copy constructor
   virtual TObject* Clone(const char* name="") const;                  // Make a deep copy and provide its pointer
   void Data(Int_t mode=1,TString u="deg",Bool_t utc=kTRUE);           // Lab info in angular units u
   void SetLabPosition(Nc3Vector& r);                                  // Set lab position in terrestrial frame
@@ -262,6 +262,6 @@ class NcAstrolab : public TTask,public NcTimestamp
   // Internal function for transient burst investigations
   void BurstCompensate(Int_t& nmugrb,Float_t Grbnu,Float_t Ngrbs,Int_t Inburst,Float_t Dtnu,Float_t Dtnus,Float_t Angres,Float_t Timres,Float_t Datype,Float_t Dawin);
  
- ClassDef(NcAstrolab,31) // Virtual lab to provide (astro)physical parameters, treat data and relate observations with astrophysical phenomena
+ ClassDef(NcAstrolab2,31) // Virtual lab to provide (astro)physical parameters, treat data and relate observations with astrophysical phenomena
 };
 #endif
