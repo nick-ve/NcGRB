@@ -152,7 +152,7 @@
 // lab.DisplaySignals("equ","J",0,"ham",1);
 //
 //--- Author: Nick van Eijndhoven 15-mar-2007 Utrecht University
-//- Modified: Nick van Eijndhoven, IIHE-VUB, Brussel, March 2, 2020  11:46
+//- Modified: Nick van Eijndhoven, IIHE-VUB Brussel, UTC June 7, 2020 11:46
 ///////////////////////////////////////////////////////////////////////////
 
 #include "NcAstrolab2.h"
