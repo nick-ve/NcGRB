@@ -8458,16 +8458,17 @@ void NcAstrolab2::SetBurstParameter(TString name,Double_t value)
 // Zmin      // Minimal redshift for burst acceptance (<0 : [|fZmin|,fZmax] with random z when redshift is unknown)
 // Zmax      // Maximal redshift for burst acceptance
 // Sigmagrb  // Angular uncertainty (sigma in degrees) on burst position (<0 : determine from observations)
-// Maxsigma  // Maximal combined burst position and track angular uncertainty (sigma in degrees) for acceptance
-// Grbnu     // Maximum number of detectable neutrinos per burst (<0 : no stat. fluct.)
+// Maxsigma  // Maximal combined burst position and track reconstruction angular uncertainty (sigma in degrees) for acceptance
+// Grbnu     // Maximum number of detectable neutrinos per burst (<0 : no statistical fluctuations)
 // Avgrbz    // Average burst redshift (<0 : determine from observations)
 // Avgrbt90  // Average burst duration (T90) in seconds (<0 : determine from observations)
 // Inburst   // Flag to indicate that neutrinos are produced coupled (1) or not (0) to the burst duration
 // Dtnu      // Mean time diff. (in sec) between gamma/GW and nu production (decoupled) or in T90 units w.r.t. trigger (coupled)
 // Dtnus     // Sigma of time difference (in sec) between gamma/GW and nu production (<0 is in T90 units)
 // Kinangle  // Neutrino-lepton kinematic opening angle selection for CC interactions (0=none 1=mean 2=median 3=draw from pdf)
-// Angres    // Detector angular resolution (degrees)
-// Timres    // Detector time resolution (sec)
+// Recoangle // Reconstruction angular uncertainty selection (0=use Angres value  1=mean 2=median 3=draw from distribution)
+// Angres    // Fixed reconstruction angular resolution (degrees), which is also used when no distribution is available
+// Timres    // Neutrino detector time resolution (sec)
 // Bkgrate   // Mean rate (in Hz) of background events for the specified [Declmin,Declmax] interval (<0 : rate per steradian)
 // Tmin      // Lower bound (in sec) of the search time window [Tmin,Tmax] where t=0 indicates the burst trigger
 // Tmax      // Upper bound (in sec) of the search time window [Tmin,Tmax] where t=0 indicates the burst trigger
@@ -8502,6 +8503,7 @@ void NcAstrolab2::SetBurstParameter(TString name,Double_t value)
 // Dtnu=-60
 // Dtnus=-0.5
 // Kinangle=3
+// Recoangle=3
 // Angres=0.5
 // Timres=1e-5
 // Bkgrate=-0.003/(2.*pi)
@@ -8576,6 +8578,9 @@ void NcAstrolab2::SetBurstParameter(TString name,Double_t value)
   fBurstParameters->AddNamedSlot(name);
   fBurstParameters->SetSignal(-0.5,name);
   name="Kinangle";
+  fBurstParameters->AddNamedSlot(name);
+  fBurstParameters->SetSignal(3,name);
+  name="Recoangle";
   fBurstParameters->AddNamedSlot(name);
   fBurstParameters->SetSignal(3,name);
   name="Angres";
@@ -8700,7 +8705,7 @@ void NcAstrolab2::ListBurstParameters() const
 // **********************************************************************************
 
  // User provided settings
- Int_t fNmax=fBurstParameters->GetSignal("Nmax");
+ Int_t fNmax=TMath::Nint(fBurstParameters->GetSignal("Nmax"));
  Float_t fDeclmin=fBurstParameters->GetSignal("Declmin");
  Float_t fDeclmax=fBurstParameters->GetSignal("Declmax");
  Float_t fT90min=fBurstParameters->GetSignal("T90min");
@@ -8712,10 +8717,11 @@ void NcAstrolab2::ListBurstParameters() const
  Float_t fGrbnu=fBurstParameters->GetSignal("Grbnu");
  Float_t fAvgrbz=fBurstParameters->GetSignal("Avgrbz");
  Float_t fAvgrbt90=fBurstParameters->GetSignal("Avgrbt90");
- Int_t fInburst=fBurstParameters->GetSignal("Inburst");
+ Int_t fInburst=TMath::Nint(fBurstParameters->GetSignal("Inburst"));
  Float_t fDtnu=fBurstParameters->GetSignal("Dtnu");
  Float_t fDtnus=fBurstParameters->GetSignal("Dtnus");
- Int_t fKinangle=fBurstParameters->GetSignal("Kinangle");
+ Int_t fKinangle=TMath::Nint(fBurstParameters->GetSignal("Kinangle"));
+ Int_t fRecoangle=TMath::Nint(fBurstParameters->GetSignal("Recoangle"));
  Float_t fAngres=fBurstParameters->GetSignal("Angres");
  Float_t fTimres=fBurstParameters->GetSignal("Timres");
  Float_t fBkgrate=fBurstParameters->GetSignal("Bkgrate");
@@ -8723,9 +8729,9 @@ void NcAstrolab2::ListBurstParameters() const
  Float_t fTmax=fBurstParameters->GetSignal("Tmax");
  Float_t fDtwin=fBurstParameters->GetSignal("Dtwin");
  Float_t fDawin=fBurstParameters->GetSignal("Dawin");
- Int_t fDatype=fBurstParameters->GetSignal("Datype");
+ Int_t fDatype=TMath::Nint(fBurstParameters->GetSignal("Datype"));
  Float_t fNbkg=fBurstParameters->GetSignal("Nbkg");
- Float_t fTbint90=fBurstParameters->GetSignal("Tbint90");
+ Int_t fTbint90=TMath::Nint(fBurstParameters->GetSignal("Tbint90"));
  Float_t fTbin=fBurstParameters->GetSignal("Tbin");
  Float_t fVarTbin=fBurstParameters->GetSignal("VarTbin");
  Float_t fAbin=fBurstParameters->GetSignal("Abin");
@@ -8737,7 +8743,7 @@ void NcAstrolab2::ListBurstParameters() const
  Float_t fNbkgWin=fBurstParameters->GetSignal("NbkgWin");
 
  // Internal statistics
- Int_t fNgrbs=fBurstParameters->GetSignal("Ngrbs");
+ Int_t fNgrbs=TMath::Nint(fBurstParameters->GetSignal("Ngrbs"));
  Float_t fMaxtotsigma=fBurstParameters->GetSignal("Maxtotsigma");
 
  cout << " ========================= User provided burst settings ===============================" << endl;
@@ -8786,8 +8792,9 @@ void NcAstrolab2::ListBurstParameters() const
   cout << " The actual number of neutrinos may be less due to statistical fluctuations" << endl;
  }
  cout << " Neutrino-lepton kinematic opening angle selection for CC interactions (0=none 1=mean 2=median 3=draw from pdf) : " << fKinangle << endl;
- cout << " Angular resolution (degrees) of the detector : " << fAngres << endl;
- cout << " Time resolution (sec) of the detector : " << fTimres << endl;
+ cout << " Reconstruction angular uncertainty selection (0=use fixed value  1=mean 2=median 3=draw from distribution) : " << fRecoangle << endl;
+ cout << " Fixed reconstruction angular resolution (degrees), which is also used when no distribution is available : " << fAngres << endl;
+ cout << " Time resolution (sec) of the neutrino detector : " << fTimres << endl;
  cout << " Mean rate (Hz) of background events for the specified declination interval (<0 : rate per steradian) " << fBkgrate << endl;
  cout << " Total search time window (in sec) with the burst trigger at t=0 : [" << fTmin << "," << fTmax << "]" << endl;
  if (fDawin>=0)
@@ -8895,7 +8902,7 @@ void NcAstrolab2::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t d
 //        to accumulate data.
 
  // Retreive the needed parameters
- Int_t fNmax=fBurstParameters->GetSignal("Nmax");
+ Int_t fNmax=TMath::Nint(fBurstParameters->GetSignal("Nmax"));
  Float_t fDeclmin=fBurstParameters->GetSignal("Declmin");
  Float_t fDeclmax=fBurstParameters->GetSignal("Declmax");
  Float_t fSigmagrb=fBurstParameters->GetSignal("Sigmagrb");
@@ -8907,7 +8914,7 @@ void NcAstrolab2::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t d
  Float_t fAngres=fBurstParameters->GetSignal("Angres");
 
  // Internal statistics
- Int_t fNgrbs=fBurstParameters->GetSignal("Ngrbs");
+ Int_t fNgrbs=TMath::Nint(fBurstParameters->GetSignal("Ngrbs"));
  Float_t fMaxtotsigma=fBurstParameters->GetSignal("Maxtotsigma");
 
  // Get access to a redshift distribution to draw randomly redshifts if needed
@@ -9094,7 +9101,7 @@ void NcAstrolab2::GenBurstGCNdata(Int_t n,TString name)
 // **********************************************************************************
 
  // Retreive the needed parameters
- Int_t fNmax=fBurstParameters->GetSignal("Nmax");
+ Int_t fNmax=TMath::Nint(fBurstParameters->GetSignal("Nmax"));
  Float_t fDeclmin=fBurstParameters->GetSignal("Declmin");
  Float_t fDeclmax=fBurstParameters->GetSignal("Declmax");
  Float_t fSigmagrb=fBurstParameters->GetSignal("Sigmagrb");
@@ -9106,7 +9113,7 @@ void NcAstrolab2::GenBurstGCNdata(Int_t n,TString name)
  Float_t fAngres=fBurstParameters->GetSignal("Angres");
 
  // Internal statistics
- Int_t fNgrbs=fBurstParameters->GetSignal("Ngrbs");
+ Int_t fNgrbs=TMath::Nint(fBurstParameters->GetSignal("Ngrbs"));
  Float_t fMaxtotsigma=fBurstParameters->GetSignal("Maxtotsigma");
 
  // Get access to a redshift distribution to draw randomly redshifts
@@ -9420,11 +9427,19 @@ void NcAstrolab2::MakeBurstBkgEdist(TString file,TString tree,TString name1,TStr
 // file   : Name of the input file containing the ROOT Tree (wildcards are allowed)
 // tree   : Name of the Tree containing the data
 // name1  : Name of the tree variable containing the log10(E) data (in GeV)
-// name2  : Name of the tree variable containing the declination data (in degrees)
-// u      : The units ("deg"=degrees or "rad"=radians) of the declination data
+// name2  : Name of the tree variable containing the declination data
+// u      : The units (see below) of the declination data
 // Emin   : Minimal energy value in GeV
 // Emax   : Maximal energy value in GeV
 // nb     : Number of bins for the Energy distribution
+//
+// Specification of the angular units :
+// ------------------------------------ 
+// "rad" : input angle provided in radians
+// "deg" : input angle provided in degrees
+// "dms" : input angle provided in dddmmss.sss
+// "hms" : input angle provided in hhmmss.sss
+// "hrs" : input angle provided in fractional hours
 //
 // The default value is nb=1000.
 //
@@ -9493,7 +9508,7 @@ void NcAstrolab2::MakeBurstBkgEdist(TString file,TString tree,TString name1,TStr
   dec=lx->GetValue();
 
   // Convert declination to degrees if needed
-  if (u=="rad") dec*=180./acos(-1.); 
+  dec=ConvertAngle(dec,u,"deg");
 
   if (dec>=fDeclmin && dec<=fDeclmax)
   {
@@ -9506,7 +9521,7 @@ void NcAstrolab2::MakeBurstBkgEdist(TString file,TString tree,TString name1,TStr
       << " of Tree:" << tree << " in file(s):" << file << endl;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab2::MakeBurstEdist(TF1& spec,Double_t Emin,Double_t Emax,Int_t nbins)
+void NcAstrolab2::MakeBurstSignalEdist(TF1& spec,Double_t Emin,Double_t Emax,Int_t nbins)
 {
 // Create an energy distribution on the interval [Emin,Emax] GeV based on the 
 // provided spectral function "spec" describing dN/dE.
@@ -9524,7 +9539,7 @@ void NcAstrolab2::MakeBurstEdist(TF1& spec,Double_t Emin,Double_t Emax,Int_t nbi
 // xmin=100;
 // xmax=1e7;
 // nbins=1000;
-// MakeBurstEdist(spec,Emin,Emax,nbins);
+// MakeBurstSignalEdist(spec,Emin,Emax,nbins);
 //
 // The default value is nbins=1000.
 
@@ -9532,7 +9547,7 @@ void NcAstrolab2::MakeBurstEdist(TF1& spec,Double_t Emin,Double_t Emax,Int_t nbi
 
  if (Emax<=Emin)
  {
-  cout << "*" << ClassName() << "::MakeBurstEdist* Inconsistent data: Emin=" << Emin << " Emax=" << Emax << endl;
+  cout << "*" << ClassName() << "::MakeBurstSignalEdist* Inconsistent data: Emin=" << Emin << " Emax=" << Emax << endl;
   return;
  }
 
@@ -9547,7 +9562,7 @@ void NcAstrolab2::MakeBurstEdist(TF1& spec,Double_t Emin,Double_t Emax,Int_t nbi
  fBurstHistos.Add(hpdfE);
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab2::MakeBurstEdist(Double_t gamma,Double_t Emin,Double_t Emax,Int_t nbins)
+void NcAstrolab2::MakeBurstSignalEdist(Double_t gamma,Double_t Emin,Double_t Emax,Int_t nbins)
 {
 // Create an energy distribution on the interval [Emin,Emax] GeV based on a 
 // a single power law with spectral index "gamma" describing dN/dE.
@@ -9565,13 +9580,144 @@ void NcAstrolab2::MakeBurstEdist(Double_t gamma,Double_t Emin,Double_t Emax,Int_
 // Emin=100;
 // Emax=1e7;
 // nbins=1000;
-// MakeBurstEdist(gamma,Emin,Emax,nbins);
+// MakeBurstSignalEdist(gamma,Emin,Emax,nbins);
 //
 // The default value is nbins=1000.
 
  TF1 spec("spec","pow(x,[0])");
  spec.SetParameter(0,-gamma);
- MakeBurstEdist(spec,Emin,Emax,nbins);
+ MakeBurstSignalEdist(spec,Emin,Emax,nbins);
+}
+///////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MakeBurstRecoAngresdist(TString file,TString tree,TString name1,TString name2,TString ua,TString name3,TString ud,Double_t Emin,Double_t Emax,Int_t nbe,Int_t nba)
+{
+// Create a reconstruction angle resolution vs. energy distribution on the interval [Emin,Emax] GeV
+// based on observed or simulated archival data.
+// The angular resolution range is fixed to [0,180] degrees. 
+// If this memberfunction is invoked before GenBurstSignals(), the resulting
+// distribution will be used to determine the reconstruction angular uncertainty
+// for individual events by invokation of GetBurstRecoAngres().
+//
+// Note : Only those data will be used that correspond with the selected
+//        declination interval for the burst investigations.
+//
+// **********************************************************************************
+// * This is a beta test version, so currently no backward compatibility guaranteed *
+// **********************************************************************************
+//
+// The input data has to be provided via a ROOT Tree which contains at least
+// the specified variable names indicated below.
+//
+// Input arguments :
+// -----------------
+// file   : Name of the input file containing the ROOT Tree (wildcards are allowed)
+// tree   : Name of the Tree containing the data
+// name1  : Name of the tree variable containing the log10(E) data (in GeV)
+// name2  : Name of the tree variable containing the reconstruction angle uncertainty
+// ua     : The units (see below) of the angular uncertainty data
+// name3  : Name of the tree variable containing the declination data
+// ud     : The units (see below) of the declination data
+// Emin   : Minimal energy value in GeV
+// Emax   : Maximal energy value in GeV
+// nbe    : Number of bins for the Energy axis
+// nba    : Number of bins for the Angular axis
+//
+// Specification of the angular units :
+// ------------------------------------ 
+// "rad" : input angle provided in radians
+// "deg" : input angle provided in degrees
+// "dms" : input angle provided in dddmmss.sss
+// "hms" : input angle provided in hhmmss.sss
+// "hrs" : input angle provided in fractional hours
+//
+// The default values are nbe=100 and nba=1000.
+//
+// Note : This memberfunction may be invoked several times to read different files
+//        to accumulate data.
+
+ Float_t fDeclmin=fBurstParameters->GetSignal("Declmin");
+ Float_t fDeclmax=fBurstParameters->GetSignal("Declmax");
+
+ if (Emin<=0) Emin=1e-10;
+
+ if (Emax<=Emin)
+ {
+  cout << "*" << ClassName() << "::MakeBurstRecoAngresdist* Inconsistent data: Emin=" << Emin << " Emax=" << Emax << endl;
+  return;
+ }
+
+ // Convert the energy boundaries to the log10 scale of the X-axis
+ Double_t xmin=log10(Emin);
+ Double_t xmax=log10(Emax);
+
+ // The Tree containing the burst data
+ TChain data(tree.Data());
+ data.Add(file.Data());
+
+ Int_t nen=data.GetEntries();
+
+ if (!nen || !data.FindLeaf(name1.Data()) || !data.FindLeaf(name2.Data()) || !data.FindLeaf(name3.Data()))
+ {
+  cout << "*" << ClassName() << "::MakeBurstRecoAngresdist* Missing information for tree variable:" << name1
+       << " and/or tree variable:" << name2 << " and/or tree variable:" << name3 << endl;
+  cout << " of Tree:" << tree << " with " << nen <<  " entries in file:" << file << endl;
+  return;
+ }
+
+ // Create a new distribution in case a reconstruction angle resolution vs. energy distribution is not yet present
+ TH2* Angresdist=(TH2*)fBurstHistos.FindObject("hAngresE");
+ if (!Angresdist)
+ {
+  // Creation of the observed reconstruction angle resolution vs. energy histo
+  TH2F* hAngresE=new TH2F("hAngresE","Archival data of observed reconstruction angle resolution vs. energy",
+  nbe,xmin,xmax,nba,0,180.1);
+  fBurstHistos.Add(hAngresE);
+  hAngresE->GetXaxis()->SetTitle("^{10}log(Energy) in GeV");
+  hAngresE->GetYaxis()->SetTitle("Angular resolution in degrees");
+ }
+
+ // Get pointer to the relevant histogram 
+ TH2* hAngresE=(TH2*)fBurstHistos.FindObject("hAngresE");
+
+ Int_t nE=0;
+ Double_t logE=0;
+ Double_t dec=0;
+ Double_t dang=0;
+ TLeaf* lx=0;
+ for (Int_t ien=0; ien<nen; ien++)
+ {
+  data.GetEntry(ien);
+
+  lx=data.GetLeaf(name1.Data());
+  if (!lx) continue;
+
+  logE=lx->GetValue();
+
+  lx=data.GetLeaf(name2.Data());
+  if (!lx) continue;
+
+  dang=lx->GetValue();
+
+  // Convert declination to degrees if needed
+  dang=ConvertAngle(dang,ua,"deg");
+
+  lx=data.GetLeaf(name3.Data());
+  if (!lx) continue;
+
+  dec=lx->GetValue();
+
+  // Convert declination to degrees if needed
+  dec=ConvertAngle(dec,ud,"deg");
+
+  if (dec>=fDeclmin && dec<=fDeclmax)
+  {
+   hAngresE->Fill(logE,dang);
+   nE++;
+  }
+ }
+
+ cout << "*" << ClassName() << "::MakeBurstRecoAngresdist* " << nE << " archival entries have been obtained for variables:" << name2
+      << " vs. " << name1 << " of Tree:" << tree << " in file(s):" << file << endl;
 }
 ///////////////////////////////////////////////////////////////////////////
 Double_t NcAstrolab2::GetBurstSignalEnergy(Double_t Emin,Double_t Emax) const
@@ -9583,8 +9729,8 @@ Double_t NcAstrolab2::GetBurstSignalEnergy(Double_t Emin,Double_t Emax) const
 // * This is a beta test version, so currently no backward compatibility guaranteed *
 // **********************************************************************************
 //
-// If Emin<0 the lower boundary of the provided spectrum will be used as Emin. 
-// If Emax<0 the upper boundary of the provided spectrum will be used as Emax.
+// If Emin<=0 the lower boundary of the provided spectrum will be used as Emin. 
+// If Emax<=0 the upper boundary of the provided spectrum will be used as Emax.
 //
 // In case of inconsistent data the value -1 is returned.
 //
@@ -9598,8 +9744,9 @@ Double_t NcAstrolab2::GetBurstSignalEnergy(Double_t Emin,Double_t Emax) const
  if (!hpdfE) return E;
 
  Int_t nbins=hpdfE->GetNbinsX();
+ Int_t nentries=hpdfE->GetEntries();
 
- if (nbins<=0) return E;
+ if (nbins<=0 || nentries<=0) return E;
 
  TAxis* xaxis=hpdfE->GetXaxis();
  
@@ -9609,7 +9756,7 @@ Double_t NcAstrolab2::GetBurstSignalEnergy(Double_t Emin,Double_t Emax) const
  Double_t xup=xaxis->GetBinUpEdge(nbins);
 
  Double_t logEmin=0;
- if (Emin<0)
+ if (Emin<=0)
  {
   logEmin=xlow;
  }
@@ -9619,7 +9766,7 @@ Double_t NcAstrolab2::GetBurstSignalEnergy(Double_t Emin,Double_t Emax) const
  }
 
  Double_t logEmax=0;
- if (Emax<0)
+ if (Emax<=0)
  {
   logEmax=xup;
  }
@@ -9649,8 +9796,8 @@ Double_t NcAstrolab2::GetBurstBackgroundEnergy(Double_t Emin,Double_t Emax) cons
 // * This is a beta test version, so currently no backward compatibility guaranteed *
 // **********************************************************************************
 //
-// If Emin<0 the lower boundary of the provided spectrum will be used as Emin. 
-// If Emax<0 the upper boundary of the provided spectrum will be used as Emax.
+// If Emin<=0 the lower boundary of the provided spectrum will be used as Emin. 
+// If Emax<=0 the upper boundary of the provided spectrum will be used as Emax.
 //
 // In case of inconsistent data the value -1 is returned.
 //
@@ -9664,8 +9811,9 @@ Double_t NcAstrolab2::GetBurstBackgroundEnergy(Double_t Emin,Double_t Emax) cons
  if (!hbkgE) return E;
 
  Int_t nbins=hbkgE->GetNbinsX();
+ Int_t nentries=hbkgE->GetEntries();
 
- if (nbins<=0) return E;
+ if (nbins<=0 || nentries<=0) return E;
 
  TAxis* xaxis=hbkgE->GetXaxis();
  
@@ -9675,7 +9823,7 @@ Double_t NcAstrolab2::GetBurstBackgroundEnergy(Double_t Emin,Double_t Emax) cons
  Double_t xup=xaxis->GetBinUpEdge(nbins);
 
  Double_t logEmin=0;
- if (Emin<0)
+ if (Emin<=0)
  {
   logEmin=xlow;
  }
@@ -9685,7 +9833,7 @@ Double_t NcAstrolab2::GetBurstBackgroundEnergy(Double_t Emin,Double_t Emax) cons
  }
 
  Double_t logEmax=0;
- if (Emax<0)
+ if (Emax<=0)
  {
   logEmax=xup;
  }
@@ -9704,6 +9852,131 @@ Double_t NcAstrolab2::GetBurstBackgroundEnergy(Double_t Emin,Double_t Emax) cons
  E=pow(float(10),E);
 
  return E;
+}
+///////////////////////////////////////////////////////////////////////////
+Double_t NcAstrolab2::GetBurstRecoAngres(Double_t Emin,Double_t Emax,Double_t Amin,Double_t Amax) const
+{
+// Provide the reconstruction angle resolution (in degrees) for the energy interval [Emin,Emax] GeV.
+// Depending on the burst parameter settings "Recoangle" and "Angres" the returned value
+// is either constant or determined from the user provided distribution as produced
+// by MakeBurstRecoAngresdist().
+// In case the user has requested the reconstruction angle resolution to be drawn randomly
+// from the distribution, the returned value will be within the interval [Amin,Amax] degrees.
+//
+// **********************************************************************************
+// * This is a beta test version, so currently no backward compatibility guaranteed *
+// **********************************************************************************
+//
+// If Emin<=0 the lower boundary of the provided spectrum will be used as Emin. 
+// If Emax<=0 the upper boundary of the provided spectrum will be used as Emax.
+//
+// In case of inconsistent data the value -1 is returned.
+//
+// The default values are Emin=-1, Emax=-1, Amin=0 and Amax=999.
+
+ Double_t dang=-1;
+
+ if (Amin<0) Amin=0;
+
+ Int_t fRecoangle=TMath::Nint(fBurstParameters->GetSignal("Recoangle"));
+ Float_t fAngres=fBurstParameters->GetSignal("Angres");
+
+ // The user requested a fixed angular resolution value "Angres"
+ if (!fRecoangle)
+ {
+  dang=fAngres;
+  return dang;
+ }
+
+ // The user requested an angular resolution based on a distribution
+
+ // Get pointer to the reco angle resolution vs. energy distribution histogram 
+ TH2* hAngresE=(TH2*)fBurstHistos.FindObject("hAngresE");
+
+ // No distribution available -> Return the user provided "Angres" value
+ if (!hAngresE)
+ {
+  dang=fAngres;
+  return dang;
+ }
+
+ // Obtain the projected reco angle resolution distribution within the [Emin,Emax] interval
+
+ Int_t nbins=hAngresE->GetNbinsX();
+ Int_t nentries=hAngresE->GetEntries();
+
+ if (nbins<=0 || nentries<=0) return dang;
+
+ TAxis* xaxis=hAngresE->GetXaxis();
+ 
+ if (!xaxis) return dang;
+
+ Double_t xlow=xaxis->GetBinLowEdge(1);
+ Double_t xup=xaxis->GetBinUpEdge(nbins);
+
+ Double_t logEmin=0;
+ if (Emin<=0)
+ {
+  logEmin=xlow;
+ }
+ else
+ {
+  logEmin=log10(Emin);
+ }
+
+ Double_t logEmax=0;
+ if (Emax<=0)
+ {
+  logEmax=xup;
+ }
+ else
+ {
+  logEmax=log10(Emax);
+ }
+
+ if (logEmax<logEmin || logEmin>=xup || logEmax<=xlow) return dang;
+
+ Int_t ilow=xaxis->FindBin(logEmin);
+ Int_t iup=xaxis->FindBin(logEmax);
+
+ TH1D* hproj=hAngresE->ProjectionY("hproj",ilow,iup);
+
+ if (!hproj) return dang;
+
+ nbins=hproj->GetNbinsX();
+ nentries=hproj->GetEntries();
+
+ if (nbins<=0 || nentries<=0) return dang;
+
+ if (fRecoangle==1) dang=hproj->GetMean();
+
+ if (fRecoangle==2)
+ {
+  NcSample q;
+  dang=q.GetMedian(hproj);
+ }
+
+ if (fRecoangle==3)
+ {
+  xaxis=hproj->GetXaxis();
+ 
+  if (!xaxis) return dang;
+
+  xlow=xaxis->GetBinLowEdge(1);
+  xup=xaxis->GetBinUpEdge(nbins);
+
+  if (Amax<=Amin || Amin>=xup || Amax<=xlow) return dang;
+  
+  dang=Amin-1.;
+  while (dang<Amin || dang>Amax)
+  {
+   dang=hproj->GetRandom();
+  }
+ }
+
+ if (hproj) delete hproj;
+
+ return dang;
 }
 ///////////////////////////////////////////////////////////////////////////
 void NcAstrolab2::GenBurstSignals()
@@ -9727,7 +10000,7 @@ void NcAstrolab2::GenBurstSignals()
  Float_t fSigmagrb=fBurstParameters->GetSignal("Sigmagrb");
  Float_t fMaxtotsigma=fBurstParameters->GetSignal("Maxtotsigma");
  Float_t fTimres=fBurstParameters->GetSignal("Timres");
- Int_t fKinangle=fBurstParameters->GetSignal("Kinangle");
+ Int_t fKinangle=TMath::Nint(fBurstParameters->GetSignal("Kinangle"));
  Float_t fAngres=fBurstParameters->GetSignal("Angres");
  Float_t fAvgrbz=fBurstParameters->GetSignal("Avgrbz");
  Float_t fAvgrbt90=fBurstParameters->GetSignal("Avgrbt90");
@@ -9736,14 +10009,14 @@ void NcAstrolab2::GenBurstSignals()
  Float_t fTmax=fBurstParameters->GetSignal("Tmax");
  Float_t fDtwin=fBurstParameters->GetSignal("Dtwin");
  Float_t fDawin=fBurstParameters->GetSignal("Dawin");
- Float_t fDatype=fBurstParameters->GetSignal("Datype");
+ Int_t fDatype=TMath::Nint(fBurstParameters->GetSignal("Datype"));
  Float_t fTbin=fBurstParameters->GetSignal("Tbin");
- Float_t fTbint90=fBurstParameters->GetSignal("Tbint90");
+ Int_t fTbint90=TMath::Nint(fBurstParameters->GetSignal("Tbint90"));
  Float_t fNbkg=fBurstParameters->GetSignal("Nbkg");
  Float_t fVarTbin=fBurstParameters->GetSignal("VarTbin");
  Float_t fAbin=fBurstParameters->GetSignal("Abin");
  Float_t fGrbnu=fBurstParameters->GetSignal("Grbnu");
- Int_t fInburst=fBurstParameters->GetSignal("Inburst");
+ Int_t fInburst=TMath::Nint(fBurstParameters->GetSignal("Inburst"));
  Float_t fDtnu=fBurstParameters->GetSignal("Dtnu");
  Float_t fDtnus=fBurstParameters->GetSignal("Dtnus");
 
@@ -10225,7 +10498,7 @@ void NcAstrolab2::BurstCompensate(Int_t& nmugrb,Float_t fGrbnu,Float_t fNgrbs,In
 // Compensate statistical underfluctuation in the number of transient burst muons.
 
  // Retreive the needed parameters
- Int_t fKinangle=fBurstParameters->GetSignal("Kinangle");
+ Int_t fKinangle=TMath::Nint(fBurstParameters->GetSignal("Kinangle"));
 
  Int_t nmu=int(fabs(fGrbnu)*float(fNgrbs));
  Int_t jgrb=0;

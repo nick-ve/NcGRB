@@ -144,10 +144,12 @@ class NcAstrolab2 : public TTask,public NcTimestamp
   void MakeBurstZdist(TString file,TString tree,TString name,Int_t nb=200,Float_t zmin=0,Float_t zmax=20); // Make transient burst observed redshift distribution
   void MakeBurstT90dist(TString file,TString tree,TString name,Int_t nb=50,Float_t xmin=-5,Float_t xmax=5); // Make transient burst observed T90 distribution
   void MakeBurstBkgEdist(TString file,TString tree,TString name1,TString name2,TString u,Double_t Emin,Double_t Emax,Int_t nb=1000);
-  void MakeBurstEdist(TF1& spec,Double_t Emin,Double_t Emax,Int_t nbins=1000);
-  void MakeBurstEdist(Double_t gamma,Double_t Emin,Double_t Emax,Int_t nbins=1000);
+  void MakeBurstSignalEdist(TF1& spec,Double_t Emin,Double_t Emax,Int_t nbins=1000);
+  void MakeBurstSignalEdist(Double_t gamma,Double_t Emin,Double_t Emax,Int_t nbins=1000);
+  void MakeBurstRecoAngresdist(TString file,TString tree,TString name1,TString name2,TString ua,TString name3,TString ud,Double_t Emin,Double_t Emax,Int_t nbe=100,Int_t nba=1000);
   Double_t GetBurstSignalEnergy(Double_t Emin=-1,Double_t Emax=-1) const;
   Double_t GetBurstBackgroundEnergy(Double_t Emin=-1,Double_t Emax=-1) const;
+  Double_t GetBurstRecoAngres(Double_t Emin=-1,Double_t Emax=-1,Double_t Amin=0,Double_t Amax=999) const;
   TH1* GetBurstBayesianSignalRate(Double_t p,Double_t& rlow,Double_t& rup,Int_t n=1000); // Provide transient burst Bayesian signal rate and credible interval 
   Double_t GetBurstLiMaSignificance() const; // Provide the transient burst Li-Ma signal significance
   void GetBurstBayesianPsiStatistics(TString type,Double_t nr=-1,Int_t ncut=10,Int_t ndt=2,Int_t mode=1,Double_t fact=1,Int_t freq=0); // Provide transient burst Bayesian Psi statistics
@@ -262,6 +264,6 @@ class NcAstrolab2 : public TTask,public NcTimestamp
   // Internal function for transient burst investigations
   void BurstCompensate(Int_t& nmugrb,Float_t Grbnu,Float_t Ngrbs,Int_t Inburst,Float_t Dtnu,Float_t Dtnus,Float_t Angres,Float_t Timres,Float_t Datype,Float_t Dawin);
  
- ClassDef(NcAstrolab2,31) // Virtual lab to provide (astro)physical parameters, treat data and relate observations with astrophysical phenomena
+ ClassDef(NcAstrolab2,32) // Virtual lab to provide (astro)physical parameters, treat data and relate observations with astrophysical phenomena
 };
 #endif
