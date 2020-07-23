@@ -8455,9 +8455,11 @@ void NcAstrolab2::SetBurstParameter(TString name,Double_t value)
 // Declmax   // Maximal declination (J2000 in degrees) for burst position acceptance
 // T90min    // Minimal duration (t90 in sec) for burst acceptance (<0 : [|T90min|,T90max] with random T90 when T90 or T100 is unknown)
 // T90max    // Maximal duration (t90 in sec) for burst acceptance
-// Zmin      // Minimal redshift for burst acceptance (<0 : [|fZmin|,fZmax] with random z when redshift is unknown)
+// Zmin      // Minimal redshift for burst acceptance (<0 : [|Zmin|,Zmax] with random z when redshift is unknown)
 // Zmax      // Maximal redshift for burst acceptance
-// Sigmagrb  // Angular uncertainty (sigma in degrees) on burst position (<0 : determine from observations)
+// Sigmamin  // Minimal position uncertainty (sigma in degrees) for burst acceptance (<0 : [|Sigmamin|,Sigmamax] with random sigma when uncertainty is unknown)
+// Sigmamax  // Maximal position uncertainty (sigma in degres)  for burst acceptance
+// Sigmagrb  // Angular uncertainty (sigma in degrees) on burst position (<0 : accept only [0,|Sigmagrb|] from observations)
 // Maxsigma  // Maximal combined burst position and track reconstruction angular uncertainty (sigma in degrees) for acceptance
 // Grbnu     // Maximum number of detectable neutrinos per burst (<0 : no statistical fluctuations)
 // Avgrbz    // Average burst redshift (<0 : determine from observations)
@@ -8473,7 +8475,7 @@ void NcAstrolab2::SetBurstParameter(TString name,Double_t value)
 // Tmin      // Lower bound (in sec) of the search time window [Tmin,Tmax] where t=0 indicates the burst trigger
 // Tmax      // Upper bound (in sec) of the search time window [Tmin,Tmax] where t=0 indicates the burst trigger
 // Dtwin     // Total search time window (in sec) centered at the burst trigger
-// Dawin     // Angular search circle (<0 is local zenith band) in degrees or sigma around (above/below) the burst position
+// Dawin     // Angular search circle (<0 is local zenith band) in degrees or units of sigma around (above/below) the burst position
 // Datype    // Type of angular window specification (0=in degrees 1=in units of combined burst/track sigma) 
 // Nbkg      // Mean number of counts per bin for auto-binning
 // Tbint90   // Flag to indicate whether Tbin represents seconds (0) or units of average T90 (1)
@@ -8492,15 +8494,16 @@ void NcAstrolab2::SetBurstParameter(TString name,Double_t value)
 // ------------------
 // Nmax=-1
 // [Declmin,Declmax]=[-90,90]
-// [T90min,T90max]=[1e-6,1e6]
-// [Zmin,Zmax]=[-1e-6,9999]
+// [T90min,T90max]=[1e-5,1e5]
+// [Zmin,Zmax]=[-1e-6,20]
+// [Sigmamin,Sigmamax]=[0,2.5]
 // Sigmagrb=-2.5
 // Maxsigma=999
 // Grbnu=-0.03
 // Avgrbz=-1
 // Avgrbt90=-1
 // Inburst=0
-// Dtnu=-60
+// Dtnu=0
 // Dtnus=-0.5
 // Kinangle=3
 // Recoangle=3
@@ -8543,16 +8546,22 @@ void NcAstrolab2::SetBurstParameter(TString name,Double_t value)
   fBurstParameters->SetSignal(90,name);
   name="T90min";
   fBurstParameters->AddNamedSlot(name);
-  fBurstParameters->SetSignal(1e-6,name);
+  fBurstParameters->SetSignal(1e-5,name);
   name="T90max";
   fBurstParameters->AddNamedSlot(name);
-  fBurstParameters->SetSignal(1e6,name);
+  fBurstParameters->SetSignal(1e5,name);
   name="Zmin";
   fBurstParameters->AddNamedSlot(name);
   fBurstParameters->SetSignal(-1e-6,name);
   name="Zmax";
   fBurstParameters->AddNamedSlot(name);
-  fBurstParameters->SetSignal(9999,name);
+  fBurstParameters->SetSignal(20,name);
+  name="Sigmamin";
+  fBurstParameters->AddNamedSlot(name);
+  fBurstParameters->SetSignal(0,name);
+  name="Sigmamax";
+  fBurstParameters->AddNamedSlot(name);
+  fBurstParameters->SetSignal(2.5,name);
   name="Sigmagrb";
   fBurstParameters->AddNamedSlot(name);
   fBurstParameters->SetSignal(-2.5,name);
@@ -8573,7 +8582,7 @@ void NcAstrolab2::SetBurstParameter(TString name,Double_t value)
   fBurstParameters->SetSignal(0,name);
   name="Dtnu";
   fBurstParameters->AddNamedSlot(name);
-  fBurstParameters->SetSignal(-60,name);
+  fBurstParameters->SetSignal(0,name);
   name="Dtnus";
   fBurstParameters->AddNamedSlot(name);
   fBurstParameters->SetSignal(-0.5,name);
@@ -8712,6 +8721,8 @@ void NcAstrolab2::ListBurstParameters() const
  Float_t fT90max=fBurstParameters->GetSignal("T90max");
  Float_t fZmin=fBurstParameters->GetSignal("Zmin");
  Float_t fZmax=fBurstParameters->GetSignal("Zmax");
+ Float_t fSigmamin=fBurstParameters->GetSignal("Sigmamin");
+ Float_t fSigmamax=fBurstParameters->GetSignal("Sigmamax");
  Float_t fSigmagrb=fBurstParameters->GetSignal("Sigmagrb");
  Float_t fMaxsigma=fBurstParameters->GetSignal("Maxsigma");
  Float_t fGrbnu=fBurstParameters->GetSignal("Grbnu");
@@ -8760,6 +8771,8 @@ void NcAstrolab2::ListBurstParameters() const
  if (fT90min<0) cout << " Random values taken from T90-distribution in case T90 and T100 were missing" << endl;
  cout << " Redshift interval for burst acceptance : [" << fabs(fZmin) << "," << fZmax << "]" << endl;
  if (fZmin<0) cout << " Random redshift values taken from z-distribution in case of unknown redshift" << endl;
+ cout << " Position uncertainty (sigma in degrees) for burst acceptance : [" << fabs(fSigmamin) << "," << fSigmamax << "]" << endl;
+ if (fSigmamin<0) cout << " Random sigma values taken from sigma-distribution in case of unknown position uncertainty" << endl;
  if (fSigmagrb>=0) cout << " Fixed burst position uncertainty (sigma in degrees) : " << fSigmagrb << endl;
  cout << " Maximal combined burst position and track angular uncertainty (sigma in degrees) for acceptance : " << fMaxsigma << endl;
  if (fAvgrbz>=0) cout << " User defined average burst redshift : " << fAvgrbz << endl;
@@ -8795,7 +8808,7 @@ void NcAstrolab2::ListBurstParameters() const
  cout << " Reconstruction angular uncertainty selection (0=use fixed value  1=mean 2=median 3=draw from distribution) : " << fRecoangle << endl;
  cout << " Fixed reconstruction angular resolution (degrees), which is also used when no distribution is available : " << fAngres << endl;
  cout << " Time resolution (sec) of the neutrino detector : " << fTimres << endl;
- cout << " Mean rate (Hz) of background events for the specified declination interval (<0 : rate per steradian) " << fBkgrate << endl;
+ cout << " Mean rate (Hz) of background events for the specified declination interval (<0 : rate per steradian) : " << fBkgrate << endl;
  cout << " Total search time window (in sec) with the burst trigger at t=0 : [" << fTmin << "," << fTmax << "]" << endl;
  if (fDawin>=0)
  {
@@ -8871,15 +8884,15 @@ void NcAstrolab2::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t d
 // The input data has to be provided via a ROOT Tree which will be searched
 // for data on the variable names specified below.
 // In case data for a certain variable is not present, the non-physical value -999
-// will be stored, unless the user has selected random generation of T90 and/or z
-// as specified via SetBurstParameter(). 
+// will be stored, unless the user has selected random generation of the variables
+// T90 and/or z and/or sigmapos as specified via SetBurstParameter(). 
 //
 //  Name             Description
 // ---------------------------------------------------------------
 // "date"        Observation date as yyyymmdd
 // "ra"          Right ascension (J2000) in decimal degrees
 // "dec"         Declination (J2000) in decimal degrees
-// "sigmapos"    The error on the burst position in decimal degrees
+// "sigmapos"    The 1-sigma angular uncertainty on the burst position in decimal degrees
 // "t90"         The T90 burst duration in seconds
 // "mjdtrig"     The (fractional) MJD of the burst trigger
 // "mjdt90start" The (fractional) MJD of the T90 start time
@@ -8906,16 +8919,16 @@ void NcAstrolab2::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t d
  Float_t fDeclmin=fBurstParameters->GetSignal("Declmin");
  Float_t fDeclmax=fBurstParameters->GetSignal("Declmax");
  Float_t fSigmagrb=fBurstParameters->GetSignal("Sigmagrb");
- Float_t fMaxsigma=fBurstParameters->GetSignal("Maxsigma");
+//@@@@@ Float_t fMaxsigma=fBurstParameters->GetSignal("Maxsigma");
  Float_t fT90min=fBurstParameters->GetSignal("T90min");
  Float_t fT90max=fBurstParameters->GetSignal("T90max");
  Float_t fZmin=fBurstParameters->GetSignal("Zmin");
  Float_t fZmax=fBurstParameters->GetSignal("Zmax");
- Float_t fAngres=fBurstParameters->GetSignal("Angres");
+ Float_t fSigmamin=fBurstParameters->GetSignal("Sigmamin");
+ Float_t fSigmamax=fBurstParameters->GetSignal("Sigmamax");
 
  // Internal statistics
  Int_t fNgrbs=TMath::Nint(fBurstParameters->GetSignal("Ngrbs"));
- Float_t fMaxtotsigma=fBurstParameters->GetSignal("Maxtotsigma");
 
  // Get access to a redshift distribution to draw randomly redshifts if needed
  TH1* zdist=0;
@@ -8971,6 +8984,33 @@ void NcAstrolab2::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t d
   }
  }
 
+ // Get access to a 1-sigma position uncertainty distribution to draw randomly position uncertaintes
+ TH1* sigmaposdist=0;
+ if (fSigmamin<0)
+ {
+  sigmaposdist=(TH1*)fBurstHistos.FindObject("hsigmapos");
+  if (!sigmaposdist)
+  {
+   cout << endl;
+   cout << " *" << ClassName() << "::LoadBurstGCNdata* Archival observed position uncertainty distribution not found." << endl;
+   cout << " A Landau fit from observed data will be used to provide random 1-sigma uncertainty values." << endl;
+
+   sigmaposdist=(TH1*)fBurstHistos.FindObject("hsigmaposfit");
+   if (!sigmaposdist)
+   { 
+    TF1 fsigmapos("fsigmapos","245.2*TMath::Landau(x,-2.209,0.6721,1)");
+    fsigmapos.SetRange(0,90);
+    fsigmapos.SetNpx(10000);
+    TH1* hfsigmapos=fsigmapos.GetHistogram();
+    sigmaposdist=(TH1*)hfsigmapos->Clone();
+    sigmaposdist->SetNameTitle("hsigmaposfit","Landau fit for burst 1-sigma position uncertainty data");
+    sigmaposdist->GetXaxis()->SetTitle("Burst position uncertainty (sigma in degrees)");
+    sigmaposdist->GetYaxis()->SetTitle("Counts");
+    fBurstHistos.Add(sigmaposdist);
+   }
+  }
+ }
+
  // The TTree containing the burst data
  TChain gcn(tree.Data());
  gcn.Add(file.Data());
@@ -8979,11 +9019,10 @@ void NcAstrolab2::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t d
  Float_t ra,dec,sigmapos,t90,t100,fluence,z;
  Double_t mjdtrig,mjdt90start;
 
- Float_t sigmagrb=fSigmagrb;
- Float_t totsigma=0;
  fNgrbs=GetNsignals(0);
+ Float_t sigmagrb=0;
  Float_t t90grb=0;
- Double_t zgrb=0;
+ Float_t zgrb=0;
  Int_t idate=0;
  TString grbname;
  NcTimestamp ts;
@@ -9032,15 +9071,8 @@ void NcAstrolab2::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t d
   if (date2 && date>date2) continue;
 
   if (mjdtrig<0 || mjdt90start<0) continue;
-
-  // Use the GCN 1 sigma position uncertainty (in degrees) if requested
-  if (fSigmagrb<0) sigmagrb=fabs(sigmapos);
-
-  // Determine the combined GRB position and track resolution uncertainty.
-  totsigma=sigmagrb*sigmagrb+fAngres*fAngres;
-  totsigma=sqrt(totsigma);
    
-  if (dec<fDeclmin || dec>fDeclmax || totsigma>fMaxsigma) continue;
+  if (dec<fDeclmin || dec>fDeclmax) continue;
 
   t90grb=t90;
   if (t90grb<=0) t90grb=t100;
@@ -9052,6 +9084,11 @@ void NcAstrolab2::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t d
   if (fZmin<0 && zgrb<0 && zdist) zgrb=zdist->GetRandom();
 
   if (zgrb<fabs(fZmin) || zgrb>fZmax) continue;
+
+  sigmagrb=sigmapos;
+  if (fSigmamin<0 && sigmagrb<0 && sigmaposdist) sigmagrb=sigmaposdist->GetRandom();
+
+  if (sigmagrb<fabs(fSigmamin) || sigmagrb>fSigmamax) continue;
 
   idate=date%1000000;
   grbname=type;
@@ -9067,24 +9104,19 @@ void NcAstrolab2::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t d
   sx->SetSignal(t90grb,"t90");
   sx->AddNamedSlot("sigmagrb");
   sx->SetSignal(sigmagrb,"sigmagrb");
-  sx->AddNamedSlot("totsigma");
-  sx->SetSignal(totsigma,"totsigma");
   sx->AddNamedSlot("fluence");
   sx->SetSignal(fluence,"fluence");
   sx->AddNamedSlot("z");
   sx->SetSignal(zgrb,"z");
 
-  if (totsigma>fMaxtotsigma) fMaxtotsigma=totsigma;
  }
 
  // Update internal statistics
- fBurstParameters->AddNamedSlot("Maxtotsigma");
- fBurstParameters->SetSignal(fMaxtotsigma,"Maxtotsigma");
  fNgrbs=GetNsignals(0);
  fBurstParameters->AddNamedSlot("Ngrbs");
  fBurstParameters->SetSignal(fNgrbs,"Ngrbs");
 
- cout << "*" << ClassName() << "::LoadBurstGCNdata* " << ngcn << " bursts of type " << type
+ cout << " *" << ClassName() << "::LoadBurstGCNdata* " << ngcn << " bursts of type " << type
       << " were stored from Tree:" << tree << " of file(s):" << file << endl;
  cout << " Total number of stored bursts : " << fNgrbs << endl;
 }
@@ -9105,24 +9137,24 @@ void NcAstrolab2::GenBurstGCNdata(Int_t n,TString name)
  Float_t fDeclmin=fBurstParameters->GetSignal("Declmin");
  Float_t fDeclmax=fBurstParameters->GetSignal("Declmax");
  Float_t fSigmagrb=fBurstParameters->GetSignal("Sigmagrb");
- Float_t fMaxsigma=fBurstParameters->GetSignal("Maxsigma");
+//@@@@@ Float_t fMaxsigma=fBurstParameters->GetSignal("Maxsigma");
  Float_t fT90min=fBurstParameters->GetSignal("T90min");
  Float_t fT90max=fBurstParameters->GetSignal("T90max");
  Float_t fZmin=fBurstParameters->GetSignal("Zmin");
  Float_t fZmax=fBurstParameters->GetSignal("Zmax");
- Float_t fAngres=fBurstParameters->GetSignal("Angres");
+ Float_t fSigmamin=fBurstParameters->GetSignal("Sigmamin");
+ Float_t fSigmamax=fBurstParameters->GetSignal("Sigmamax");
 
  // Internal statistics
  Int_t fNgrbs=TMath::Nint(fBurstParameters->GetSignal("Ngrbs"));
- Float_t fMaxtotsigma=fBurstParameters->GetSignal("Maxtotsigma");
 
  // Get access to a redshift distribution to draw randomly redshifts
  TH1* zdist=(TH1*)fBurstHistos.FindObject("hz");
  if (!zdist)
  {
+  cout << endl;
   cout << " *" << ClassName() << "::GenBurstGCNdata* Archival observed redshift distribution not found." << endl;
   cout << " A Landau fit from Swift GRB redshift data will be used to provide random z values." << endl;
-  cout << endl;
 
   zdist=(TH1*)fBurstHistos.FindObject("hzfit");
   if (!zdist)
@@ -9143,9 +9175,9 @@ void NcAstrolab2::GenBurstGCNdata(Int_t n,TString name)
  TH1* t90dist=(TH1*)fBurstHistos.FindObject("ht90");
  if (!t90dist)
  {
+  cout << endl;
   cout << " *" << ClassName() << "::GenBurstGCNData* Observational T90 distribution not found." << endl;
   cout << " A double Gaussian fit from Fermi GRB T90 data will be used to provide random T90 values." << endl;
-  cout << endl;
 
   t90dist=(TH1*)fBurstHistos.FindObject("ht90fit");
   if (!t90dist)
@@ -9162,6 +9194,29 @@ void NcAstrolab2::GenBurstGCNdata(Int_t n,TString name)
   } 
  }
 
+ // Get access to a 1-sigma position uncertainty distribution to draw randomly position uncertaintes
+ TH1* sigmaposdist=(TH1*)fBurstHistos.FindObject("hsigmapos");
+ if (!sigmaposdist)
+ {
+  cout << endl;
+  cout << " *" << ClassName() << "::GenBurstGCNdata* Archival observed position uncertainty distribution not found." << endl;
+  cout << " A Landau fit from observed data will be used to provide random 1-sigma uncertainty values." << endl;
+
+  sigmaposdist=(TH1*)fBurstHistos.FindObject("hsigmaposfit");
+  if (!sigmaposdist)
+  { 
+   TF1 fsigmapos("fsigmapos","245.2*TMath::Landau(x,-2.209,0.6721,1)");
+   fsigmapos.SetRange(0,90);
+   fsigmapos.SetNpx(10000);
+   TH1* hfsigmapos=fsigmapos.GetHistogram();
+   sigmaposdist=(TH1*)hfsigmapos->Clone();
+   sigmaposdist->SetNameTitle("hsigmaposfit","Landau fit for burst 1-sigma position uncertainty data");
+   sigmaposdist->GetXaxis()->SetTitle("Burst position uncertainty (sigma in degrees)");
+   sigmaposdist->GetYaxis()->SetTitle("Counts");
+   fBurstHistos.Add(sigmaposdist);
+  }
+ }
+
  Float_t thlow=fDeclmin+90.;
  Float_t thup=fDeclmax+90.;
  if (thup>180) thup=180;
@@ -9169,10 +9224,9 @@ void NcAstrolab2::GenBurstGCNdata(Int_t n,TString name)
  NcSignal* sx=0;
  NcPosition rgrb;
  Float_t t90grb=0;
- Double_t zgrb=0;
+ Float_t zgrb=0;
+ Float_t sigmagrb=0;
  TString grbname;
- Float_t sigmagrb=fabs(fSigmagrb);
- Float_t totsigma=0;
  Double_t thetagrb,phigrb;
  Int_t ngen=0;
  fNgrbs=GetNsignals(0);
@@ -9186,10 +9240,6 @@ void NcAstrolab2::GenBurstGCNdata(Int_t n,TString name)
   {
    zgrb=zdist->GetRandom();
   }
-  rgrb.SetPosition(zgrb,0,0,"sph","deg");
-  RandomPosition(rgrb,thlow,thup,0,360);
-  thetagrb=rgrb.GetX(2,"sph","deg");
-  phigrb=rgrb.GetX(3,"sph","deg");
 
   t90grb=-1;
   while (t90grb<fabs(fT90min) || t90grb>fT90max)
@@ -9197,17 +9247,22 @@ void NcAstrolab2::GenBurstGCNdata(Int_t n,TString name)
    t90grb=t90dist->GetRandom();
    t90grb=pow(float(10),t90grb);
   }
-
-  // Determine the combined GRB position and track resolution uncertainty.
-  totsigma=sigmagrb*sigmagrb+fAngres*fAngres;
-  totsigma=sqrt(totsigma);
    
-  if (totsigma>fMaxsigma) continue;
+  sigmagrb=-1;
+  while (sigmagrb<fabs(fSigmamin) || sigmagrb>fSigmamax)
+  {
+   sigmagrb=sigmaposdist->GetRandom();
+  }
+
+  rgrb.SetPosition(1,0,0,"sph","deg");
+  RandomPosition(rgrb,thlow,thup,0,360);
+  thetagrb=rgrb.GetX(2,"sph","deg");
+  phigrb=rgrb.GetX(3,"sph","deg");
 
   grbname="Random-";
   grbname+=name;
   grbname+=igrb;
-  sx=SetSignal(zgrb,thetagrb,"deg",phigrb,"deg","loc",0,-1,"M",grbname);
+  sx=SetSignal(1,thetagrb,"deg",phigrb,"deg","loc",0,-1,"M",grbname);
 
   if (!sx) continue;
 
@@ -9217,22 +9272,18 @@ void NcAstrolab2::GenBurstGCNdata(Int_t n,TString name)
   sx->SetSignal(t90grb,"t90");
   sx->AddNamedSlot("sigmagrb");
   sx->SetSignal(sigmagrb,"sigmagrb");
-  sx->AddNamedSlot("totsigma");
-  sx->SetSignal(totsigma,"totsigma");
   sx->AddNamedSlot("z");
   sx->SetSignal(zgrb,"z");
 
-  if (totsigma>fMaxtotsigma) fMaxtotsigma=totsigma;
  }
 
  // Update internal statistics
- fBurstParameters->AddNamedSlot("Maxtotsigma");
- fBurstParameters->SetSignal(fMaxtotsigma,"Maxtotsigma");
  fNgrbs=GetNsignals(0);
  fBurstParameters->AddNamedSlot("Ngrbs");
  fBurstParameters->SetSignal(fNgrbs,"Ngrbs");
 
- cout << "*" << ClassName() << "::GenBurstGCNdata* " << ngen << " generated bursts with name " << name << " were stored." << endl;
+ cout << endl;
+ cout << " *" << ClassName() << "::GenBurstGCNdata* " << ngen << " generated bursts with name " << name << " were stored." << endl;
  cout << " Total number of stored bursts : " << fNgrbs << endl;
 }
 ///////////////////////////////////////////////////////////////////////////
@@ -9275,7 +9326,7 @@ void NcAstrolab2::MakeBurstZdist(TString file,TString tree,TString name,Int_t nb
 
  if (!nen || !lx)
  {
-  cout << "*" << ClassName() << "::MakeBurstZdist* Missing information for tree variable:" << name << endl;
+  cout << " *" << ClassName() << "::MakeBurstZdist* Missing information for tree variable:" << name << endl;
   cout << " of Tree:" << tree << " with " << nen <<  " entries in file:" << file << endl;
   return;
  }
@@ -9323,7 +9374,7 @@ void NcAstrolab2::MakeBurstZdist(TString file,TString tree,TString name,Int_t nb
   hd->Fill(d);
  }
 
- cout << "*" << ClassName() << "::MakeBurstZdist* " << nz << " archival z-values have been obtained from tree variable:" << name
+ cout << " *" << ClassName() << "::MakeBurstZdist* " << nz << " archival z-values have been obtained from tree variable:" << name
       << " of Tree:" << tree << " in file(s):" << file << endl;
 }
 ///////////////////////////////////////////////////////////////////////////
@@ -9364,7 +9415,7 @@ void NcAstrolab2::MakeBurstT90dist(TString file,TString tree,TString name,Int_t 
 
  if (!nen || !lx)
  {
-  cout << "*" << ClassName() << "::MakeBurstT90dist* Missing information for tree variable:" << name << endl;
+  cout << " *" << ClassName() << "::MakeBurstT90dist* Missing information for tree variable:" << name << endl;
   cout << " of Tree:" << tree << " with " << nen <<  " entries in file:" << file << endl;
   return;
  }
@@ -9374,7 +9425,7 @@ void NcAstrolab2::MakeBurstT90dist(TString file,TString tree,TString name,Int_t 
  if (!t90dist)
  {
   // Creation of observed burst t90 duration histo
-  TH1F* ht90=new TH1F("ht90","Archival data of observed burst durations",50,-5,5);
+  TH1F* ht90=new TH1F("ht90","Archival data of observed burst durations",nb,xmin,xmax);
   fBurstHistos.Add(ht90);
   ht90->GetXaxis()->SetTitle("Burst duration ^{10}log(T90) in sec.");
   ht90->GetYaxis()->SetTitle("Counts");
@@ -9400,7 +9451,96 @@ void NcAstrolab2::MakeBurstT90dist(TString file,TString tree,TString name,Int_t 
   }
  }
 
- cout << "*" << ClassName() << "::MakeBurstT90dist* " << nt90 << " archival T90 values have been obtained from variable:" << name
+ cout << " *" << ClassName() << "::MakeBurstT90dist* " << nt90 << " archival T90 values have been obtained from variable:" << name
+      << " of Tree:" << tree << " in file(s):" << file << endl;
+}
+///////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MakeBurstSigmaPosdist(TString file,TString tree,TString name,TString u,Int_t nb,Float_t xmin,Float_t xmax)
+{
+// Read observed archival 1-sigma burst position uncertainty data and create the corresponding distribution.
+// If this memberfunction is invoked before LoadBurstGCNdata() or GenBurstGCNdata(),
+// the resulting distribution will be used to draw random 1-sigma burst position uncertainty values
+// (if requested) for the bursts without localisation uncertainty information.
+//
+// **********************************************************************************
+// * This is a beta test version, so currently no backward compatibility guaranteed *
+// **********************************************************************************
+//
+// The input data has to be provided via a ROOT Tree which contains at least
+// the specified variable name indicated below.
+//
+// Input arguments :
+// -----------------
+// file   : Name of the input file containing the ROOT Tree (wildcards are allowed)
+// tree   : Name of the Tree containing the data
+// name   : Name of the variable in the Tree containing the 1-sigma angular localisation uncertainty data
+// u      : Units of the angular localisation uncertainty input data (see below)
+// nb     : Number of bins for the resulting distribution
+// xmin   : Minimal value for the 1-sigma position uncertainty in degrees
+// xmax   : Maximal value for the 1-sigma position uncertainty in degrees
+//
+// Specification of the angular units :
+// ------------------------------------ 
+// "rad" : angular uncertainty provided in radians
+// "deg" : angular uncertainty provided in degrees
+// "dms" : angular uncertainty provided in dddmmss.sss
+// "hms" : angular uncertainty provided in hhmmss.sss
+// "hrs" : angular uncertainty provided in fractional hours
+//
+// The default values are nb=900, xmin=0 and xmax=90.
+//
+// Note : This memberfunction may be invoked several times to read different files
+//        to accumulate data.
+
+ // The Tree containing the burst data
+ TChain data(tree.Data());
+ data.Add(file.Data());
+
+ Int_t nen=data.GetEntries();
+ TLeaf* lx=data.FindLeaf(name.Data());
+
+ if (!nen || !lx)
+ {
+  cout << " *" << ClassName() << "::MakeBurstSigmaPosdist* Missing information for tree variable:" << name << endl;
+  cout << " of Tree:" << tree << " with " << nen <<  " entries in file:" << file << endl;
+  return;
+ }
+
+ // Create a new distribution in case a burst position uncertainty distribution is not yet present
+ TH1* sigmaposdist=(TH1*)fBurstHistos.FindObject("hsigmapos");
+ if (!sigmaposdist)
+ {
+  // Creation of observed 1-sigma burst position uncertainty histo
+  TH1F* hsigmapos=new TH1F("hsigmapos","Archival data of observed 1-sigma burst position uncertainties",nb,xmin,xmax);
+  fBurstHistos.Add(hsigmapos);
+  hsigmapos->GetXaxis()->SetTitle("Burst position uncertainty (sigma in degrees)");
+  hsigmapos->GetYaxis()->SetTitle("Counts");
+ }
+
+ // Get pointer to the relevant histogram 
+ TH1* hsigmapos=(TH1*)fBurstHistos.FindObject("hsigmapos");
+
+ Int_t nsigmapos=0;
+ Double_t sigmapos=0;
+ for (Int_t ien=0; ien<nen; ien++)
+ {
+  data.GetEntry(ien);
+
+  lx=data.GetLeaf(name.Data());
+  if (!lx) continue;
+
+  sigmapos=lx->GetValue();
+
+  // Convert declination to degrees if needed
+  sigmapos=ConvertAngle(sigmapos,u,"deg");
+
+  if (sigmapos<xmin || sigmapos>xmax) continue;
+
+  hsigmapos->Fill(sigmapos);
+  nsigmapos++;
+ }
+
+ cout << " *" << ClassName() << "::MakeBurstSigmaPosdist* " << nsigmapos << " archival sigmapos values have been obtained from variable:" << name
       << " of Tree:" << tree << " in file(s):" << file << endl;
 }
 ///////////////////////////////////////////////////////////////////////////
@@ -9453,7 +9593,7 @@ void NcAstrolab2::MakeBurstBkgEdist(TString file,TString tree,TString name1,TStr
 
  if (Emax<=Emin)
  {
-  cout << "*" << ClassName() << "::MakeBurstBkgEdist* Inconsistent data: Emin=" << Emin << " Emax=" << Emax << endl;
+  cout << " *" << ClassName() << "::MakeBurstBkgEdist* Inconsistent data: Emin=" << Emin << " Emax=" << Emax << endl;
   return;
  }
 
@@ -9469,7 +9609,7 @@ void NcAstrolab2::MakeBurstBkgEdist(TString file,TString tree,TString name1,TStr
 
  if (!nen || !data.FindLeaf(name1.Data()) || !data.FindLeaf(name2.Data()))
  {
-  cout << "*" << ClassName() << "::MakeBurstBkgEdist* Missing information for tree variable:" << name1
+  cout << " *" << ClassName() << "::MakeBurstBkgEdist* Missing information for tree variable:" << name1
        << " and/or tree variable:" << name2 << endl;
   cout << " of Tree:" << tree << " with " << nen <<  " entries in file:" << file << endl;
   return;
@@ -9517,7 +9657,7 @@ void NcAstrolab2::MakeBurstBkgEdist(TString file,TString tree,TString name1,TStr
   }
  }
 
- cout << "*" << ClassName() << "::MakeBurstBkgEdist* " << nE << " archival Energy values have been obtained from variable:" << name1
+ cout << " *" << ClassName() << "::MakeBurstBkgEdist* " << nE << " archival Energy values have been obtained from variable:" << name1
       << " of Tree:" << tree << " in file(s):" << file << endl;
 }
 ///////////////////////////////////////////////////////////////////////////
@@ -9547,7 +9687,7 @@ void NcAstrolab2::MakeBurstSignalEdist(TF1& spec,Double_t Emin,Double_t Emax,Int
 
  if (Emax<=Emin)
  {
-  cout << "*" << ClassName() << "::MakeBurstSignalEdist* Inconsistent data: Emin=" << Emin << " Emax=" << Emax << endl;
+  cout << " *" << ClassName() << "::MakeBurstSignalEdist* Inconsistent data: Emin=" << Emin << " Emax=" << Emax << endl;
   return;
  }
 
@@ -9555,11 +9695,18 @@ void NcAstrolab2::MakeBurstSignalEdist(TF1& spec,Double_t Emin,Double_t Emax,Int
  Double_t xmin=log10(Emin);
  Double_t xmax=log10(Emax);
 
- TString s="Burst induced signal energy distribution;^{10}Log(Energy) in GeV;pdf";
- TH1F his=GetCountsHistogram(spec,nbins,xmin,xmax,1,s);
+ TString sf="dN/dx=";
+ sf+=spec.GetExpFormula("p");
+ sf+=" spectrum PDF for x=E";
+ TString sh="Burst induced signal energy distribution;^{10}Log(E) in GeV;";
+ sh+=sf;
+ TH1F his=GetCountsHistogram(spec,nbins,xmin,xmax,1,sh);
  TH1F* hpdfE=(TH1F*)his.Clone();
  hpdfE->SetName("hpdfE");
  fBurstHistos.Add(hpdfE);
+
+ cout << " *" << ClassName() << "::MakeBurstSignalEdist* Created " << sf
+      << " on [Emin,Emax]=[" << Emin << "," << Emax << "] GeV" << endl;
 }
 ///////////////////////////////////////////////////////////////////////////
 void NcAstrolab2::MakeBurstSignalEdist(Double_t gamma,Double_t Emin,Double_t Emax,Int_t nbins)
@@ -9642,7 +9789,7 @@ void NcAstrolab2::MakeBurstRecoAngresdist(TString file,TString tree,TString name
 
  if (Emax<=Emin)
  {
-  cout << "*" << ClassName() << "::MakeBurstRecoAngresdist* Inconsistent data: Emin=" << Emin << " Emax=" << Emax << endl;
+  cout << " *" << ClassName() << "::MakeBurstRecoAngresdist* Inconsistent data: Emin=" << Emin << " Emax=" << Emax << endl;
   return;
  }
 
@@ -9658,7 +9805,7 @@ void NcAstrolab2::MakeBurstRecoAngresdist(TString file,TString tree,TString name
 
  if (!nen || !data.FindLeaf(name1.Data()) || !data.FindLeaf(name2.Data()) || !data.FindLeaf(name3.Data()))
  {
-  cout << "*" << ClassName() << "::MakeBurstRecoAngresdist* Missing information for tree variable:" << name1
+  cout << " *" << ClassName() << "::MakeBurstRecoAngresdist* Missing information for tree variable:" << name1
        << " and/or tree variable:" << name2 << " and/or tree variable:" << name3 << endl;
   cout << " of Tree:" << tree << " with " << nen <<  " entries in file:" << file << endl;
   return;
@@ -9716,7 +9863,7 @@ void NcAstrolab2::MakeBurstRecoAngresdist(TString file,TString tree,TString name
   }
  }
 
- cout << "*" << ClassName() << "::MakeBurstRecoAngresdist* " << nE << " archival entries have been obtained for variables:" << name2
+ cout << " *" << ClassName() << "::MakeBurstRecoAngresdist* " << nE << " archival entries have been obtained for variables:" << name2
       << " vs. " << name1 << " of Tree:" << tree << " in file(s):" << file << endl;
 }
 ///////////////////////////////////////////////////////////////////////////
@@ -9997,8 +10144,14 @@ void NcAstrolab2::GenBurstSignals()
  // Retreive the needed parameters
  Float_t fDeclmin=fBurstParameters->GetSignal("Declmin");
  Float_t fDeclmax=fBurstParameters->GetSignal("Declmax");
+ Float_t fT90min=fBurstParameters->GetSignal("T90min");
+ Float_t fT90max=fBurstParameters->GetSignal("T90max");
+ Float_t fZmin=fBurstParameters->GetSignal("Zmin");
+ Float_t fZmax=fBurstParameters->GetSignal("Zmax");
+ Float_t fSigmamin=fBurstParameters->GetSignal("Sigmamin");
+ Float_t fSigmamax=fBurstParameters->GetSignal("Sigmamax");
  Float_t fSigmagrb=fBurstParameters->GetSignal("Sigmagrb");
- Float_t fMaxtotsigma=fBurstParameters->GetSignal("Maxtotsigma");
+ Float_t fMaxsigma=fBurstParameters->GetSignal("Maxsigma");
  Float_t fTimres=fBurstParameters->GetSignal("Timres");
  Int_t fKinangle=TMath::Nint(fBurstParameters->GetSignal("Kinangle"));
  Float_t fAngres=fBurstParameters->GetSignal("Angres");
@@ -10026,8 +10179,6 @@ void NcAstrolab2::GenBurstSignals()
  Float_t fNbkgHour=fBurstParameters->GetSignal("NbkgHour");
  Float_t fNbkgWin=fBurstParameters->GetSignal("NbkgWin");
 
- Float_t t90,z;
- TString name;
 
  ////////////////////////////////////////////////
  // Some Burst statistics from the loaded data //
@@ -10035,19 +10186,62 @@ void NcAstrolab2::GenBurstSignals()
 
  Int_t fNgrbs=GetNsignals(0);
 
+ Float_t xmin=0;
+ Float_t xmax=0;
+ Float_t range=0;
+ Int_t nbins=0;
+
+ // Creation of the burst redshift histo
+ xmin=fabs(fZmin);
+ xmax=fZmax;
+ range=xmax-xmin;
+ nbins=TMath::Nint(range/0.1); // Bins of 0.1
+ TH1F* hzburst=new TH1F("hzburst","Burst redshifts in the final sample",nbins,xmin,xmax);
+ fBurstHistos.Add(hzburst);
+ hzburst->GetXaxis()->SetTitle("Burst redshift");
+ hzburst->GetYaxis()->SetTitle("Counts");
+
+ // Creation of the corresponding physical distance histo
+ xmin=GetPhysicalDistance(fabs(fZmin));
+ xmax=GetPhysicalDistance(fZmax);
+ TH1F* hdburst=new TH1F("hdburst","Burst distances in the final sample derived from the redshifts",nbins,xmin,xmax);
+ fBurstHistos.Add(hdburst);
+ hdburst->GetXaxis()->SetTitle("Burst physical distance in Mpc");
+ hdburst->GetYaxis()->SetTitle("Counts");
+
+ // Creation of the burst t90 duration histo
+ xmin=-5;
+ if (fabs(fT90min)>0) xmin=log10(fabs(fT90min));
+ xmax=5;
+ if (fT90max>0) xmax=log10(fT90max);
+ range=xmax-xmin;
+ nbins=TMath::Nint(range/0.2); // Bins of 0.2
+ TH1F* ht90burst=new TH1F("ht90burst","Burst durations in the final sample",nbins,xmin,xmax);
+ fBurstHistos.Add(ht90burst);
+ ht90burst->GetXaxis()->SetTitle("Burst duration ^{10}log(T90) in sec.");
+ ht90burst->GetYaxis()->SetTitle("Counts");
+
  // Creation of the burst position uncertainty histo
- TH1F* hsigmagrb=new TH1F("hsigmagrb","Burst position uncertainty",450,0,90);
- fBurstHistos.Add(hsigmagrb);
- hsigmagrb->GetXaxis()->SetTitle("Burst position uncertainty (sigma in degrees)");
- hsigmagrb->GetYaxis()->SetTitle("Counts");
+ xmin=fabs(fSigmamin);
+ xmax=fSigmamax;
+ range=xmax-xmin;
+ nbins=TMath::Nint(range/0.1); // Bins of 0.1 degree
+ TH1F* hsigmaburst=new TH1F("hsigmaburst","Burst position uncertainties in the final sample",nbins,xmin,xmax);
+ fBurstHistos.Add(hsigmaburst);
+ hsigmaburst->GetXaxis()->SetTitle("Burst position uncertainty (sigma in degrees)");
+ hsigmaburst->GetYaxis()->SetTitle("Counts");
 
  // Creation of the combined burst position and track resolution uncertainty histo
- TH1F* htotsigma=new TH1F("htotsigma","Combined burst position and event direction uncertainty",450,0,90);
+ TH1F* htotsigma=new TH1F("htotsigma","Combined burst position and event direction uncertainty",900,0,90);
  fBurstHistos.Add(htotsigma);
  htotsigma->GetXaxis()->SetTitle("Combined burst position and event direction uncertainty (sigma in degrees)");
  htotsigma->GetYaxis()->SetTitle("Counts");
 
  NcSignal* sx=0;
+ Float_t zgrb=0;
+ Double_t dgrb=0;
+ Float_t t90grb=0;
+ Float_t sigmagrb=0;
  NcSample zsample;
  zsample.SetStoreMode();
  NcSample t90sample;
@@ -10059,11 +10253,19 @@ void NcAstrolab2::GenBurstSignals()
 
   if (!sx) continue;
 
-  hsigmagrb->Fill(sx->GetSignal("sigmagrb"));
-  htotsigma->Fill(sx->GetSignal("totsigma"));
+  zgrb=sx->GetSignal("z");
+  dgrb=GetPhysicalDistance(zgrb);
+  t90grb=sx->GetSignal("t90");
+  sigmagrb=sx->GetSignal("sigmagrb");
 
-  if (fAvgrbz<0) zsample.Enter(sx->GetSignal("z"));
-  if (fAvgrbt90<0) t90sample.Enter(sx->GetSignal("t90"));
+  hzburst->Fill(zgrb);
+  hdburst->Fill(dgrb);
+  if (t90grb>0) ht90burst->Fill(log10(t90grb));
+  hsigmaburst->Fill(sigmagrb);
+//@@@@@@@  htotsigma->Fill(sx->GetSignal("totsigma"));
+
+  if (fAvgrbz<0) zsample.Enter(zgrb);
+  if (fAvgrbt90<0) t90sample.Enter(t90grb);
  }
 
  // Determine median redshift if requested
@@ -10088,7 +10290,7 @@ void NcAstrolab2::GenBurstSignals()
 
  Float_t danglow=0;     // Lower value (in degrees) of angular difference histo
  Float_t dangup=fDawin; // Upper value (in degrees) of angular difference histo
- if (fDatype) dangup=fDawin*fabs(fMaxtotsigma);
+ if (fDatype) dangup=fDawin*fabs(fMaxsigma);
  if (dangup<0 || dangup>180) dangup=180;
 
  //////////////////////////////////////////////////////////////////////////
@@ -10154,8 +10356,6 @@ void NcAstrolab2::GenBurstSignals()
  if (ntbins<2) ntbins=2;
  if (nabins<2) nabins=2;
  if (nabins2<2) nabins2=2;
-
- gStyle->SetOptStat("e"); // Only display number of entries in stats box
 
  Float_t tbinfine=0.1; // Bin size (in sec) for the fine binned histos
  Int_t ntbinsfine=int(fDtwin/tbinfine);
@@ -10239,9 +10439,6 @@ void NcAstrolab2::GenBurstSignals()
  // based on the provided user settings                  //
  //////////////////////////////////////////////////////////
 
- Float_t t90grb=0;
- Double_t zgrb=0;
- Float_t sigmagrb=0;
  Float_t totsigma=0;
  NcPosition rgrb;
  Int_t nmu;
@@ -10267,11 +10464,12 @@ void NcAstrolab2::GenBurstSignals()
   if (!sx) continue;
 
   tx=sx->GetTimestamp();
+  zgrb=sx->GetSignal("z");
   t90grb=sx->GetSignal("t90");
   sigmagrb=sx->GetSignal("sigmagrb");
-  totsigma=sx->GetSignal("totsigma");
-  GetSignal(zgrb,thetagrb,"deg",phigrb,"deg","loc",tx,igrb+1);
-  rgrb.SetPosition(zgrb,thetagrb,phigrb,"sph","deg");
+//@@@@@  totsigma=sx->GetSignal("totsigma");
+  GetSignal(dgrb,thetagrb,"deg",phigrb,"deg","loc",tx,igrb+1);
+  rgrb.SetPosition(1,thetagrb,phigrb,"sph","deg");
 
   // Update the total stacked solid angle that is probed
   if (fDawin<0) // Local zenith band
@@ -10505,12 +10703,13 @@ void NcAstrolab2::BurstCompensate(Int_t& nmugrb,Float_t fGrbnu,Float_t fNgrbs,In
  NcSignal* sx=0;
  NcTimestamp* tx=0;
  Float_t t90grb=0;
+ Float_t zgrb=0;
  Float_t sigmagrb=0;
  Float_t totsigma=0;
  NcPosition rgrb;
  NcPosition rgrb2;
  Float_t dt=0;
- Double_t zgrb=0;
+ Double_t dgrb=0;
  Double_t thetagrb=0;
  Double_t phigrb=0;
  Float_t dang=0;
@@ -10534,9 +10733,10 @@ void NcAstrolab2::BurstCompensate(Int_t& nmugrb,Float_t fGrbnu,Float_t fNgrbs,In
    if (!sx) continue;
 
    tx=sx->GetTimestamp();
+   GetSignal(dgrb,thetagrb,"deg",phigrb,"deg","loc",tx,jgrb);
+   rgrb.SetPosition(1,thetagrb,phigrb,"sph","deg");
+   zgrb=sx->GetSignal("z");
    t90grb=sx->GetSignal("t90");
-   GetSignal(zgrb,thetagrb,"deg",phigrb,"deg","loc",tx,jgrb);
-   rgrb.SetPosition(zgrb,thetagrb,phigrb,"sph","deg");
    sigmagrb=sx->GetSignal("sigmagrb");
    totsigma=sx->GetSignal("totsigma");
 
