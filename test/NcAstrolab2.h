@@ -263,7 +263,7 @@ class NcAstrolab2 : public TTask,public NcTimestamp
   TObjArray fBurstHistos;     // Storage of all the produced transient burst histograms
 
   // Internal function for transient burst investigations
-  void BurstCompensate(Int_t& nmugrb,Float_t Grbnu,Float_t Ngrbs,Int_t Inburst,Float_t Dtnu,Float_t Dtnus,Float_t Angres,Float_t Timres,Float_t Datype,Float_t Dawin);
+  void BurstCompensate(Int_t& nmugrb);
  
  ClassDef(NcAstrolab2,32) // Virtual lab to provide (astro)physical parameters, treat data and relate observations with astrophysical phenomena
 };
