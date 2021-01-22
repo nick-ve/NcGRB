@@ -144,9 +144,9 @@ class NcAstrolab2 : public TTask,public NcTimestamp
   void MakeBurstZdist(TString file,TString tree,TString name,Int_t nb=200,Float_t zmin=0,Float_t zmax=20); // Make transient burst observed redshift distribution
   void MakeBurstT90dist(TString file,TString tree,TString name,Int_t nb=50,Float_t xmin=-5,Float_t xmax=5); // Make transient burst observed T90 distribution
   void MakeBurstSigmaPosdist(TString file,TString tree,TString name,TString u,Int_t nb=900,Float_t xmin=0,Float_t xmax=90); // Make burst observed position uncertainty dist.
-  void MakeBurstBkgEdist(TString file,TString tree,TString name1,TString name2,TString u,Double_t Emin,Double_t Emax,Int_t nb=1000);
-  void MakeBurstSignalEdist(TF1& spec,Double_t Emin,Double_t Emax,Int_t nbins=1000);
-  void MakeBurstSignalEdist(Double_t gamma,Double_t Emin,Double_t Emax,Int_t nbins=1000);
+  void MakeBurstEnergydist(Int_t mode,TString file,TString tree,TString name1,TString name2,TString u,Double_t Emin,Double_t Emax,Int_t nb=1000);
+  void MakeBurstEnergydist(Int_t mode,TF1& spec,Double_t Emin,Double_t Emax,Int_t nbins=1000);
+  void MakeBurstEnergydist(Int_t mode,Double_t alpha,Double_t Emin,Double_t Emax,Int_t nbins=1000);
   void MakeBurstRecoAngresdist(TString file,TString tree,TString name1,TString name2,TString ua,TString name3,TString ud,Double_t Emin,Double_t Emax,Int_t nbe=100,Int_t nba=1000);
   Double_t GetBurstSignalEnergy(Double_t Emin=-1,Double_t Emax=-1) const;
   Double_t GetBurstBackgroundEnergy(Double_t Emin=-1,Double_t Emax=-1) const;
@@ -265,6 +265,6 @@ class NcAstrolab2 : public TTask,public NcTimestamp
   // Internal function for transient burst investigations
   void BurstCompensate(Int_t& nmugrb);
  
- ClassDef(NcAstrolab2,32) // Virtual lab to provide (astro)physical parameters, treat data and relate observations with astrophysical phenomena
+ ClassDef(NcAstrolab2,33) // Virtual lab to provide (astro)physical parameters, treat data and relate observations with astrophysical phenomena
 };
 #endif
