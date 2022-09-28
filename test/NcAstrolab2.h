@@ -5,8 +5,9 @@
 
 #include <math.h>
 
+#include "TROOT.h"
 #include "TTask.h"
-#include "TString.h"
+#include "TObjString.h"
 #include "TRotMatrix.h"
 #include "TObjArray.h"
 #include "TArrayI.h"
@@ -131,6 +132,9 @@ class NcAstrolab2 : public TTask,public NcTimestamp
   Double_t KolmogorovTest(TString mode,TH1* h1,TH1* h2=0,TF1* pdf=0,Double_t nr=1000,TH1F* ksh=0,Int_t ncut=0,Double_t* nrx=0,Int_t mark=1); // Perform a K-S test
   TH1F GetCumulHistogram(TH1* h,TString name,TString mode="F") const; // Provide the Cumulative Distribution Histogram from an input histogram
   TH1F GetCumulHistogram(TF1* f,TString name,Int_t nbins,Double_t xmin,Double_t xmax,TString mode="F") const; // Provide the Cumulative Distribution Histogram from an input function
+  void InitDataNames(Int_t dir,TString frame,TString mode="J");         // Initialisation of the input data variable names correspondence table
+  void SetDataNames(TString obsname,TString varname,TString units="1",TString func="none"); // Specification of the input data variable names correspondence table
+  void ListDataNames(); // Listing of the input data variable names correspondence table
 
   // Facilities for transient burst investigation
   void SetBurstParameter(TString name,Double_t value); // Specification of a certain transient burst parameter setting
@@ -258,13 +262,23 @@ class NcAstrolab2 : public TTask,public NcTimestamp
   Double_t GetBackgroundRateProb(Double_t* vars,Double_t* pars); // Posterior Bayesian probability for a background rate "b"
   Double_t GetSignalRateProb(Double_t* vars,Double_t* pars); // Posterior Bayesian probability for a source signal rate "s"
 
+  // Specifications of the data from a ROOT input Tree  
+  Int_t fDataDir;         // Indicator for arrival (1) or moving (-1) directions
+  TString fDataFrame;     // The frame in which coordinates are provided
+  TString fDataMode;      // Indicator for equatorial coordinates mode (Mean, True, B1950 or J2000)
+  NcObjMatrix fDataNames; // The correspondence table between physical observables and variable names
+
   // Storage for transient burst investigations
   NcDevice* fBurstParameters; // Various parameters describing the transient burst
   TObjArray fBurstHistos;     // Storage of all the produced transient burst histograms
 
-  // Internal function for transient burst investigations
+  // Internal functions for transient burst investigations
   void BurstCompensate(Int_t& nmugrb);
+  void InitBurstHistograms();
+  TH1* GetBurstZdist(TString name);
+  TH1* GetBurstT90dist(TString name);
+  TH1* GetBurstSigmaPosdist(TString name);
  
- ClassDef(NcAstrolab2,33) // Virtual lab to provide (astro)physical parameters, treat data and relate observations with astrophysical phenomena
+ ClassDef(NcAstrolab2,35) // Virtual lab to provide (astro)physical parameters, treat data and relate observations with astrophysical phenomena
 };
 #endif
