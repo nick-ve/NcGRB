@@ -159,7 +159,7 @@
 // lab.DisplaySignals("equ","J",0,"ham",1);
 //
 //--- Author: Nick van Eijndhoven 15-mar-2007 Utrecht University
-//- Modified: Nick van Eijndhoven, IIHE-VUB Brussel, September 28, 2022  21:16Z
+//- Modified: Nick van Eijndhoven, IIHE-VUB Brussel, September 29, 2022  12:01Z
 ///////////////////////////////////////////////////////////////////////////
 
 #include "NcAstrolab2.h"
@@ -5745,6 +5745,8 @@ Double_t NcAstrolab2::GetPhysicalParameter(TString name) const
 // Hbarc2 = The value of the conversion constant (hbar*c)^2 in GeV^2 barn
 // Mnucl  = The nucleon mass (=average of proton and neutron mass) in MeV/c^2
 // Sin2w  = The sin^2 of the Weinberg angle
+// Jy     = Flux density of 1 Jansky (1e-23 erg s^-1 cm^-2 Hz^-1)
+// Erg    = The equivalent of 1 erg in GeV
 
  Double_t val=0;
 
@@ -5786,6 +5788,12 @@ Double_t NcAstrolab2::GetPhysicalParameter(TString name) const
  if (name=="Sin2w")
  {
   val=1.-pow(fMW/fMZ,2.);
+  return val;
+ }
+ if (name=="Jy") return 1e-23;
+ if (name=="Erg")
+ {
+  val=1e-7/(fQe*1e9);
   return val;
  }
 
@@ -8436,7 +8444,7 @@ TH1F NcAstrolab2::GetCumulHistogram(TF1* f,TString name,Int_t nbins,Double_t xmi
 ///////////////////////////////////////////////////////////////////////////
 void NcAstrolab2::InitDataNames(Int_t dir,TString frame,TString mode)
 {
-// Initialisation of the correspondance table between physical observables
+// Initialisation of the correspondence table between physical observables
 // and their names in a ROOT input Tree.
 // The actual correspondence settings are performed by invokation of SetDataNames().
 // 
@@ -8499,53 +8507,105 @@ void NcAstrolab2::InitDataNames(Int_t dir,TString frame,TString mode)
 ///////////////////////////////////////////////////////////////////////////
 void NcAstrolab2::SetDataNames(TString obsname,TString varname,TString units,TString func)
 {
-// Specification of the correspondance table between physical observables
+// Specification of the correspondence table between (physical) observables
 // and their names in a ROOT input Tree.
+//@@@@@@@@@@@@@@@@@@@@@
+// In order to be compatible with the generic data reading member function LoadInputData(),
+// only the (physical) observable names listed below are accepted.
+// Reading routines specifically tailored for transient source(s) analysis are provided
+// by LoadBurstGCNData() and LoadBurstEventData().
+//@@@@@@@@@@@@@@@@@@@@@@@
+// Note :
+// ------
+// Make sure to invoke InitDataNames() first, before providing the various settings here.
 //
 // Input arguments :
 // -----------------
-// obsname : Name of the physical observable (see below)
+// obsname : Name of the (physical) observable (see below)
 // varname : Name of the corresponding variable in the ROOT Tree
 // units   : The units in which the input value is provided (see below)
-//           This includes scaling w.r.t. standard units like GeV, meter, second etc.
-//           Example : units="1e3" would represent TeV in case of an energy.
+//           This includes scaling w.r.t. standard units like GeV, pc, second etc.
+//           Example : units="1e3" would represent TeV instead of the standard GeV in case of an energy.
 // func    : Function that has been applied on the value of the observable (see below).
 //
-// Possible physical observable names are :
-// ----------------------------------------
-// MJD : Modified Julian Date
-// d   : Distance
-// a   : right ascension, longitude, azimuth angle or spherical angle theta (depending on the reference frame)
-// b   : declination, latitude, zenith angle or spherical angle phi (depending on the reference frame)
-// E   : Energy
+// Accepted (physical) observable names are :
+// ------------------------------------------
+// Run       : Run number
+// Event     : Event number
+// Eventb    : Sub-event number
+// DetId     : Detector identifier
+// Date      : Date with as possible units "ddmmyyy", "yyyymmdd", "mmddyyyy" or "yyyyddmm"
+// Ttrig     : Generic trigger timestamp with as possible units "JD", "MJD", "TJD" or "hms"
+// Tstart    : Generic start timestamp with as possible units "JD", "MJD", "TJD" or "hms"
+// Tend      : Generic end timestamp with as possible units "JD", "MJD", "TJD" or "hms"
+// d         : Distance with a number as units (Standard unit is pc)
+// a         : right ascension, longitude, azimuth angle or spherical angle theta (depending on the reference frame)
+// b         : declination, latitude, zenith angle or spherical angle phi (depending on the reference frame)
+// z         : Redshift
+// E         : Energy with a number as units (Standard unit is GeV)
+// L         : Luminosity with a number as units (Standard unit is erg s^-1. [For particle counts : s^-1])
+// S         : Fluence with a number as units (Standard unit is erg cm^-2. [For particle counts : cm^-2])
+// F         : Flux with a number as units (Standard unit is erg cm^-2 s^-1 [For particle counts : cm^-2 s^-1])
+// I         : Intensity with a number as units (Standard unit is erg cm^-2 s^-1 sr^-1 [For particle counts : cm^-2 s^-1 sr^-1])
+// J         : Flux density with a number as units (Standard unit is Jy, i.e. 1e-23 erg cm^-2 s^-1 Hz^-1)
+// T90       : T90 burst duration with a number as units (Standard unit is second)
+// T100      : T100 burst duration with a number as units (Standard unit is second)
+// dsigma    : The 1-sigma uncertainty on d
+// asigma    : The 1-sigma uncertainty on a
+// bsigma    : The 1-sigma uncertainty on b
+// csigma    : The 1-sigma angular cone uncertainty on the position or direction
+// zsigma    : The 1-sigma uncertainty on z
+// Esigma    : The uncertainty on E
+// Lsigma    : The uncertainty on L
+// Ssigma    : The uncertainty on S
+// Fsigma    : The uncertainty on F
+// Isigma    : The uncertainty on I
+// t90sigma  : The uncertainty on T90 
+// t100sigma : The uncertainty on T90 
 //
-// Possible specifications for units are :
+// Accepted specifications for units are :
 // ---------------------------------------
-// "1"   : Standard units are used like GeV, meter, second (or days in case of MJD)
-// "ly"  : Distance provided in light years
-// "pc"  : Distance provided in parsec
-// "Mpc" : Distance provided in Mega-parsec
-// "Gpc" : Distance provided in Giga-parsec
+// "1"   : Standard units are used like GeV, pc, second (or days in case of Julian Dates)
+//         Any other numerical value will be used for unit conversion (see below for examples)
 // "rad" : Angle provided in radians
 // "deg" : Angle provided in degrees
 // "dms" : Angle provided in dddmmss.sss
-// "hms" : Angle provided in hhmmss.sss
+// "hms" : Angle or time provided in hhmmss.sss
 // "hrs" : Angle provided in fractional hours
+// "JD"  : Timestamp provided as Julian Date
+// "MJD" : Timestamp provided as Modified Julian Date
+// "TJD" : Timestamp provided as Truncated Julian Date
 //
-// Possible specifications for func are :
+// Accepted specifications for func are :
 // --------------------------------------
 // "Log" : Log10 of the value of the corresponding observable
 // "Ln"  : Natural logarithm of the value of the corresponding observable
 //
-// For example : The input ("E","Enu","1","Log") would mean that the variable "Enu" in the ROOT Tree
-//               represents Log10(energy) in GeV.
+// Input examples :
+// ----------------
+// ("E","Enu","1","Log")      : The ROOT Tree variable "Enu" represents Log10(energy) in GeV.
+// ("Date","date","yyyymmdd") : The ROOT Tree variable "date" represents the date as yyyymmdd.
+// ("Tstart","time","hms")    : The ROOT Tree variable "time" represents a timestamp as hhmmss.sss.
+// ("d","dist","1e6")         : The ROOT Tree variable "dist" represents the distance in Mpc.
+// ("Ttrig","trig","MJD")     : The ROOT Tree variable "trig" represents the trigger time in MJD.
 //
 // The defaults are units="1" and func="none".
 
  Bool_t error=kFALSE;
 
- if (obsname!="MJD" && obsname!="d" && obsname!="a" && obsname!="b" && obsname!="E") error=kTRUE;
- if ((obsname=="a" || obsname=="b") && (units!="rad" && units!="deg" && units!="dms" && units!="hms" && units!="hrs")) error=kTRUE;
+ if (obsname!="Run" && obsname!="Event" && obsname!="Eventb" && obsname!="DetId"
+     && obsname!="Date" && obsname!="Ttrig" && obsname!="Tstart" && obsname!="Tend"
+     && obsname!="d" && obsname!="a" && obsname!="b" && obsname!="z"
+     && obsname!="E" && obsname!="L" && obsname!="S" && obsname!="F" && obsname!="I" && obsname!="J"
+     && obsname!="T90" && obsname!="T100"
+     && obsname!="dsigma" && obsname!="asigma" && obsname!="bigma" && obsname!="csigma" && obsname!="zsigma"
+     && obsname!="Esigma" && obsname!="Lsigma" && obsname!="Ssigma" && obsname!="Fsigma" && obsname!="Isigma"
+     && obsname!="t90sigma" && obsname!="t100sigma") error=kTRUE;
+ if (obsname=="Date" && (units!="ddmmyyyy" && units!="yyyymmdd" && units!="mmddyyyy" && units!="yyyyddmm")) error=kTRUE;
+ if ((obsname=="Ttrig" || obsname=="Tstart" || obsname=="Tend")
+     && (units!="JD" && units!="MJD" && units!="TJD" && units!="hms")) error=kTRUE;
+ if ((obsname=="a" || obsname=="b" || obsname=="asigma" || obsname=="bsigma" || obsname=="csigma")
+     && (units!="rad" && units!="deg" && units!="dms" && units!="hms" && units!="hrs")) error=kTRUE;
  if (func!="none" && func!="Log" && func!="Ln") error=kTRUE;
 
  if (error)
@@ -9133,23 +9193,10 @@ void NcAstrolab2::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t d
 // **********************************************************************************
 //
 // The input data has to be provided via a ROOT Tree which will be searched
-// for data on the variable names specified below.
+// for data on the variable names as specified via SetDataNames().
 // In case data for a certain variable is not present, the non-physical value -999
 // will be stored, unless the user has selected random generation of the variables
 // T90 and/or z and/or sigmapos as specified via SetBurstParameter(). 
-//
-//  Name             Description
-// ---------------------------------------------------------------
-// "date"        Observation date as yyyymmdd
-// "ra"          Right ascension (J2000) in decimal degrees
-// "dec"         Declination (J2000) in decimal degrees
-// "sigmapos"    The 1-sigma angular uncertainty on the burst position in decimal degrees
-// "t90"         The T90 burst duration in seconds
-// "mjdtrig"     The (fractional) MJD of the burst trigger
-// "mjdt90start" The (fractional) MJD of the T90 start time
-// "t100"        The T100 burst duration in seconds
-// "fluence"     The observed fluence of the burst in erg/cm^2
-// "z"           The redshift of the burst
 //
 // Input arguments :
 // -----------------
@@ -9164,6 +9211,14 @@ void NcAstrolab2::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t d
 //
 // Note : This memberfunction make be invoked several times to read different files
 //        to accumulate data.
+
+ Int_t nvars=fDataNames.GetMaxRow();
+
+ if (nvars<1)
+ {
+  cout << " *" << ClassName() << "::LoadBurstGCNdata* No variables were specified." << endl;
+  return;
+ }
 
  // Retreive the needed parameters
  Int_t fNmax=TMath::Nint(fBurstParameters->GetSignal("Nmax"));
@@ -9195,6 +9250,7 @@ void NcAstrolab2::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t d
  TChain gcn(tree.Data());
  gcn.Add(file.Data());
 
+ Double_t value;
  Int_t date;
  Float_t ra,dec,sigmapos,t90,t100,fluence,z;
  Double_t mjdtrig,mjdt90start;
@@ -9209,6 +9265,10 @@ void NcAstrolab2::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t d
  NcSignal* sx=0;
  Int_t ngcn=0;
  TLeaf* lx=0;
+ TString obsname;
+ TString varname;
+ TString units;
+ TString func;
  for (Int_t ient=0; ient<gcn.GetEntries(); ient++)
  {
   if (nmax>=0 && ngcn>=nmax) break;
@@ -9217,35 +9277,43 @@ void NcAstrolab2::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t d
   gcn.GetEntry(ient);
 
   date=-999;
-  lx=gcn.GetLeaf("date");
-  if (lx) date=lx->GetValue();  
   ra=-999;
-  lx=gcn.GetLeaf("ra");
-  if (lx) ra=lx->GetValue();  
   dec=-999;
-  lx=gcn.GetLeaf("dec");
-  if (lx) dec=lx->GetValue();  
   sigmapos=-999;
-  lx=gcn.GetLeaf("sigmapos");
-  if (lx) sigmapos=lx->GetValue();  
   t90=-999;
-  lx=gcn.GetLeaf("t90");
-  if (lx) t90=lx->GetValue();  
   mjdtrig=-999;
-  lx=gcn.GetLeaf("mjdtrig");
-  if (lx) mjdtrig=lx->GetValue();  
   mjdt90start=-999;
-  lx=gcn.GetLeaf("mjdt90start");
-  if (lx) mjdt90start=lx->GetValue();  
   t100=-999;
-  lx=gcn.GetLeaf("t100");
-  if (lx) t100=lx->GetValue();  
   fluence=-999;
-  lx=gcn.GetLeaf("fluence");
-  if (lx) fluence=lx->GetValue();  
   z=-999;
-  lx=gcn.GetLeaf("z");
-  if (lx) z=lx->GetValue();  
+
+  // Loop over the selected input variables
+  for (Int_t ivar=1; ivar<=fDataNames.GetMaxRow(); ivar++)
+  {
+   obsname=((TObjString*)fDataNames.GetObject(ivar,1))->GetString();
+   varname=((TObjString*)fDataNames.GetObject(ivar,2))->GetString();
+   units=((TObjString*)fDataNames.GetObject(ivar,3))->GetString();
+   func=((TObjString*)fDataNames.GetObject(ivar,4))->GetString();
+
+   lx=gcn.GetLeaf(varname);
+   
+   if (!lx) continue;
+
+   value=lx->GetValue();
+   if (func=="Log") value=pow(value,10);
+   if (func=="Ln") value=exp(value);
+
+   if (obsname=="Date") date=value;
+   if (obsname=="a") ra=ConvertAngle(value,units,"deg");
+   if (obsname=="b") dec=ConvertAngle(value,units,"deg");
+   if (obsname=="csigma") sigmapos=ConvertAngle(value,units,"deg");
+   if (obsname=="T90") t90=value;  
+   if (obsname=="Ttrig") mjdtrig=value;  
+   if (obsname=="Tstart") mjdt90start=value;
+   if (obsname=="T100") t100=value;
+   if (obsname=="S") fluence=value;  
+   if (obsname=="z") z=value;  
+  }
 
   if (date1 && date<date1) continue;
   if (date2 && date>date2) continue;
@@ -9274,7 +9342,8 @@ void NcAstrolab2::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t d
   grbname=type;
   grbname+=idate;
   ts.SetMJD(mjdtrig);
-  sx=SetSignal(1,ra,"deg",dec,"deg","equ",&ts,-1,"J",grbname);
+//@@@@@@  sx=SetSignal(1,ra,"deg",dec,"deg","equ",&ts,-1,"J",grbname);
+  sx=SetSignal(1,ra,"deg",dec,"deg",fDataFrame,&ts,-1,fDataMode,grbname);
 
   if (!sx) continue;
 
@@ -9288,7 +9357,6 @@ void NcAstrolab2::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t d
   sx->SetSignal(fluence,"fluence");
   sx->AddNamedSlot("z");
   sx->SetSignal(zgrb,"z");
-
  }
 
  // Update internal statistics
