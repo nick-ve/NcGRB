@@ -159,7 +159,7 @@
 // lab.DisplaySignals("equ","J",0,"ham",1);
 //
 //--- Author: Nick van Eijndhoven 15-mar-2007 Utrecht University
-//- Modified: Nick van Eijndhoven, IIHE-VUB Brussel, October 3, 2022  03:22Z
+//- Modified: Nick van Eijndhoven, IIHE-VUB Brussel, October 3, 2022  11:51Z
 ///////////////////////////////////////////////////////////////////////////
 
 #include "NcAstrolab2.h"
@@ -2474,6 +2474,39 @@ Int_t NcAstrolab2::GetSignalIndex(TString name,Int_t type)
   if (!sx) continue;
 
   if (name==sx->GetName())
+  {
+   index=i+1;
+   break;
+  }
+ }
+
+ return index;
+}
+///////////////////////////////////////////////////////////////////////////
+Int_t NcAstrolab2::GetSignalIndex(NcSignal* s,Int_t type)
+{
+// Provide storage index of the specified signal.
+//
+// type = 0 --> Provide the index of a reference signal
+//      = 1 --> Provide the index of a measured signal
+//
+// In case no matching signal is found, the value -1 is returned.
+
+ if (!s) return -1;
+
+ Int_t index=-1;
+ 
+ TObjArray* arr=fRefs;
+ if (type) arr=fSigs;
+ 
+ if (!arr) return -1;
+
+ for (Int_t i=0; i<arr->GetSize(); i++)
+ {
+  NcSignal* sx=(NcSignal*)arr->At(i);
+  if (!sx) continue;
+
+  if (sx==s)
   {
    index=i+1;
    break;
@@ -9429,22 +9462,27 @@ void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1
 // date1 : The date (yyyymmdd) of the start of the observation period [date1,date2] (0=No restriction)
 // date2 : The date (yyyymmdd) of the end of the observation period [date1,date2] (0=No restriction)
 // nmax  : Maximum number of sources or events to be accepted from this input file (<0 : no limitation)
-// type  : Identifier of the transient (alert) type (e.g. "GRB", "GW", "IC",....)
+// type  : Identifier of the source (c.q. burst) or observed event (alert) type (e.g. "GRB", "GW", "IC",...)
+//         When type="-" the source type is set to "GRB" and the event type is set to "EVT".         
 //
-// The default values are date1=0, date2=0, nmax=-1 and type="GRB".
+// The default values are date1=0, date2=0, nmax=-1 and type="-".
 //
 // Note : This memberfunction make be invoked several times to read different files
 //        to accumulate data.
+
+ // Set the default type identifier
+ if (type=="-" && src) type="GRB";
+ if (type=="-" && !src) type="EVT";
 
  Int_t nvars=fDataNames.GetMaxRow();
 
  if (nvars<1)
  {
-  cout << " *" << ClassName() << "::LoadBurstGCNdata* No variables were specified." << endl;
+  cout << " *" << ClassName() << "::LoadInputData* No variables were specified for " << type << " data."<< endl;
   return;
  }
 
- // Set the data type : observed events or source data
+ // Set the data mode : observed events or source data
  Int_t iobs=1;
  if (src) iobs=0;
 
@@ -9471,17 +9509,21 @@ void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1
  Int_t fNgrbs=GetNsignals(0);
  Int_t fNevts=GetNsignals(1);
 
- // Get access to a redshift distribution to draw randomly redshifts if needed
+ TString str="LoadInputData() for ";
+ str+=type;
+ str+=" data.";
+
+ // Get access to a redshift distribution to draw randomly source redshifts if needed
  TH1* zdist=0;
- if (fZmin<0) zdist=GetBurstZdist("LoadInputData");
+ if (src && fZmin<0) zdist=GetBurstZdist(str);
 
- // Get access to a T90 distribution to draw randomly T90 values if needed
+ // Get access to a T90 distribution to draw randomly source c.q. burst T90 values if needed
  TH1* t90dist=0;
- if (fT90min<0) t90dist=GetBurstT90dist("LoadInputData");
+ if (src && fT90min<0) t90dist=GetBurstT90dist(str);
 
- // Get access to a 1-sigma position uncertainty distribution to draw randomly position uncertaintes
+ // Get access to a 1-sigma position uncertainty distribution to draw randomly source position uncertaintes
  TH1* sigmaposdist=0;
- if (fSigmamin<0) sigmaposdist=GetBurstSigmaPosdist("LoadInputData");
+ if (src && fSigmamin<0) sigmaposdist=GetBurstSigmaPosdist(str);
 
  // The TTree containing the source (c.q. burst) or observed event data
  TChain data(tree.Data());
@@ -9607,7 +9649,6 @@ void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1
    }
    if (obsname=="Tobs")
    {
-//@@@@    tobs.LoadUTCparameterFiles();
     if (units=="JD") tobs.SetJD(value);
     if (units=="MJD") tobs.SetMJD(value);
     if (units=="TJD") tobs.SetTJD(value);
@@ -9616,7 +9657,6 @@ void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1
    }
    if (obsname=="Tstart")
    {
-//@@@@    tstart.LoadUTCparameterFiles();
     if (units=="JD") tstart.SetJD(value);
     if (units=="MJD") tstart.SetMJD(value);
     if (units=="TJD") tstart.SetTJD(value);
@@ -9625,7 +9665,6 @@ void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1
    }
    if (obsname=="Tend")
    {
-//@@@@@    tend.LoadUTCparameterFiles();
     if (units=="JD") tend.SetJD(value);
     if (units=="MJD") tend.SetMJD(value);
     if (units=="TJD") tend.SetTJD(value);
@@ -9671,16 +9710,16 @@ void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1
   // Compose the name of the source c.q. burst with the common yymmdd suffix
   jdate=idate%1000000;
   grbname=type;
-  grbname+=idate;
+  grbname+=jdate;
 
   if (date1 && idate<date1) continue;
   if (date2 && idate>date2) continue;
 
-  // Check for the presence of a valid T90 start timestamp
-  if (Tstart<-100 || (Tstart>=0 && Date=="none")) continue; //@@@@@@
-
   if (src) // Source c.q. burst specific selections
   {
+   // Check for the presence of a valid T90 start timestamp
+   if (Tstart<-100 || (Tstart>=0 && Date=="none")) continue; //@@@@@@
+
    t90grb=T90;
    if (t90grb<=0) t90grb=T100;
    if (fT90min<0 && t90grb<0 && t90dist) t90grb=t90dist->GetRandom();
@@ -9705,9 +9744,10 @@ void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1
 
   // Obtain the RA and DEC coordinates for acceptance selection
   sx=SetSignal(1,a,"deg",b,"deg",fDataFrame,&tobs,-1,fDataMode,grbname,iobs);
-  jlast=GetNsignals(iobs);
+  jlast=GetSignalIndex(sx,iobs);
   GetSignal(d,ra,"deg",dec,"deg","equ",&tobs,jlast,"J",iobs);
 
+  // Remove the signal again when it falls outside the acceptance
   if (dec<fDeclmin || dec>fDeclmax)
   {
    RemoveSignal(jlast,iobs,1);
@@ -9778,7 +9818,7 @@ void NcAstrolab2::GenBurstGCNdata(Int_t n,TString name)
 
  // Retreive the needed parameters
 //@@@@ Int_t fNmax=TMath::Nint(fBurstParameters->GetSignal("Nmax"));
- Int_t fNmaxgrb=TMath::Nint(fBurstParameters->GetSignal("Nmaxgrb"));
+ Int_t fNmaxsrc=TMath::Nint(fBurstParameters->GetSignal("Nmaxsrc"));
  Float_t fDeclmin=fBurstParameters->GetSignal("Declmin");
  Float_t fDeclmax=fBurstParameters->GetSignal("Declmax");
  Float_t fT90min=fBurstParameters->GetSignal("T90min");
@@ -9789,16 +9829,21 @@ void NcAstrolab2::GenBurstGCNdata(Int_t n,TString name)
  Float_t fSigmamax=fBurstParameters->GetSignal("Sigmamax");
 
  // Internal statistics
- Int_t fNgrbs=TMath::Nint(fBurstParameters->GetSignal("Ngrbs"));
+//@@@@@@ Int_t fNgrbs=TMath::Nint(fBurstParameters->GetSignal("Ngrbs"));
+ Int_t fNgrbs=GetNsignals(0);
+
+ TString str="GenBurstGCNdata() for ";
+ str+=name;
+ str+=" data.";
 
  // Get access to a redshift distribution to draw randomly redshifts
- TH1* zdist=GetBurstZdist("GenBurstGCNdata");
+ TH1* zdist=GetBurstZdist(str);
 
  // Get access to a T90 distribution to draw randomly T90 values
- TH1* t90dist=GetBurstT90dist("GenBurstGCNdata");
+ TH1* t90dist=GetBurstT90dist(str);
 
  // Get access to a 1-sigma position uncertainty distribution to draw randomly position uncertaintes
- TH1* sigmaposdist=GetBurstSigmaPosdist("GenBurstGCNdata");
+ TH1* sigmaposdist=GetBurstSigmaPosdist(str);
 
  Float_t thlow=fDeclmin+90.;
  Float_t thup=fDeclmax+90.;
@@ -9812,12 +9857,11 @@ void NcAstrolab2::GenBurstGCNdata(Int_t n,TString name)
  TString grbname;
  Double_t thetagrb,phigrb;
  Int_t ngen=0;
- fNgrbs=GetNsignals(0);
 
  for (Int_t igrb=1; igrb<=n; igrb++)
  {
 //@@@@  if (fNmax>=0 && (fNgrbs+ngen)>=fNmax) break;
-  if (fNmaxgrb>=0 && (fNgrbs+ngen)>=fNmaxgrb) break;
+  if (fNmaxsrc>=0 && (fNgrbs+ngen)>=fNmaxsrc) break;
 
   zgrb=-1;
   if (fabs(fZmin)==fZmax) zgrb=fZmax; 
@@ -9974,7 +10018,8 @@ TH1* NcAstrolab2::GetBurstZdist(TString name)
  if (!zdist)
  {
   cout << endl;
-  cout << " *" << ClassName() << "::" << name <<"* Archival observed redshift distribution not found." << endl;
+  cout << " *" << ClassName() << "::GetBurstZdist* Called from " << name << endl;
+  cout << " *** Archival observed redshift distribution not found. ***" << endl;
   cout << " A Landau fit from Swift GRB redshift data will be used to provide missing c.q. random z values." << endl;
 
   zdist=(TH1*)fBurstHistos.FindObject("hzfit");
@@ -10081,7 +10126,8 @@ TH1* NcAstrolab2::GetBurstT90dist(TString name)
  if (!t90dist)
  {
   cout << endl;
-  cout << " *" << ClassName() << "::" << name << "* Observational T90 distribution not found." << endl;
+  cout << " *" << ClassName() << "::GetBurstT90dist* Called from " << name << endl;
+  cout << " *** Observational T90 distribution not found. ***" << endl;
   cout << " A double Gaussian fit from Fermi GRB T90 data will be used to provide missing c.q. random T90 values." << endl;
 
   t90dist=(TH1*)fBurstHistos.FindObject("ht90fit");
@@ -10200,7 +10246,8 @@ TH1* NcAstrolab2::GetBurstSigmaPosdist(TString name)
  if (!sigmaposdist)
  {
   cout << endl;
-  cout << " *" << ClassName() << "::" << name << "* Archival observed position uncertainty distribution not found." << endl;
+  cout << " *" << ClassName() << "::GetBurstSigmaPosdist* Called from " << name << endl;
+  cout << " *** Archival observed position uncertainty distribution not found. ***" << endl;
   cout << " A Landau fit from observed data will be used to provide missing c.q. random 1-sigma uncertainty values." << endl;
 
   sigmaposdist=(TH1*)fBurstHistos.FindObject("hsigmaposfit");

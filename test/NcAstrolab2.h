@@ -83,6 +83,7 @@ class NcAstrolab2 : public TTask,public NcTimestamp
   void PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t ndig,TString name,TString emode="T",Int_t type=0); // Print stored signal data
   void ListSignals(TString frame,TString mode,Int_t ndig=1,TString emode="T",Int_t nmax=10,Int_t j=-1,Int_t type=-1); // List stored signals
   Int_t GetSignalIndex(TString name,Int_t type=0); // Provide storage index of the signal with the specified name
+  Int_t GetSignalIndex(NcSignal* s,Int_t type);    // Provide storage index of the specified signal
   Double_t GetHourAngle(TString mode,NcTimestamp* ts,Int_t jref=0,Int_t type=0);// Provide the Local Hour Angle in degrees
   void SetLocalFrame(Double_t t1,Double_t p1,Double_t t2,Double_t p2,Double_t t3,Double_t p3); // Define local coordinate frame
   using NcTimestamp::GetDifference;
@@ -141,7 +142,7 @@ class NcAstrolab2 : public TTask,public NcTimestamp
   NcDevice* GetBurstParameters();    // Provide the device containing all the burst parameter settings
   void ListBurstParameters() const;  // Listing of all the burst parameter settings
   void LoadBurstGCNdata(TString file,TString tree,Int_t date1=0,Int_t date2=0,Int_t nmax=-1,TString type="GRB");  // Load observed burst GCN data
-  void LoadInputData(Bool_t src,TString file,TString tree,Int_t date1=0,Int_t date2=0,Int_t nmax=-1,TString type="GRB");  // Load observed burst GCN data
+  void LoadInputData(Bool_t src,TString file,TString tree,Int_t date1=0,Int_t date2=0,Int_t nmax=-1,TString type="-");  // Load source (c.q. burst) or observed event data
   void GenBurstGCNdata(Int_t n,TString name="GRB"); // Generate fictative burst GCN data
   void GenBurstSignals(); // Generate detector signals from the stored transient bursts
   void ListBurstHistograms() const;            // Provide a list of all the stored transient burst histograms
