@@ -159,7 +159,7 @@
 // lab.DisplaySignals("equ","J",0,"ham",1);
 //
 //--- Author: Nick van Eijndhoven 15-mar-2007 Utrecht University
-//- Modified: Nick van Eijndhoven, IIHE-VUB Brussel, September 29, 2022  12:01Z
+//- Modified: Nick van Eijndhoven, IIHE-VUB Brussel, October 3, 2022  03:22Z
 ///////////////////////////////////////////////////////////////////////////
 
 #include "NcAstrolab2.h"
@@ -8534,8 +8534,8 @@ void NcAstrolab2::SetDataNames(TString obsname,TString varname,TString units,TSt
 // Event     : Event number
 // Eventb    : Sub-event number
 // DetId     : Detector identifier
-// Date      : Date with as possible units "ddmmyyy", "yyyymmdd", "mmddyyyy" or "yyyyddmm"
-// Ttrig     : Generic trigger timestamp with as possible units "JD", "MJD", "TJD" or "hms"
+// Date      : The observation date with as possible units "ddmmyyy", "yyyymmdd", "mmddyyyy" or "yyyyddmm"
+// Tobs      : The observation c.q. trigger timestamp with as possible units "JD", "MJD", "TJD" or "hms"
 // Tstart    : Generic start timestamp with as possible units "JD", "MJD", "TJD" or "hms"
 // Tend      : Generic end timestamp with as possible units "JD", "MJD", "TJD" or "hms"
 // d         : Distance with a number as units (Standard unit is pc)
@@ -8560,8 +8560,8 @@ void NcAstrolab2::SetDataNames(TString obsname,TString varname,TString units,TSt
 // Ssigma    : The uncertainty on S
 // Fsigma    : The uncertainty on F
 // Isigma    : The uncertainty on I
-// t90sigma  : The uncertainty on T90 
-// t100sigma : The uncertainty on T90 
+// T90sigma  : The uncertainty on T90 
+// T100sigma : The uncertainty on T90 
 //
 // Accepted specifications for units are :
 // ---------------------------------------
@@ -8587,22 +8587,22 @@ void NcAstrolab2::SetDataNames(TString obsname,TString varname,TString units,TSt
 // ("Date","date","yyyymmdd") : The ROOT Tree variable "date" represents the date as yyyymmdd.
 // ("Tstart","time","hms")    : The ROOT Tree variable "time" represents a timestamp as hhmmss.sss.
 // ("d","dist","1e6")         : The ROOT Tree variable "dist" represents the distance in Mpc.
-// ("Ttrig","trig","MJD")     : The ROOT Tree variable "trig" represents the trigger time in MJD.
+// ("Tobs","trig","MJD")      : The ROOT Tree variable "trig" represents the observation time in MJD.
 //
 // The defaults are units="1" and func="none".
 
  Bool_t error=kFALSE;
 
  if (obsname!="Run" && obsname!="Event" && obsname!="Eventb" && obsname!="DetId"
-     && obsname!="Date" && obsname!="Ttrig" && obsname!="Tstart" && obsname!="Tend"
+     && obsname!="Date" && obsname!="Tobs" && obsname!="Tstart" && obsname!="Tend"
      && obsname!="d" && obsname!="a" && obsname!="b" && obsname!="z"
      && obsname!="E" && obsname!="L" && obsname!="S" && obsname!="F" && obsname!="I" && obsname!="J"
      && obsname!="T90" && obsname!="T100"
      && obsname!="dsigma" && obsname!="asigma" && obsname!="bigma" && obsname!="csigma" && obsname!="zsigma"
      && obsname!="Esigma" && obsname!="Lsigma" && obsname!="Ssigma" && obsname!="Fsigma" && obsname!="Isigma"
-     && obsname!="t90sigma" && obsname!="t100sigma") error=kTRUE;
+     && obsname!="T90sigma" && obsname!="T100sigma") error=kTRUE;
  if (obsname=="Date" && (units!="ddmmyyyy" && units!="yyyymmdd" && units!="mmddyyyy" && units!="yyyyddmm")) error=kTRUE;
- if ((obsname=="Ttrig" || obsname=="Tstart" || obsname=="Tend")
+ if ((obsname=="Tobs" || obsname=="Tstart" || obsname=="Tend")
      && (units!="JD" && units!="MJD" && units!="TJD" && units!="hms")) error=kTRUE;
  if ((obsname=="a" || obsname=="b" || obsname=="asigma" || obsname=="bsigma" || obsname=="csigma")
      && (units!="rad" && units!="deg" && units!="dms" && units!="hms" && units!="hrs")) error=kTRUE;
@@ -8702,7 +8702,9 @@ void NcAstrolab2::SetBurstParameter(TString name,Double_t value)
 //
 // The available parameter names are :
 //
-// Nmax;     // Maximal number of bursts to be accepted for analysis (<0 : no limitation)
+//@@@@ Nmax;     // Maximal number of bursts to be accepted for analysis (<0 : no limitation)
+// Nmaxsrc;  // Maximal number of sources c.q. bursts to be accepted for analysis (<0 : no limitation)
+// Nmaxevt;  // Maximal number of observed events to be accepted for analysis (<0 : no limitation)
 // Declmin   // Minimal declination (J2000 in degrees) for burst position acceptance
 // Declmax   // Maximal declination (J2000 in degrees) for burst position acceptance
 // T90min    // Minimal duration (t90 in sec) for burst acceptance (<0 : [|T90min|,T90max] with random T90 when missing in loaded data)
@@ -8750,7 +8752,9 @@ void NcAstrolab2::SetBurstParameter(TString name,Double_t value)
 //
 // Default settings (tailored for IceCube 86 strings) :
 // ----------------------------------------------------
-// Nmax=-1
+//@@@@ Nmax=-1
+// Nmaxsrc=-1
+// Nmaxevt=-1
 // [Declmin,Declmax]=[-90,90]
 // [T90min,T90max]=[1e-5,1e5]
 // [Zmin,Zmax]=[-1e-6,20]
@@ -8796,8 +8800,15 @@ void NcAstrolab2::SetBurstParameter(TString name,Double_t value)
  else
  {
   Double_t pi=acos(-1.);
-
+//@@@@@@@@@@@@@
   name="Nmax";
+  fBurstParameters->AddNamedSlot(name);
+  fBurstParameters->SetSignal(-1,name);
+//@@@@@@@@@@@@
+  name="Nmaxsrc";
+  fBurstParameters->AddNamedSlot(name);
+  fBurstParameters->SetSignal(-1,name);
+  name="Nmaxevt";
   fBurstParameters->AddNamedSlot(name);
   fBurstParameters->SetSignal(-1,name);
   name="Declmin";
@@ -9021,7 +9032,11 @@ void NcAstrolab2::ListBurstParameters() const
 // **********************************************************************************
 
  // User provided settings
+//@@@@@@@@@@@@@
  Int_t fNmax=TMath::Nint(fBurstParameters->GetSignal("Nmax"));
+//@@@@@@@@@@@@
+ Int_t fNmaxsrc=TMath::Nint(fBurstParameters->GetSignal("Nmaxsrc"));
+ Int_t fNmaxevt=TMath::Nint(fBurstParameters->GetSignal("Nmaxevt"));
  Float_t fDeclmin=fBurstParameters->GetSignal("Declmin");
  Float_t fDeclmax=fBurstParameters->GetSignal("Declmax");
  Float_t fT90min=fBurstParameters->GetSignal("T90min");
@@ -9070,8 +9085,11 @@ void NcAstrolab2::ListBurstParameters() const
 
  // Internal statistics
  Int_t fNgrbs=TMath::Nint(fBurstParameters->GetSignal("Ngrbs"));
+ Int_t fNevts=TMath::Nint(fBurstParameters->GetSignal("Nevts"));
 
  cout << " ========================= User provided burst settings ===============================" << endl;
+/****************
+@@@@@@@@@@
  if (fNmax<0)
  {
   cout << " No limitation has been put on the number of bursts to be accepted for analysis." << endl;
@@ -9079,6 +9097,23 @@ void NcAstrolab2::ListBurstParameters() const
  else
  {
   cout << " Maximal number of bursts to be accepted for analysis : " << fNmax << endl;
+ }
+****************/
+ if (fNmaxsrc<0)
+ {
+  cout << " No limitation has been put on the number of sources c.q. bursts to be accepted for analysis." << endl;
+ }
+ else
+ {
+  cout << " Maximal number of sources c.q. bursts to be accepted for analysis : " << fNmaxsrc << endl;
+ }
+ if (fNmaxevt<0)
+ {
+  cout << " No limitation has been put on the number of observed events to be accepted for analysis." << endl;
+ }
+ else
+ {
+  cout << " Maximal number of observed events to be accepted for analysis : " << fNmaxevt << endl;
  }
  cout << " Declination interval (J2000 in degrees) for burst position acceptance : [" << fDeclmin << "," << fDeclmax << "]" << endl;
  cout << " Duration interval (t90 in sec) for burst acceptance : [" << fabs(fT90min) << "," << fT90max << "]" << endl;
@@ -9167,7 +9202,7 @@ void NcAstrolab2::ListBurstParameters() const
 
  cout << endl;
  cout << " ============================== Derived parameters ====================================" << endl;
- cout << " Combined burst position and event reco angular uncertainty interval (sigma in degrees) : [" << fMinsigmatot << "," << fMaxsigmatot << "]" << endl;
+ cout << " Combined source c.q. burst position and event reco angular uncertainty interval (sigma in degrees) : [" << fMinsigmatot << "," << fMaxsigmatot << "]" << endl;
  cout << " Solid angle coverage (in steradian) corresponding to the selected declination band : " << fOmegaDecl << endl;
  cout << " Background event rate (Hz) for the selected declination band : " << fRbkgDecl << endl;
  cout << " Mean number of background events per hour from the selected declination band : " << fNbkgHour << endl;
@@ -9179,6 +9214,7 @@ void NcAstrolab2::ListBurstParameters() const
   cout << " Median burst T90 duration (in sec.) from the data sample : " << fabs(fAvgrbt90) << endl;
   cout << " Median burst position uncertainty (sigma in degrees) from the data sample : " << fAvgrbsigma << endl;
  }
+ if (fNevts>0) cout << " Number of observed events accepted for analysis : " << fNevts << endl;
  cout << " ======================================================================================" << endl;
  cout << endl;
 }
@@ -9308,7 +9344,7 @@ void NcAstrolab2::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t d
    if (obsname=="b") dec=ConvertAngle(value,units,"deg");
    if (obsname=="csigma") sigmapos=ConvertAngle(value,units,"deg");
    if (obsname=="T90") t90=value;  
-   if (obsname=="Ttrig") mjdtrig=value;  
+   if (obsname=="Tobs") mjdtrig=value;  
    if (obsname=="Tstart") mjdt90start=value;
    if (obsname=="T100") t100=value;
    if (obsname=="S") fluence=value;  
@@ -9370,6 +9406,365 @@ void NcAstrolab2::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t d
  cout << " Total number of stored bursts : " << fNgrbs << endl;
 }
 ///////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1,Int_t date2,Int_t nmax,TString type)
+{
+// Load observed burst GCN data, e.g. GRB data from GCN notices as available from
+// https://icecube.wisc.edu/~grbweb_public.
+//
+// **********************************************************************************
+// * This is a beta test version, so currently no backward compatibility guaranteed *
+// **********************************************************************************
+//
+// The input data has to be provided via a ROOT Tree which will be searched
+// for data on the variable names as specified via SetDataNames().
+// In case data for a certain variable is not present, the non-physical value -999
+// will be stored, unless the user has selected random generation of the variables
+// T90 and/or z and/or sigmapos as specified via SetBurstParameter(). 
+//
+// Input arguments :
+// -----------------
+// src   : Flag to indicate source (e.g. GCN) data (kTRUE) or observed events (kFALSE)
+// file  : Name of the input file containing the ROOT Tree (wildcards are allowed)
+// tree  : Name of the Tree containing the data
+// date1 : The date (yyyymmdd) of the start of the observation period [date1,date2] (0=No restriction)
+// date2 : The date (yyyymmdd) of the end of the observation period [date1,date2] (0=No restriction)
+// nmax  : Maximum number of sources or events to be accepted from this input file (<0 : no limitation)
+// type  : Identifier of the transient (alert) type (e.g. "GRB", "GW", "IC",....)
+//
+// The default values are date1=0, date2=0, nmax=-1 and type="GRB".
+//
+// Note : This memberfunction make be invoked several times to read different files
+//        to accumulate data.
+
+ Int_t nvars=fDataNames.GetMaxRow();
+
+ if (nvars<1)
+ {
+  cout << " *" << ClassName() << "::LoadBurstGCNdata* No variables were specified." << endl;
+  return;
+ }
+
+ // Set the data type : observed events or source data
+ Int_t iobs=1;
+ if (src) iobs=0;
+
+ // Retreive the needed parameters
+//@@@@ Int_t fNmax=TMath::Nint(fBurstParameters->GetSignal("Nmax"));
+ Int_t fNmaxsrc=TMath::Nint(fBurstParameters->GetSignal("Nmaxsrc"));
+ Int_t fNmaxevt=TMath::Nint(fBurstParameters->GetSignal("Nmaxevt"));
+ Float_t fDeclmin=fBurstParameters->GetSignal("Declmin");
+ Float_t fDeclmax=fBurstParameters->GetSignal("Declmax");
+ Float_t fT90min=fBurstParameters->GetSignal("T90min");
+ Float_t fT90max=fBurstParameters->GetSignal("T90max");
+ Float_t fZmin=fBurstParameters->GetSignal("Zmin");
+ Float_t fZmax=fBurstParameters->GetSignal("Zmax");
+ Float_t fSigmamin=fBurstParameters->GetSignal("Sigmamin");
+ Float_t fSigmamax=fBurstParameters->GetSignal("Sigmamax");
+ Float_t fEmin=fBurstParameters->GetSignal("Emin");
+ Float_t fEmax=fBurstParameters->GetSignal("Emax");
+ Float_t fAngresmin=fBurstParameters->GetSignal("Angresmin");
+ Float_t fAngresmax=fBurstParameters->GetSignal("Angresmax");
+
+ // Internal statistics
+//@@@@ Int_t fNgrbs=TMath::Nint(fBurstParameters->GetSignal("Ngrbs"));
+//@@@@ Int_t fNevts=TMath::Nint(fBurstParameters->GetSignal("Nevts"));
+ Int_t fNgrbs=GetNsignals(0);
+ Int_t fNevts=GetNsignals(1);
+
+ // Get access to a redshift distribution to draw randomly redshifts if needed
+ TH1* zdist=0;
+ if (fZmin<0) zdist=GetBurstZdist("LoadInputData");
+
+ // Get access to a T90 distribution to draw randomly T90 values if needed
+ TH1* t90dist=0;
+ if (fT90min<0) t90dist=GetBurstT90dist("LoadInputData");
+
+ // Get access to a 1-sigma position uncertainty distribution to draw randomly position uncertaintes
+ TH1* sigmaposdist=0;
+ if (fSigmamin<0) sigmaposdist=GetBurstSigmaPosdist("LoadInputData");
+
+ // The TTree containing the source (c.q. burst) or observed event data
+ TChain data(tree.Data());
+ data.Add(file.Data());
+
+ // The accepted (physical) observables
+ Int_t Run,Event,Eventb,DetId;
+ TString Date;
+ Double_t Tobs,Tstart,Tend;
+ Double_t d,a,b;
+ Float_t z,E,L,S,F,I,J,T90,T100;
+ Float_t dsigma,asigma,bsigma,csigma;
+ Float_t zsigma,Esigma,Lsigma,Ssigma,Fsigma,Isigma,Jsigma,T90sigma,T100sigma;
+
+ // The retrieved observable value from the ROOT Tree
+ Double_t value;
+
+ Double_t ra,dec;
+ Float_t sigmapos,t90,t100,fluence;
+ Double_t mjdtrig,mjdt90start;
+
+ Float_t sigmagrb=0;
+ Float_t t90grb=0;
+ Float_t zgrb=0;
+ UInt_t yyyy,mm,dd;
+ Int_t dmode=0;
+ Int_t idate=0;
+ Int_t jdate=0;
+ TString grbname;
+ NcTimestamp tobs;
+ NcTimestamp tstart;
+ NcTimestamp tend;
+ NcSignal* sx=0;
+ Int_t nnew=0;
+ TLeaf* lx=0;
+ TString obsname;
+ TString varname;
+ TString units;
+ TString func;
+ Int_t jlast=0;
+ for (Int_t ient=0; ient<data.GetEntries(); ient++)
+ {
+  if (nmax>=0 && nnew>=nmax) break;
+//@@@@  if (fNmax>=0 && (fNgrbs+ngcn)>=fNmax) break;
+  if (src && fNmaxsrc>=0 && (fNgrbs+nnew)>=fNmaxsrc) break;
+  if (!src && fNmaxevt>=0 && (fNevts+nnew)>=fNmaxevt) break;
+
+  data.GetEntry(ient);
+
+  Run=-999;
+  Event=-999;
+  Eventb=-999;
+  DetId=-999;
+  Date="none";
+  Tobs=-999;
+  Tstart=-999;
+  Tend=-999;
+  d=-999;
+  a=-999;
+  b=-999;
+  z=-999;
+  E=-999;
+  L=-999;
+  S=-999;
+  F=-999;
+  I=-999;
+  J=-999;
+  T90=-999;
+  T100=-999;
+  dsigma=-999;
+  asigma=-999;
+  bsigma=-999;
+  csigma=-999;
+  zsigma=-999;
+  Esigma=-999;
+  Lsigma=-999;
+  Ssigma=-999;
+  Fsigma=-999;
+  Isigma=-999;
+  Jsigma=-999;
+  T90sigma=-999;
+  T100sigma=-999;
+
+  ra=-999;
+  dec=-999;
+  sigmapos=-999;
+  t90=-999;
+  mjdtrig=-999;
+  mjdt90start=-999;
+  t100=-999;
+  fluence=-999;
+  z=-999;
+
+  // Loop over the selected input variables
+  for (Int_t ivar=1; ivar<=nvars; ivar++)
+  {
+   obsname=((TObjString*)fDataNames.GetObject(ivar,1))->GetString();
+   varname=((TObjString*)fDataNames.GetObject(ivar,2))->GetString();
+   units=((TObjString*)fDataNames.GetObject(ivar,3))->GetString();
+   func=((TObjString*)fDataNames.GetObject(ivar,4))->GetString();
+
+   lx=data.GetLeaf(varname);
+   
+   if (!lx) continue;
+
+   value=lx->GetValue();
+
+   if (func=="Log") value=pow(value,10);
+   if (func=="Ln") value=exp(value);
+
+   if (obsname=="Run") Run=value;  
+   if (obsname=="Event") Event=value;  
+   if (obsname=="Eventb") Eventb=value;  
+   if (obsname=="DetId") DetId=value;  
+   if (obsname=="Date")
+   {
+    Date="";
+    Date+=int(value);
+    if (units=="ddmmyyyy") dmode=0;
+    if (units=="yyyymmdd") dmode=1;
+    if (units=="mmddyyyy") dmode=2;
+    if (units=="yyyyddmm") dmode=3;
+   }
+   if (obsname=="Tobs")
+   {
+//@@@@    tobs.LoadUTCparameterFiles();
+    if (units=="JD") tobs.SetJD(value);
+    if (units=="MJD") tobs.SetMJD(value);
+    if (units=="TJD") tobs.SetTJD(value);
+    Tobs=-1;
+    if (units=="hms") Tobs=value;
+   }
+   if (obsname=="Tstart")
+   {
+//@@@@    tstart.LoadUTCparameterFiles();
+    if (units=="JD") tstart.SetJD(value);
+    if (units=="MJD") tstart.SetMJD(value);
+    if (units=="TJD") tstart.SetTJD(value);
+    Tstart=-1;
+    if (units=="hms") Tstart=value;
+   }
+   if (obsname=="Tend")
+   {
+//@@@@@    tend.LoadUTCparameterFiles();
+    if (units=="JD") tend.SetJD(value);
+    if (units=="MJD") tend.SetMJD(value);
+    if (units=="TJD") tend.SetTJD(value);
+    Tend=-1;
+    if (units=="hms") Tend=value;
+   }
+   if (obsname=="a") a=ConvertAngle(value,units,"deg");
+   if (obsname=="b") b=ConvertAngle(value,units,"deg");
+   if (obsname=="z") z=value;  
+   if (obsname=="E") E=value;  
+   if (obsname=="L") L=value;  
+   if (obsname=="S") S=value;  
+   if (obsname=="F") F=value;  
+   if (obsname=="I") I=value;  
+   if (obsname=="J") J=value;  
+   if (obsname=="T90") T90=value;  
+   if (obsname=="T100") T100=value;
+   if (obsname=="dsigma") dsigma=value;
+   if (obsname=="asigma") asigma=ConvertAngle(value,units,"deg");
+   if (obsname=="bsigma") bsigma=ConvertAngle(value,units,"deg");
+   if (obsname=="csigma") csigma=ConvertAngle(value,units,"deg");
+   if (obsname=="zsigma") zsigma=value;
+   if (obsname=="Esigma") Esigma=value;
+   if (obsname=="Lsigma") Lsigma=value;
+   if (obsname=="Ssigma") Ssigma=value;
+   if (obsname=="Fsigma") Fsigma=value;
+   if (obsname=="Isigma") Isigma=value;
+   if (obsname=="T90sigma") T90sigma=value;
+   if (obsname=="T100sigma") T100sigma=value;
+  }
+
+  // Construct the various timestamps from the (date,time) specification if needed
+  if (Tobs>=0 && Date!="none") tobs.SetUT(Date,Tobs,dmode);  
+  if (Tstart>=0 && Date!="none") tstart.SetUT(Date,Tobs,dmode);  
+  if (Tend>=0 && Date!="none") tend.SetUT(Date,Tobs,dmode);
+
+  // Check for the presence of a valid observation c.q. trigger timestamp
+  if (Tobs<-100 || (Tobs>=0 && Date=="none")) continue;
+
+  // Obtain the date in yyyymmdd format
+  tobs.GetDate(kTRUE,0,&yyyy,&mm,&dd);
+  idate=dd+100*mm+10000*yyyy;
+  // Compose the name of the source c.q. burst with the common yymmdd suffix
+  jdate=idate%1000000;
+  grbname=type;
+  grbname+=idate;
+
+  if (date1 && idate<date1) continue;
+  if (date2 && idate>date2) continue;
+
+  // Check for the presence of a valid T90 start timestamp
+  if (Tstart<-100 || (Tstart>=0 && Date=="none")) continue; //@@@@@@
+
+  if (src) // Source c.q. burst specific selections
+  {
+   t90grb=T90;
+   if (t90grb<=0) t90grb=T100;
+   if (fT90min<0 && t90grb<0 && t90dist) t90grb=t90dist->GetRandom();
+
+   if (t90grb<fabs(fT90min) || t90grb>fT90max) continue;
+
+   zgrb=z;
+   if (fZmin<0 && zgrb<0 && zdist) zgrb=zdist->GetRandom();
+
+   if (zgrb<fabs(fZmin) || zgrb>fZmax) continue;
+
+   sigmagrb=csigma;
+   if (fSigmamin<0 && sigmagrb<0 && sigmaposdist) sigmagrb=sigmaposdist->GetRandom();
+
+   if (sigmagrb<fabs(fSigmamin) || sigmagrb>fSigmamax) continue;
+  }
+  else // Observed event specific selections
+  {
+   if (E<fEmin || E>fEmax) continue;
+   if (csigma<fAngresmin || csigma>fAngresmax) continue;
+  }
+
+  // Obtain the RA and DEC coordinates for acceptance selection
+  sx=SetSignal(1,a,"deg",b,"deg",fDataFrame,&tobs,-1,fDataMode,grbname,iobs);
+  jlast=GetNsignals(iobs);
+  GetSignal(d,ra,"deg",dec,"deg","equ",&tobs,jlast,"J",iobs);
+
+  if (dec<fDeclmin || dec>fDeclmax)
+  {
+   RemoveSignal(jlast,iobs,1);
+   sx=0;
+   continue;
+  }
+
+  if (!sx) continue;
+
+  nnew++;
+
+  if (src) // Specific source c.q. burst data
+  {
+   sx->AddNamedSlot("t90");
+   sx->SetSignal(t90grb,"t90");
+   sx->AddNamedSlot("sigmagrb");
+   sx->SetSignal(sigmagrb,"sigmagrb");
+   sx->AddNamedSlot("z");
+   sx->SetSignal(zgrb,"z");
+   if (S>0)
+   {
+    sx->AddNamedSlot("fluence");
+    sx->SetSignal(S,"fluence");
+   }
+  }
+  else // Specific observed c.q. reconstructed event data
+  {
+   sx->AddNamedSlot("E");
+   sx->SetSignal(E,"E");
+   sx->AddNamedSlot("sigmaevt");
+   sx->SetSignal(csigma,"sigmaevt");
+  }
+ }
+
+ Int_t nstored=GetNsignals(iobs);
+
+ cout << endl;
+ if (src)
+ {
+  // Update internal statistics
+  fBurstParameters->AddNamedSlot("Ngrbs");
+  fBurstParameters->SetSignal(nstored,"Ngrbs");
+  cout << " *" << ClassName() << "::LoadInputData* " << nnew << " new source(s) of type " << type
+       << " stored from Tree:" << tree << " of file(s):" << file << endl;
+  cout << " Total number of stored sources c.q. bursts : " << nstored << endl;
+ }
+ else
+ {
+  // Update internal statistics
+  fBurstParameters->AddNamedSlot("Nevts");
+  fBurstParameters->SetSignal(nstored,"Nevts");
+  cout << " *" << ClassName() << "::LoadInputData* " << nnew
+       << " new observed event(s) were stored from Tree:" << tree << " of file(s):" << file << endl;
+  cout << " Total number of stored events : " << nstored << endl;
+ }
+}
+///////////////////////////////////////////////////////////////////////////
 void NcAstrolab2::GenBurstGCNdata(Int_t n,TString name)
 {
 // Generate fictative burst GCN data for "n" bursts of (alert) type "name",
@@ -9382,7 +9777,8 @@ void NcAstrolab2::GenBurstGCNdata(Int_t n,TString name)
 // **********************************************************************************
 
  // Retreive the needed parameters
- Int_t fNmax=TMath::Nint(fBurstParameters->GetSignal("Nmax"));
+//@@@@ Int_t fNmax=TMath::Nint(fBurstParameters->GetSignal("Nmax"));
+ Int_t fNmaxgrb=TMath::Nint(fBurstParameters->GetSignal("Nmaxgrb"));
  Float_t fDeclmin=fBurstParameters->GetSignal("Declmin");
  Float_t fDeclmax=fBurstParameters->GetSignal("Declmax");
  Float_t fT90min=fBurstParameters->GetSignal("T90min");
@@ -9420,7 +9816,8 @@ void NcAstrolab2::GenBurstGCNdata(Int_t n,TString name)
 
  for (Int_t igrb=1; igrb<=n; igrb++)
  {
-  if (fNmax>=0 && (fNgrbs+ngen)>=fNmax) break;
+//@@@@  if (fNmax>=0 && (fNgrbs+ngen)>=fNmax) break;
+  if (fNmaxgrb>=0 && (fNgrbs+ngen)>=fNmaxgrb) break;
 
   zgrb=-1;
   if (fabs(fZmin)==fZmax) zgrb=fZmax; 
@@ -9473,7 +9870,7 @@ void NcAstrolab2::GenBurstGCNdata(Int_t n,TString name)
  fBurstParameters->SetSignal(fNgrbs,"Ngrbs");
 
  cout << endl;
- cout << " *" << ClassName() << "::GenBurstGCNdata* " << ngen << " generated bursts with name " << name << " were stored." << endl;
+ cout << " *" << ClassName() << "::GenBurstGCNdata* " << ngen << " new generated bursts with name " << name << " were stored." << endl;
  cout << " Total number of stored bursts : " << fNgrbs << endl;
 }
 ///////////////////////////////////////////////////////////////////////////
@@ -10570,6 +10967,7 @@ void NcAstrolab2::GenBurstSignals()
  Float_t fNbkgWin=fBurstParameters->GetSignal("NbkgWin");
 
 /******************
+@@@@@@@@@@@@@@@@@@@
  // Set default energy spectra if needed
  TH1* edist=0;
  edist=(TH1*)fBurstHistos.FindObject("hsigE");
@@ -10585,6 +10983,7 @@ void NcAstrolab2::GenBurstSignals()
  Int_t fNgrbs=GetNsignals(0);
 
 /**************
+@@@@@@@@@@@@@@@@@@
  Float_t xmin=0;
  Float_t xmax=0;
  Float_t range=0;
