@@ -9305,15 +9305,15 @@ void NcAstrolab2::LoadBurstGCNdata(TString file,TString tree,Int_t date1,Int_t d
 
  // Get access to a redshift distribution to draw randomly redshifts if needed
  TH1* zdist=0;
- if (fZmin<0) zdist=GetBurstZdist("LoadBurstGCNdata");
+ if (fZmin<0) zdist=GetBurstZdist("LoadBurstGCNdata()",type);
 
  // Get access to a T90 distribution to draw randomly T90 values if needed
  TH1* t90dist=0;
- if (fT90min<0) t90dist=GetBurstT90dist("LoadBurstGCNdata");
+ if (fT90min<0) t90dist=GetBurstT90dist("LoadBurstGCNdata()",type);
 
  // Get access to a 1-sigma position uncertainty distribution to draw randomly position uncertaintes
  TH1* sigmaposdist=0;
- if (fSigmamin<0) sigmaposdist=GetBurstSigmaPosdist("LoadBurstGCNdata");
+ if (fSigmamin<0) sigmaposdist=GetBurstSigmaPosdist("LoadBurstGCNdata()",type);
 
  // The TTree containing the burst data
  TChain gcn(tree.Data());
@@ -9509,21 +9509,17 @@ void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1
  Int_t fNgrbs=GetNsignals(0);
  Int_t fNevts=GetNsignals(1);
 
- TString str="LoadInputData() for ";
- str+=type;
- str+=" data.";
-
  // Get access to a redshift distribution to draw randomly source redshifts if needed
  TH1* zdist=0;
- if (src && fZmin<0) zdist=GetBurstZdist(str);
+ if (src && fZmin<0) zdist=GetBurstZdist("LoadInputData()",type);
 
  // Get access to a T90 distribution to draw randomly source c.q. burst T90 values if needed
  TH1* t90dist=0;
- if (src && fT90min<0) t90dist=GetBurstT90dist(str);
+ if (src && fT90min<0) t90dist=GetBurstT90dist("LoadInputData()",type);
 
  // Get access to a 1-sigma position uncertainty distribution to draw randomly source position uncertaintes
  TH1* sigmaposdist=0;
- if (src && fSigmamin<0) sigmaposdist=GetBurstSigmaPosdist(str);
+ if (src && fSigmamin<0) sigmaposdist=GetBurstSigmaPosdist("LoadInputData()",type);
 
  // The TTree containing the source (c.q. burst) or observed event data
  TChain data(tree.Data());
@@ -9832,18 +9828,22 @@ void NcAstrolab2::GenBurstGCNdata(Int_t n,TString name)
 //@@@@@@ Int_t fNgrbs=TMath::Nint(fBurstParameters->GetSignal("Ngrbs"));
  Int_t fNgrbs=GetNsignals(0);
 
- TString str="GenBurstGCNdata() for ";
- str+=name;
- str+=" data.";
-
  // Get access to a redshift distribution to draw randomly redshifts
- TH1* zdist=GetBurstZdist(str);
+ TH1* zdist=GetBurstZdist("GenBurstGCNdata()",name);
 
  // Get access to a T90 distribution to draw randomly T90 values
- TH1* t90dist=GetBurstT90dist(str);
+ TH1* t90dist=GetBurstT90dist("GenBurstGCNdata()",name);
 
  // Get access to a 1-sigma position uncertainty distribution to draw randomly position uncertaintes
- TH1* sigmaposdist=GetBurstSigmaPosdist(str);
+ TH1* sigmaposdist=GetBurstSigmaPosdist("GenBurstGCNdata()",name);
+
+ if (!zdist || !t90dist || !sigmaposdist)
+ {
+  cout << endl;
+  cout << " *" << ClassName() << "::GenBurstGCNdata* A distribution for random values is missing." << endl; 
+  cout << endl;
+  return;
+ }
 
  Float_t thlow=fDeclmin+90.;
  Float_t thup=fDeclmax+90.;
@@ -10009,31 +10009,42 @@ void NcAstrolab2::MakeBurstZdist(TString file,TString tree,TString name,Int_t nb
       << " of Tree:" << tree << " in file(s):" << file << endl;
 }
 ///////////////////////////////////////////////////////////////////////////
-TH1* NcAstrolab2::GetBurstZdist(TString name)
+TH1* NcAstrolab2::GetBurstZdist(TString name,TString type)
 {
 // Internal member function to provide the archival c.q. fitted burst redshift distribution.
 // The input argument "name" serves to identify the calling function in the printout.
+// The input argument "type" serves to identify the source class for which a fit has to be provided.
+// Currently only a fit for GRB is available.
 
  TH1* zdist=(TH1*)fBurstHistos.FindObject("hz");
  if (!zdist)
  {
-  cout << endl;
-  cout << " *" << ClassName() << "::GetBurstZdist* Called from " << name << endl;
-  cout << " *** Archival observed redshift distribution not found. ***" << endl;
-  cout << " A Landau fit from Swift GRB redshift data will be used to provide missing c.q. random z values." << endl;
+  if (type.Contains("GRB"))
+  {
+   cout << endl;
+   cout << " *" << ClassName() << "::GetBurstZdist* Called from " << name << endl;
+   cout << " *** Archival observed redshift distribution not found. ***" << endl;
+   cout << " A Landau fit from Swift GRB redshift data will be used to provide missing c.q. random z values." << endl;
 
-  zdist=(TH1*)fBurstHistos.FindObject("hzfit");
-  if (!zdist)
-  { 
-   TF1 fz("fz","59.54*TMath::Landau(x,1.092,0.5203)");
-   fz.SetRange(0,10);
-   fz.SetNpx(10000);
-   TH1* hfz=fz.GetHistogram();
-   zdist=(TH1*)hfz->Clone();
-   zdist->SetNameTitle("hzfit","Landau fit for Swift GRB z data");
-   zdist->GetXaxis()->SetTitle("GRB redshift");
-   zdist->GetYaxis()->SetTitle("Counts");
-   fBurstHistos.Add(zdist);
+   zdist=(TH1*)fBurstHistos.FindObject("hzfit");
+   if (!zdist)
+   { 
+    TF1 fz("fz","59.54*TMath::Landau(x,1.092,0.5203)");
+    fz.SetRange(0,10);
+    fz.SetNpx(10000);
+    TH1* hfz=fz.GetHistogram();
+    zdist=(TH1*)hfz->Clone();
+    zdist->SetNameTitle("hzfit","Landau fit for Swift GRB z data");
+    zdist->GetXaxis()->SetTitle("GRB redshift");
+    zdist->GetYaxis()->SetTitle("Counts");
+    fBurstHistos.Add(zdist);
+   }
+  }
+  else // Source class for which no fit is available
+  {
+   cout << endl;
+   cout << " *" << ClassName() << "::GetBurstZdist* Called from " << name << endl;
+   cout << " *** No redshift fit is available for source class " << type << " ***" << endl;
   }
  }
 
@@ -10117,32 +10128,43 @@ void NcAstrolab2::MakeBurstT90dist(TString file,TString tree,TString name,Int_t 
       << " of Tree:" << tree << " in file(s):" << file << endl;
 }
 ///////////////////////////////////////////////////////////////////////////
-TH1* NcAstrolab2::GetBurstT90dist(TString name)
+TH1* NcAstrolab2::GetBurstT90dist(TString name,TString type)
 {
 // Internal member function to provide the archival c.q. fitted burst T90 distribution.
 // The input argument "name" serves to identify the calling function in the printout.
+// The input argument "type" serves to identify the source class for which a fit has to be provided.
+// Currently only a fit for GRB is available.
 
  TH1* t90dist=(TH1*)fBurstHistos.FindObject("ht90");
  if (!t90dist)
  {
-  cout << endl;
-  cout << " *" << ClassName() << "::GetBurstT90dist* Called from " << name << endl;
-  cout << " *** Observational T90 distribution not found. ***" << endl;
-  cout << " A double Gaussian fit from Fermi GRB T90 data will be used to provide missing c.q. random T90 values." << endl;
-
-  t90dist=(TH1*)fBurstHistos.FindObject("ht90fit");
-  if (!t90dist)
+  if (type.Contains("GRB"))
   {
-   TF1 ft("ft","44.39*TMath::Gaus(x,-0.131,0.481)+193.8*TMath::Gaus(x,1.447,0.4752)");
-   ft.SetRange(-5,5);
-   ft.SetNpx(10000);
-   TH1* hft=ft.GetHistogram();
-   t90dist=(TH1*)hft->Clone();
-   t90dist->SetNameTitle("ht90fit","Double Gauss fit for Fermi t90 data");
-   t90dist->GetXaxis()->SetTitle("GRB duration ^{10}log(T90) in sec.");
-   t90dist->GetYaxis()->SetTitle("Counts");
-   fBurstHistos.Add(t90dist);
-  } 
+   cout << endl;
+   cout << " *" << ClassName() << "::GetBurstT90dist* Called from " << name << endl;
+   cout << " *** Observational T90 distribution not found. ***" << endl;
+   cout << " A double Gaussian fit from Fermi GRB T90 data will be used to provide missing c.q. random T90 values." << endl;
+
+   t90dist=(TH1*)fBurstHistos.FindObject("ht90fit");
+   if (!t90dist)
+   {
+    TF1 ft("ft","44.39*TMath::Gaus(x,-0.131,0.481)+193.8*TMath::Gaus(x,1.447,0.4752)");
+    ft.SetRange(-5,5);
+    ft.SetNpx(10000);
+    TH1* hft=ft.GetHistogram();
+    t90dist=(TH1*)hft->Clone();
+    t90dist->SetNameTitle("ht90fit","Double Gauss fit for Fermi t90 data");
+    t90dist->GetXaxis()->SetTitle("GRB duration ^{10}log(T90) in sec.");
+    t90dist->GetYaxis()->SetTitle("Counts");
+    fBurstHistos.Add(t90dist);
+   }
+  }
+  else // Source class for which no fit is available
+  {
+   cout << endl;
+   cout << " *" << ClassName() << "::GetBurstT90dist* Called from " << name << endl;
+   cout << " *** No T90 fit is available for source class " << type << " ***" << endl;
+  }
  }
 
  return t90dist;
@@ -10237,31 +10259,42 @@ void NcAstrolab2::MakeBurstSigmaPosdist(TString file,TString tree,TString name,T
       << " of Tree:" << tree << " in file(s):" << file << endl;
 }
 ///////////////////////////////////////////////////////////////////////////
-TH1* NcAstrolab2::GetBurstSigmaPosdist(TString name)
+TH1* NcAstrolab2::GetBurstSigmaPosdist(TString name,TString type)
 {
 // Internal member function to provide the archival c.q. fitted 1-sigma burst position uncertainty distribution.
 // The input argument "name" serves to identify the calling function in the printout.
+// The input argument "type" serves to identify the source class for which a fit has to be provided.
+// Currently only a fit for GRB is available.
 
  TH1* sigmaposdist=(TH1*)fBurstHistos.FindObject("hsigmapos");
  if (!sigmaposdist)
  {
-  cout << endl;
-  cout << " *" << ClassName() << "::GetBurstSigmaPosdist* Called from " << name << endl;
-  cout << " *** Archival observed position uncertainty distribution not found. ***" << endl;
-  cout << " A Landau fit from observed data will be used to provide missing c.q. random 1-sigma uncertainty values." << endl;
+  if (type.Contains("GRB"))
+  {
+   cout << endl;
+   cout << " *" << ClassName() << "::GetBurstSigmaPosdist* Called from " << name << endl;
+   cout << " *** Archival observed GRB position uncertainty distribution not found. ***" << endl;
+   cout << " A Landau fit from observed GRB data will be used to provide missing c.q. random 1-sigma uncertainty values." << endl;
 
-  sigmaposdist=(TH1*)fBurstHistos.FindObject("hsigmaposfit");
-  if (!sigmaposdist)
-  { 
-   TF1 fsigmapos("fsigmapos","245.2*TMath::Landau(x,-2.209,0.6721,1)");
-   fsigmapos.SetRange(0,90);
-   fsigmapos.SetNpx(10000);
-   TH1* hfsigmapos=fsigmapos.GetHistogram();
-   sigmaposdist=(TH1*)hfsigmapos->Clone();
-   sigmaposdist->SetNameTitle("hsigmaposfit","Landau fit for burst 1-sigma position uncertainty data");
-   sigmaposdist->GetXaxis()->SetTitle("Burst position uncertainty (sigma in degrees)");
-   sigmaposdist->GetYaxis()->SetTitle("Counts");
-   fBurstHistos.Add(sigmaposdist);
+   sigmaposdist=(TH1*)fBurstHistos.FindObject("hsigmaposfit");
+   if (!sigmaposdist)
+   { 
+    TF1 fsigmapos("fsigmapos","245.2*TMath::Landau(x,-2.209,0.6721,1)");
+    fsigmapos.SetRange(0,90);
+    fsigmapos.SetNpx(10000);
+    TH1* hfsigmapos=fsigmapos.GetHistogram();
+    sigmaposdist=(TH1*)hfsigmapos->Clone();
+    sigmaposdist->SetNameTitle("hsigmaposfit","Landau fit for burst 1-sigma position uncertainty data");
+    sigmaposdist->GetXaxis()->SetTitle("Burst position uncertainty (sigma in degrees)");
+    sigmaposdist->GetYaxis()->SetTitle("Counts");
+    fBurstHistos.Add(sigmaposdist);
+   }
+  }
+  else // Source class for which no fit is available
+  {
+   cout << endl;
+   cout << " *" << ClassName() << "::GetBurstSigmaPosdist* Called from " << name << endl;
+   cout << " *** No position uncertainty fit is available for source class " << type << " ***" << endl;
   }
  }
 

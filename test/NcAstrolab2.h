@@ -277,9 +277,9 @@ class NcAstrolab2 : public TTask,public NcTimestamp
   // Internal functions for transient burst investigations
   void BurstCompensate(Int_t& nmugrb);
   void InitBurstHistograms();
-  TH1* GetBurstZdist(TString name);
-  TH1* GetBurstT90dist(TString name);
-  TH1* GetBurstSigmaPosdist(TString name);
+  TH1* GetBurstZdist(TString name,TString type);
+  TH1* GetBurstT90dist(TString name,TString type);
+  TH1* GetBurstSigmaPosdist(TString name,TString type);
  
  ClassDef(NcAstrolab2,35) // Virtual lab to provide (astro)physical parameters, treat data and relate observations with astrophysical phenomena
 };
