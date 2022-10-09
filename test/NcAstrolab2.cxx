@@ -159,7 +159,7 @@
 // lab.DisplaySignals("equ","J",0,"ham",1);
 //
 //--- Author: Nick van Eijndhoven 15-mar-2007 Utrecht University
-//- Modified: Nick van Eijndhoven, IIHE-VUB Brussel, October 3, 2022  11:51Z
+//- Modified: Nick van Eijndhoven, IIHE-VUB Brussel, October 9, 2022  13:19Z
 ///////////////////////////////////////////////////////////////////////////
 
 #include "NcAstrolab2.h"
@@ -4686,8 +4686,16 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t
 // merh : Mercator projection plotted in a 2-D histogram
 // ang  : Straight sin(b) vs. l plot with colored markers
 // angh : Straight sin(b) vs. l plot in a 2-D histogram
+// UTh  : Day view (0-24 hours) of b vs. Universal Time
+// LTh  : Day view (0-24 hours) of b vs. Local Time
+// GSTh : Day view (0-24 hours) of b vs. Greenwich Siderial Time
+// LSTh : Day view (0-24 hours) of b vs. Local Siderial Time
 //
-// Note : The ang(h) plot allows for easy identification of an isotropic distribution.
+// Notes :
+// -------
+// 1) The ang(h) plot allows for easy identification of an isotropic distribution.
+// 2) For the projections "GSTh" and "LSTh", the input argument "mode" also determines
+//    whether they show the Mean (mode="M") or Apparent (mode="T") Sidereal Time. 
 //
 // The input argument "clr" allows to clear (1) the display before drawing or not (0).
 //
@@ -4763,6 +4771,7 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t
 
  Int_t hist=0;
  if (proj=="hamh" || proj=="aith" || proj=="merh" || proj=="cylh" || proj=="angh") hist=1;
+ if (proj=="UTh" || proj=="LTh" || proj=="GSTh" || proj=="LSTh") hist=1;
 
  // Update the display for this signal position
 
@@ -5240,10 +5249,77 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t
   {
    fHist[type]->Fill(x*xfac,theta*180./pi);
   }
-  else
+  else if (proj!="UTh" && proj!="LTh" && proj!="GSTh" && proj!="LSTh")
   {
    fHist[type]->Fill(x*xfac,y*yfac);
   }
+  else // The 24 hour day view
+  {
+   // Set histogram binning and axes attributes
+   fHist[type]->SetBins(100,0,24,181,-90.5,90.5);
+   if (!ts) ts=(NcTimestamp*)this;
+   NcTimestamp tx=(*ts);
+   Double_t toffset=GetLabTimeOffset();
+   TString title="Day view at ";
+   title+=GetName();
+   title+=" on ";
+   title+=ts->GetDayTimeString("UT");
+   TString tmode="UT";
+   if (proj=="LTh") tmode="LMT";
+   if (proj=="GSTh") tmode="GMST";
+   if (mode=="T") tmode="GAST";
+   if (proj=="LSTh") tmode="LMST";
+   if (mode=="T") tmode="LAST";
+   if (proj=="UTh") title+=";Universal Time";
+   if (proj=="LTh") title+=";Local Time";
+   if (proj=="GSTh") title+=";Greenwich Sidereal Time";
+   if (proj=="LSTh") title+=";Local Sidereal Time";
+   if (proj!="UTh")
+   {
+    title+=" (";
+    title+=tmode;
+    title+=")";
+   }
+   title+=" in hours;";
+   TString ytitle="Declination ";
+   if (frame=="equ" && mode=="J") ytitle+="(J2000)";
+   if (frame=="equ" && mode=="B") ytitle+="(B1950)";
+   if (frame=="equ" && mode=="M") ytitle+="(Mean)";
+   if (frame=="equ" && mode=="T") ytitle+="(True)";
+   if (frame=="gal") ytitle="Galactic latitude";
+   if (frame=="ecl") ytitle="Geocentric Ecliptic latitude";
+   if (frame=="hor") ytitle="Horizon altitude";
+   if (frame=="icr") ytitle="ICRS latitude";
+   if (frame=="loc") ytitle="Angle w.r.t. local frame equator";
+   ytitle+=" in degrees";
+   title+=ytitle;
+   fHist[type]->SetTitle(title);
+   fHist[type]->SetStats(kFALSE);
+
+   // Fill the day view histogram
+   Double_t hour=0;
+   Double_t d,a,b;
+   for (Int_t i=0; i<24; i++)
+   {
+    if (tmode=="UT") hour=tx.GetUT();
+    if (tmode=="LMT") hour=tx.GetLT(toffset);
+    if (tmode=="GMST") hour=tx.GetGMST();
+    if (tmode=="GAST") hour=tx.GetGAST();
+    if (tmode=="LMST") hour=tx.GetLMST(toffset);
+    if (tmode=="LAST") hour=tx.GetLAST(toffset);
+
+    // Get coordinates at this time step
+    GetSignal(d,a,"deg",b,"deg",frame,&tx,jref,mode,type);
+    
+    if (frame=="hor") b=90.-b;
+    if (frame=="loc") b=90.-a;
+
+    fHist[type]->Fill(hour,b);
+
+    tx.Add(1); // Add 1 hour for each time step
+   }
+  }
+
   if ((!type && fHist[1]) || (type && fHist[0]))
   {
    fHist[type]->Draw("same");
@@ -5251,6 +5327,20 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t
   else
   {
    fHist[type]->Draw();
+
+   // Draw a horizontal thick line to mark the horizon c.q. equator for the day views
+   if (proj=="UTh" || proj=="LTh" || proj=="GSTh" || proj=="LSTh")
+   {
+    if (!fMarkers)
+    {
+     fMarkers=new TObjArray();
+     fMarkers->SetOwner();
+    }
+    TLine* line=new TLine(0,0,24,0);
+    line->SetLineWidth(3);
+    fMarkers->Add(line);
+    line->Draw();
+   }
   }
  }
 }
