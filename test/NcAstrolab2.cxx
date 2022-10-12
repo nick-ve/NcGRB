@@ -66,6 +66,11 @@
 // These facilities will enable a background c.q. blind analysis in studying
 // correlations with external (astrophysical) phenomena.
 //
+// The member function sequence InitDataNames(), SetDataNames() and LoadInputData()
+// provides a generic facility to load both observations and reference signals
+// from ROOT data files in Tree format.
+// This provides a convenient way to load e.g. experimental observations or (GCN) catalog data.
+//
 // This NcAstrolab2 class also provides a facility to model c.q. perform the
 // analysis of transient phenomena by means of (stacked) time series observations.
 // It reflects the observation of neutrinos based on gamma/GW burst alerts, but the
@@ -159,7 +164,7 @@
 // lab.DisplaySignals("equ","J",0,"ham",1);
 //
 //--- Author: Nick van Eijndhoven 15-mar-2007 Utrecht University
-//- Modified: Nick van Eijndhoven, IIHE-VUB Brussel, October 10, 2022  12:44Z
+//- Modified: Nick van Eijndhoven, IIHE-VUB Brussel, October 12, 2022  15:49Z
 ///////////////////////////////////////////////////////////////////////////
 
 #include "NcAstrolab2.h"
@@ -8638,10 +8643,10 @@ void NcAstrolab2::InitDataNames(Int_t dir,TString frame,TString mode)
 ///////////////////////////////////////////////////////////////////////////
 void NcAstrolab2::SetDataNames(TString obsname,TString varname,TString units,TString func)
 {
-// Specification of the correspondence table between (physical) observables
+// Specification of the correspondence table between pre-defined (physical) observables
 // and their names in a ROOT input Tree.
 // In order to be compatible with the generic data reading member function LoadInputData(),
-// only the (physical) observable names listed below are accepted.
+// only the pre-defined (physical) observable names listed below are accepted.
 //
 // Note :
 // ------
@@ -8663,9 +8668,9 @@ void NcAstrolab2::SetDataNames(TString obsname,TString varname,TString units,TSt
 // Eventb    : Sub-event number
 // DetId     : Detector identifier
 // Date      : The UTC observation date with as possible units "ddmmyyy", "yyyymmdd", "mmddyyyy" or "yyyyddmm"
-// Tobs      : The UTC observation c.q. trigger timestamp with as possible units "JD", "MJD", "TJD" or "hms"
-// Tstart    : Generic UTC start timestamp with as possible units "JD", "MJD", "TJD" or "hms"
-// Tend      : Generic UTC end timestamp with as possible units "JD", "MJD", "TJD" or "hms"
+// Tobs      : The UTC observation c.q. trigger timestamp with as possible units "JD", "MJD", "TJD", "hms" or "hrs"
+// Tstart    : Generic UTC start timestamp with as possible units "JD", "MJD", "TJD", "hms" or "hrs"
+// Tend      : Generic UTC end timestamp with as possible units "JD", "MJD", "TJD", "hms" or "hrs"
 // d         : Distance with a number as units (Standard unit is pc)
 // a         : right ascension, longitude, azimuth angle or spherical angle theta (depending on the reference frame)
 // b         : declination, latitude, zenith angle or spherical angle phi (depending on the reference frame)
@@ -8678,11 +8683,9 @@ void NcAstrolab2::SetDataNames(TString obsname,TString varname,TString units,TSt
 // J         : Flux density with a number as units (Standard unit is Jy, i.e. 1e-23 erg cm^-2 s^-1 Hz^-1)
 // T90       : T90 burst duration with a number as units (Standard unit is second)
 // T100      : T100 burst duration with a number as units (Standard unit is second)
-// dsigma    : The 1-sigma uncertainty on d
-// asigma    : The 1-sigma uncertainty on a
-// bsigma    : The 1-sigma uncertainty on b
-// csigma    : The 1-sigma angular cone uncertainty on the position or direction
-// zsigma    : The 1-sigma uncertainty on z
+// dsigma    : The on d
+// csigma    : The angular uncertainty in a cone around the position or direction
+// zsigma    : The uncertainty on z
 // Esigma    : The uncertainty on E
 // Lsigma    : The uncertainty on L
 // Ssigma    : The uncertainty on S
@@ -8690,6 +8693,8 @@ void NcAstrolab2::SetDataNames(TString obsname,TString varname,TString units,TSt
 // Isigma    : The uncertainty on I
 // T90sigma  : The uncertainty on T90 
 // T100sigma : The uncertainty on T90 
+//
+// Note : In case Tobs, Tstart or Tend are specified in "hms" or "hrs", also Date has to be provided.
 //
 // Accepted specifications for units are :
 // ---------------------------------------
@@ -8699,7 +8704,7 @@ void NcAstrolab2::SetDataNames(TString obsname,TString varname,TString units,TSt
 // "deg" : Angle provided in degrees
 // "dms" : Angle provided in dddmmss.sss
 // "hms" : Angle or time provided in hhmmss.sss
-// "hrs" : Angle provided in fractional hours
+// "hrs" : Angle or time provided in fractional hours
 // "JD"  : Timestamp provided as Julian Date
 // "MJD" : Timestamp provided as Modified Julian Date
 // "TJD" : Timestamp provided as Truncated Julian Date
@@ -8726,13 +8731,13 @@ void NcAstrolab2::SetDataNames(TString obsname,TString varname,TString units,TSt
      && obsname!="d" && obsname!="a" && obsname!="b" && obsname!="z"
      && obsname!="E" && obsname!="L" && obsname!="S" && obsname!="F" && obsname!="I" && obsname!="J"
      && obsname!="T90" && obsname!="T100"
-     && obsname!="dsigma" && obsname!="asigma" && obsname!="bigma" && obsname!="csigma" && obsname!="zsigma"
+     && obsname!="dsigma" && obsname!="csigma" && obsname!="zsigma"
      && obsname!="Esigma" && obsname!="Lsigma" && obsname!="Ssigma" && obsname!="Fsigma" && obsname!="Isigma"
      && obsname!="T90sigma" && obsname!="T100sigma") error=kTRUE;
  if (obsname=="Date" && (units!="ddmmyyyy" && units!="yyyymmdd" && units!="mmddyyyy" && units!="yyyyddmm")) error=kTRUE;
  if ((obsname=="Tobs" || obsname=="Tstart" || obsname=="Tend")
-     && (units!="JD" && units!="MJD" && units!="TJD" && units!="hms")) error=kTRUE;
- if ((obsname=="a" || obsname=="b" || obsname=="asigma" || obsname=="bsigma" || obsname=="csigma")
+     && (units!="JD" && units!="MJD" && units!="TJD" && units!="hms" && units!="hrs")) error=kTRUE;
+ if ((obsname=="a" || obsname=="b" || obsname=="csigma")
      && (units!="rad" && units!="deg" && units!="dms" && units!="hms" && units!="hrs")) error=kTRUE;
  if (func!="none" && func!="Log" && func!="Ln") error=kTRUE;
 
@@ -9337,8 +9342,12 @@ void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1
 // The input data has to be provided via a ROOT Tree which will be searched
 // for data on the variable names as specified via SetDataNames().
 //
-// The necessary minimal set of observables (see SetDataNames) is :
-// a, b, Tobs (and Date in case Tobs is in units "hrs").
+// The necessary minimal set of pre-defined observables (see SetDataNames) is :
+// (a,b,Tobs) [and Date in case Tobs is in units "hms" or "hrs"].
+//
+// Apart from the location c.q. direction coordinates (d,a,b) and the timestamp Tobs,
+// all values will be stored as signal slots with the same pre-defined observable name
+// as defined in SetDataNames().
 //
 // In case data for a certain observable is not present, the non-physical value -999
 // will be stored, unless the user has selected random generation of that observable
@@ -9414,20 +9423,18 @@ void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1
 
  // The accepted (physical) observables
  Int_t Run,Event,Eventb,DetId;
- TString Date;
- Double_t Tobs,Tstart,Tend;
+ TString Date,Tobs,Tstart,Tend;
  Double_t d,a,b;
  Float_t z,E,L,S,F,I,J,T90,T100;
- Float_t dsigma,asigma,bsigma,csigma;
+ Float_t dsigma,csigma;
  Float_t zsigma,Esigma,Lsigma,Ssigma,Fsigma,Isigma,Jsigma,T90sigma,T100sigma;
 
  // The retrieved observable value from the ROOT Tree
  Double_t value;
 
- Float_t sigmasrc=0;
- Float_t t90src=0;
- Float_t zsrc=0;
- UInt_t yyyy,mm,dd;
+ UInt_t yyyy,mm,dd; // The date format
+ Int_t h,m;  // The integer hour and minute time format
+ Double_t s; // The (fractional) seconds time format
  Int_t dmode=0;
  Int_t idate=0;
  Int_t jdate=0;
@@ -9458,9 +9465,9 @@ void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1
   Eventb=-999;
   DetId=-999;
   Date="none";
-  Tobs=-999;
-  Tstart=-999;
-  Tend=-999;
+  Tobs="none";
+  Tstart="none";
+  Tend="none";
   d=-999;
   a=-999;
   b=-999;
@@ -9474,8 +9481,6 @@ void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1
   T90=-999;
   T100=-999;
   dsigma=-999;
-  asigma=-999;
-  bsigma=-999;
   csigma=-999;
   zsigma=-999;
   Esigma=-999;
@@ -9519,27 +9524,60 @@ void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1
    }
    if (obsname=="Tobs")
    {
-    Tobs=-1; // Indicate that Tobs is encountered
+    Tobs="set"; // Indicate that Tobs is encountered
     if (units=="JD") tobs.SetJD(value);
     if (units=="MJD") tobs.SetMJD(value);
     if (units=="TJD") tobs.SetTJD(value);
-    if (units=="hms") Tobs=value;
+    if (units=="hms")
+    {
+     Tobs="";
+     Tobs+=value;
+    }
+    if (units=="hrs") // Convert "hrs" to "hms" time format
+    {
+     Tobs="";
+     Convert(value,h,m,s);
+     value=s+double(100*m+10000*h);
+     Tobs+=value;
+    }
    }
    if (obsname=="Tstart")
    {
-    Tstart=-1; // Indicate that Tstart is encountered
+    Tstart="set"; // Indicate that Tstart is encountered
     if (units=="JD") tstart.SetJD(value);
     if (units=="MJD") tstart.SetMJD(value);
     if (units=="TJD") tstart.SetTJD(value);
-    if (units=="hms") Tstart=value;
+    if (units=="hms")
+    {
+     Tstart="";
+     Tstart+=value;
+    }
+    if (units=="hrs") // Convert "hrs" to "hms" time format
+    {
+     Tstart="";
+     Convert(value,h,m,s);
+     value=s+double(100*m+10000*h);
+     Tstart+=value;
+    }
    }
    if (obsname=="Tend")
    {
-    Tend=-1; // Indicate that Tend is encountered
+    Tend="set"; // Indicate that Tend is encountered
     if (units=="JD") tend.SetJD(value);
     if (units=="MJD") tend.SetMJD(value);
     if (units=="TJD") tend.SetTJD(value);
-    if (units=="hms") Tend=value;
+    if (units=="hms")
+    {
+     Tend="";
+     Tend+=value;
+    }
+    if (units=="hrs") // Convert "hrs" to "hms" time format
+    {
+     Tend="";
+     Convert(value,h,m,s);
+     value=s+double(100*m+10000*h);
+     Tend+=value;
+    }
    }
    if (obsname=="d") d=value;  
    if (obsname=="a") a=ConvertAngle(value,units,"deg");
@@ -9554,8 +9592,6 @@ void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1
    if (obsname=="T90") T90=value;  
    if (obsname=="T100") T100=value;
    if (obsname=="dsigma") dsigma=value;
-   if (obsname=="asigma") asigma=ConvertAngle(value,units,"deg");
-   if (obsname=="bsigma") bsigma=ConvertAngle(value,units,"deg");
    if (obsname=="csigma") csigma=ConvertAngle(value,units,"deg");
    if (obsname=="zsigma") zsigma=value;
    if (obsname=="Esigma") Esigma=value;
@@ -9574,12 +9610,12 @@ void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1
   if (a<-900 || b<-900) continue;
 
   // Construct the various timestamps from the (date,time) specification if needed
-  if (Tobs>=0 && Date!="none") tobs.SetUT(Date,Tobs,dmode);  
-  if (Tstart>=0 && Date!="none") tstart.SetUT(Date,Tobs,dmode);  
-  if (Tend>=0 && Date!="none") tend.SetUT(Date,Tobs,dmode);
+  if (Tobs!="none" && Tobs!="set" && Date!="none") tobs.SetUT(Date,Tobs,dmode);  
+  if (Tstart!="none" && Tstart!="set" && Date!="none") tstart.SetUT(Date,Tstart,dmode);  
+  if (Tend!="none" && Tend!="set" && Date!="none") tend.SetUT(Date,Tend,dmode);
 
   // Check for the presence of a valid observation c.q. trigger timestamp
-  if (Tobs<-100 || (Tobs>=0 && Date=="none")) continue;
+  if (Tobs=="none" || (Tobs!="set" && Date=="none")) continue;
 
   // Obtain the date in yyyymmdd format
   tobs.GetDate(kTRUE,0,&yyyy,&mm,&dd);
@@ -9594,25 +9630,6 @@ void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1
 
   if (src) // Source c.q. burst specific selections
   {
-/**************************************
-@@@@@@@@@@@@@@@@@@@@@@@@@   
-   t90src=T90;
-   if (t90src<=0) t90src=T100;
-   if (fT90min<0 && t90src<0 && t90dist) t90src=t90dist->GetRandom();
-
-   if (t90src<fabs(fT90min) || t90src>fT90max) continue;
-
-   zsrc=z;
-   if (fZmin<0 && zsrc<0 && zdist) zsrc=zdist->GetRandom();
-
-   if (zsrc<fabs(fZmin) || zsrc>fZmax) continue;
-
-   sigmasrc=csigma;
-   if (fSigmamin<0 && sigmasrc<0 && sigmaposdist) sigmasrc=sigmaposdist->GetRandom();
-
-   if (sigmasrc<fabs(fSigmamin) || sigmasrc>fSigmamax) continue;
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-**************************/
    if (T90<=0) T90=T100;
    if (fT90min<0 && T90<0 && t90dist) T90=t90dist->GetRandom();
 
@@ -9653,20 +9670,10 @@ void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1
 
   if (src) // Specific source c.q. burst data
   {
-/****************
-@@@@@@@@@@@@@@@@@@
-   sx->AddNamedSlot("t90");
-   sx->SetSignal(t90src,"t90");
-   sx->AddNamedSlot("sigmagrb");
-   sx->SetSignal(sigmasrc,"sigmagrb");
-   sx->AddNamedSlot("z");
-   sx->SetSignal(zsrc,"z");
-@@@@@@@@@@@@@@@@@@
-*****************/
-   sx->AddNamedSlot("t90");
-   sx->SetSignal(T90,"t90");
-   sx->AddNamedSlot("sigmagrb");
-   sx->SetSignal(csigma,"sigmagrb");
+   sx->AddNamedSlot("T90");
+   sx->SetSignal(T90,"T90");
+   sx->AddNamedSlot("csigma");
+   sx->SetSignal(csigma,"csigma");
    sx->AddNamedSlot("z");
    sx->SetSignal(z,"z");
    if (S>0)
@@ -9802,10 +9809,10 @@ void NcAstrolab2::GenBurstGCNdata(Int_t n,TString name)
 
   ngen++;
 
-  sx->AddNamedSlot("t90");
-  sx->SetSignal(t90grb,"t90");
-  sx->AddNamedSlot("sigmagrb");
-  sx->SetSignal(sigmagrb,"sigmagrb");
+  sx->AddNamedSlot("T90");
+  sx->SetSignal(t90grb,"T90");
+  sx->AddNamedSlot("csigma");
+  sx->SetSignal(sigmagrb,"csigma");
   sx->AddNamedSlot("z");
   sx->SetSignal(zgrb,"z");
 
@@ -11028,8 +11035,8 @@ void NcAstrolab2::GenBurstSignals()
 
   tx=sx->GetTimestamp();
   zgrb=sx->GetSignal("z");
-  t90grb=sx->GetSignal("t90");
-  sigmagrb=sx->GetSignal("sigmagrb");
+  t90grb=sx->GetSignal("T90");
+  sigmagrb=sx->GetSignal("csigma");
   GetSignal(dgrb,thetagrb,"deg",phigrb,"deg","loc",tx,igrb+1);
   rgrb.SetPosition(1,thetagrb,phigrb,"sph","deg");
 
@@ -11730,8 +11737,8 @@ void NcAstrolab2::InitBurstHistograms()
 
   zgrb=sx->GetSignal("z");
   dgrb=GetPhysicalDistance(zgrb);
-  t90grb=sx->GetSignal("t90");
-  sigmagrb=sx->GetSignal("sigmagrb");
+  t90grb=sx->GetSignal("T90");
+  sigmagrb=sx->GetSignal("csigma");
 
   hzburst->Fill(zgrb);
   hdburst->Fill(dgrb);
@@ -11985,8 +11992,8 @@ void NcAstrolab2::BurstCompensate(Int_t& nmugrb)
   GetSignal(dgrb,thetagrb,"deg",phigrb,"deg","loc",tx,jgrb);
   rgrb.SetPosition(1,thetagrb,phigrb,"sph","deg");
   zgrb=sx->GetSignal("z");
-  t90grb=sx->GetSignal("t90");
-  sigmagrb=sx->GetSignal("sigmagrb");
+  t90grb=sx->GetSignal("T90");
+  sigmagrb=sx->GetSignal("csigma");
   fixedwinset=TMath::Nint(sx->GetSignal("fixedwinset"));
   dangmaxOn=sx->GetSignal("dangmaxOn");
   OmegaOn=sx->GetSignal("OmegaOn");
