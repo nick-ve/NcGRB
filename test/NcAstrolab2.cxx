@@ -164,7 +164,7 @@
 // lab.DisplaySignals("equ","J",0,"ham",1);
 //
 //--- Author: Nick van Eijndhoven 15-mar-2007 Utrecht University
-//- Modified: Nick van Eijndhoven, IIHE-VUB Brussel, October 12, 2022  15:49Z
+//- Modified: Nick van Eijndhoven, IIHE-VUB Brussel, October 15, 2022  13:29Z
 ///////////////////////////////////////////////////////////////////////////
 
 #include "NcAstrolab2.h"
@@ -4695,12 +4695,17 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t
 // LTh  : Day view (0-24 hours) of b vs. Local Time
 // GSTh : Day view (0-24 hours) of b vs. Greenwich Siderial Time
 // LSTh : Day view (0-24 hours) of b vs. Local Siderial Time
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+// UYh  : Year view of b vs. day of the year at the Universal Time of the specified timestamp
+// LYh  : Year view of b vs. day of the year at the Local Time of the specified timestamp
+// GSYh : Year view of b vs. day of the year at the Greenwich Siderial Time of the specified timestamp
+// LSYh : Year view of b vs. day of the year at the Local Siderial Time of the specified timestamp
 //
 // Notes :
 // -------
 // 1) The ang(h) plot allows for easy identification of an isotropic distribution.
-// 2) For the projections "GSTh" and "LSTh", the input argument "mode" also determines
-//    whether they show the Mean (mode="M") or Apparent (mode="T") Sidereal Time. 
+// 2) For the projections "GSTh", "LSTh", "@@@@@GSYh" and "@@@@@@LSYh", the input argument "mode"
+//    also determines whether they show the Mean (mode="M") or Apparent (mode="T") Sidereal Time. 
 //
 // The input argument "clr" allows to clear (1) the display before drawing or not (0).
 //
@@ -4777,6 +4782,7 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t
  Int_t hist=0;
  if (proj=="hamh" || proj=="aith" || proj=="merh" || proj=="cylh" || proj=="angh") hist=1;
  if (proj=="UTh" || proj=="LTh" || proj=="GSTh" || proj=="LSTh") hist=1;
+ if (proj=="UYh" || proj=="LYh" || proj=="GSYh" || proj=="LSYh") hist=1; //@@@@@@@@@@@@
 
  // Update the display for this signal position
 
@@ -5254,11 +5260,11 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t
   {
    fHist[type]->Fill(x*xfac,theta*180./pi);
   }
-  else if (proj!="UTh" && proj!="LTh" && proj!="GSTh" && proj!="LSTh")
+  else if (proj=="hamh" || proj=="aith" || proj=="cylh" || proj=="angh")
   {
    fHist[type]->Fill(x*xfac,y*yfac);
   }
-  else // The 24 hour day view
+  else if (proj=="UTh" || proj=="LTh" || proj=="GSTh" || proj=="LSTh") // The 24 hour day view
   {
    // Set histogram binning and axes attributes
    fHist[type]->SetBins(100,0,24,181,-90.5,90.5);
@@ -5332,7 +5338,85 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t
     tx.Add(1); // Add 1 hour for each time step
    }
   }
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+  else if (proj=="UYh" || proj=="LYh" || proj=="GSYh" || proj=="LSYh") // The day of the year view
+  {
+   // Set histogram binning and axes attributes
+   fHist[type]->SetBins(1500,0,370,181,-90.5,90.5);
+   if (!ts) ts=(NcTimestamp*)this;
+   NcTimestamp tx=(*ts);
+   Double_t toffset=GetLabTimeOffset();
+   TString year="";
+   year+=int(ts->GetEpoch("J"));
+   TString tmode="UT";
+   if (proj=="LYh") tmode="LMT";
+   if (proj=="GSYh")
+   {
+    tmode="GMST";
+    if (mode=="T") tmode="GAST";
+   }
+   if (proj=="LSYh")
+   {
+    tmode="LMST";
+    if (mode=="T") tmode="LAST";
+   }
+   TString time;
+   ts->GetDayTimeString(tmode,0,0,0,&time);
 
+   TString title="Year view at ";
+   title+=GetName();
+   title+=" in ";
+   title+=year;
+   title+=" at  ";
+   title+=time;
+   title+=";Day of the year;";
+   TString ytitle="Declination ";
+   if (frame=="equ" && mode=="J") ytitle+="(J2000)";
+   if (frame=="equ" && mode=="B") ytitle+="(B1950)";
+   if (frame=="equ" && mode=="M") ytitle+="(Mean)";
+   if (frame=="equ" && mode=="T") ytitle+="(True)";
+   if (frame=="gal") ytitle="Galactic latitude";
+   if (frame=="ecl") ytitle="Geocentric Ecliptic latitude";
+   if (frame=="hor") ytitle="Horizon altitude";
+   if (frame=="icr") ytitle="ICRS latitude";
+   if (frame=="loc") ytitle="Angle w.r.t. local frame equator";
+   ytitle+=" in degrees";
+   title+=ytitle;
+   fHist[type]->SetTitle(title);
+   fHist[type]->SetStats(kFALSE);
+
+   // Fill the year view histogram
+   // Start at 01-jan 00:00:00h of the corresponding year
+   if (proj=="UYh" || proj=="GSYh") tx.SetUT(year.Atoi(),1,1,"00:00:00");
+   if (proj=="LYh" || proj=="LSYh") tx.SetLT(toffset,year.Atoi(),1,1,"00:00:00");
+   Double_t hour=0;
+   if (tmode=="UT") hour=tx.GetUT();
+   if (tmode=="LMT") hour=tx.GetLT(toffset);
+   if (tmode=="GMST") hour=tx.GetGMST();
+   if (tmode=="GAST") hour=tx.GetGAST();
+   if (tmode=="LMST") hour=tx.GetLMST(toffset);
+   if (tmode=="LAST") hour=tx.GetLAST(toffset);
+   tx.Add(hour); // Set the selected time
+   Double_t d,a,b;
+   Int_t day=0;
+   for (Int_t i=0; i<367; i++)
+   {
+
+    // Get coordinates at this time step
+    GetSignal(d,a,"deg",b,"deg",frame,&tx,jref,mode,type);
+    
+    if (frame=="hor") b=90.-b;
+    if (frame=="loc") b=90.-a;
+
+    if (proj=="UYh" || proj=="GSYh") day=tx.GetDayOfYear();
+    if (proj=="LYh" || proj=="LSYh") day=tx.GetDayOfYear(kFALSE,toffset);
+
+    fHist[type]->Fill(day,b);
+
+    tx.Add(24); // Add 1 day (= 24 hours) for each time step
+   }
+  }
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
   if ((!type && fHist[1]) || (type && fHist[0]))
   {
    fHist[type]->Draw("same");
@@ -5341,18 +5425,24 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t
   {
    fHist[type]->Draw();
 
-   // Draw a horizontal thick line to mark the horizon c.q. equator for the day views
-   if (proj=="UTh" || proj=="LTh" || proj=="GSTh" || proj=="LSTh")
+   // Draw a horizontal thick line to mark the horizon c.q. equator for the day and year views
+   if (proj=="UTh" || proj=="LTh" || proj=="GSTh" || proj=="LSTh" ||
+       proj=="UYh" || proj=="LYh" || proj=="GSYh" || proj=="LSYh")
    {
     if (!fMarkers)
     {
      fMarkers=new TObjArray();
      fMarkers->SetOwner();
     }
-    TLine* line=new TLine(0,0,24,0);
-    line->SetLineWidth(3);
-    fMarkers->Add(line);
-    line->Draw();
+    TLine* line=0;
+    if (proj=="UTh" || proj=="LTh" || proj=="GSTh" || proj=="LSTh") line=new TLine(0,0,24,0);
+    if (proj=="UYh" || proj=="LYh" || proj=="GSYh" || proj=="LSYh") line=new TLine(0,0,370,0);
+    if (line)
+    {
+     line->SetLineWidth(3);
+     fMarkers->Add(line);
+     line->Draw();
+    }
    }
   }
  }
@@ -5422,13 +5512,34 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,TStri
 // merh : Mercator projection plotted in a 2-D histogram
 // ang  : Straight sin(b) vs. l plot with colored markers
 // angh : Straight sin(b) vs. l plot in a 2-D histogram
+// UTh  : Day view (0-24 hours) of b vs. Universal Time
+// LTh  : Day view (0-24 hours) of b vs. Local Time
+// GSTh : Day view (0-24 hours) of b vs. Greenwich Siderial Time
+// LSTh : Day view (0-24 hours) of b vs. Local Siderial Time
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+// UYh  : Year view of b vs. day of the year at the Universal Time of the specified timestamp
+// LYh  : Year view of b vs. day of the year at the Local Time of the specified timestamp
+// GSYh : Year view of b vs. day of the year at the Greenwich Siderial Time of the specified timestamp
+// LSYh : Year view of b vs. day of the year at the Local Siderial Time of the specified timestamp
 //
-// Note : The ang(h) plot allows for easy identification of an isotropic distribution.
+// Notes :
+// -------
+// 1) In case the name specifies a solar system object which was not yet stored according to "type",
+//    the corresponding signal will be created and stored with the specified timestamp.
+//    All geocentric name specifications for solar system objects as indicated in the
+//    docs of NcTimestamp::Almanac() are supported.
+// 2) The ang(h) plot allows for easy identification of an isotropic distribution.
+// 3) For the projections "GSTh", "LSTh", "@@@@@GSYh" and "@@@@@@LSYh", the input argument "mode"
+//    also determines whether they show the Mean (mode="M") or Apparent (mode="T") Sidereal Time. 
 //
 // The input argument "clr" allows to clear (1) the display before drawing or not (0).
 //
 // The default values are : proj="ham", clr=0 and type=0.
 
+ // Create a signal for a solar system object if needed
+ Double_t d,a,b;
+ GetSignal(d,a,"deg",b,"deg",frame,ts,name,mode,type);
+  
  Int_t j=GetSignalIndex(name,type);
  if (j>0)
  {

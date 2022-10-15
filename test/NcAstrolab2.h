@@ -141,7 +141,6 @@ class NcAstrolab2 : public TTask,public NcTimestamp
   void SetBurstParameter(TString name,Double_t value); // Specification of a certain transient burst parameter setting
   NcDevice* GetBurstParameters();    // Provide the device containing all the burst parameter settings
   void ListBurstParameters() const;  // Listing of all the burst parameter settings
-//@@@@@  void LoadBurstGCNdata(TString file,TString tree,Int_t date1=0,Int_t date2=0,Int_t nmax=-1,TString type="GRB");  // Load observed burst GCN data
   void LoadInputData(Bool_t src,TString file,TString tree,Int_t date1=0,Int_t date2=0,Int_t nmax=-1,TString type="-");  // Load source (c.q. burst) or observed event data
   void GenBurstGCNdata(Int_t n,TString name="GRB"); // Generate fictative burst GCN data
   void GenBurstSignals(); // Generate detector signals from the stored transient bursts
