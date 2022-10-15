@@ -8753,11 +8753,13 @@ void NcAstrolab2::SetDataNames(TString obsname,TString varname,TString units,TSt
  TObjString* var=new TObjString(varname);
  TObjString* u=new TObjString(units);
  TObjString* f=new TObjString(func);
+ TObjString* val=new TObjString(""); // Value will be filled in LoadInputData()
 
  fDataNames.EnterObject(n+1,1,obs);
  fDataNames.EnterObject(n+1,2,var);
  fDataNames.EnterObject(n+1,3,u);
  fDataNames.EnterObject(n+1,4,f);
+ fDataNames.EnterObject(n+1,5,val);
 }
 ///////////////////////////////////////////////////////////////////////////
 void NcAstrolab2::ListDataNames()
@@ -9339,17 +9341,27 @@ void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1
 // * This is a beta test version, so currently no backward compatibility guaranteed *
 // **********************************************************************************
 //
-// The input data has to be provided via a ROOT Tree which will be searched
-// for data on the variable names as specified via SetDataNames().
+// The input data has to be provided as numerical values via a ROOT Tree which will be
+// searched for data on the variable names as specified via SetDataNames().
 //
 // The necessary minimal set of pre-defined observables (see SetDataNames) is :
 // (a,b,Tobs) [and Date in case Tobs is in units "hms" or "hrs"].
+// The observables (a,b,Tobs) are used to automatically construct and store the signal entries,
+// as outlined in SetSignal().
 //
-// Apart from the location c.q. direction coordinates (d,a,b) and the timestamp Tobs,
-// all values will be stored as signal slots with the same pre-defined observable name
-// as defined in SetDataNames().
+// All requested values will (also) be stored in NcSignal slots with the pre-defined
+// observable name and in the standard units as defined in SetDataNames().
 //
-// In case data for a certain observable is not present, the non-physical value -999
+// Special standard units used for storage are :
+// 1) yyyymmdd for Date
+// 2) MJD for Tobs, Tstart and Tend.
+// 3) Degrees for all angles
+//
+// Note that the values of "a" and "b" are not stored as NcSignal slots, since their
+// meaning depends on the used reference frame.
+// Retrieval of the values of "a" and "b" should be performed via the GetSignal() facility.
+//
+// In case data for a requested observable is not present, the non-physical value -999
 // will be stored, unless the user has selected random generation of that observable
 // via the specifications in SetBurstParameter(). 
 //
@@ -9421,16 +9433,24 @@ void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1
  TChain data(tree.Data());
  data.Add(file.Data());
 
- // The accepted (physical) observables
- Int_t Run,Event,Eventb,DetId;
+ // The pre-defined (physical) observables
+ TString obsname;
+ TString varname;
+ TString units;
+ TString func;
+
+ // The (physical) observable value in string format
+ TObjString* pval=0;
+ TString val;
+
+ // The retrieved numerical (physical) observable value from the ROOT Tree
+ Double_t value;
+
+ // Some of the pre-defined observable values that are used for selections
+ // or that need special treatment
  TString Date,Tobs,Tstart,Tend;
  Double_t d,a,b;
- Float_t z,E,L,S,F,I,J,T90,T100;
- Float_t dsigma,csigma;
- Float_t zsigma,Esigma,Lsigma,Ssigma,Fsigma,Isigma,Jsigma,T90sigma,T100sigma;
-
- // The retrieved observable value from the ROOT Tree
- Double_t value;
+ Float_t z,csigma,T90,T100,E;
 
  UInt_t yyyy,mm,dd; // The date format
  Int_t h,m;  // The integer hour and minute time format
@@ -9445,10 +9465,6 @@ void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1
  NcSignal* sx=0;
  Int_t nnew=0;
  TLeaf* lx=0;
- TString obsname;
- TString varname;
- TString units;
- TString func;
  Int_t jlast=0;
 
  // Loop over the data entries in the input Tree
@@ -9460,10 +9476,8 @@ void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1
 
   data.GetEntry(ient);
 
-  Run=-999;
-  Event=-999;
-  Eventb=-999;
-  DetId=-999;
+  // Initialisation of the values that are used for selections
+  // or that need special treatment
   Date="none";
   Tobs="none";
   Tstart="none";
@@ -9472,27 +9486,12 @@ void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1
   a=-999;
   b=-999;
   z=-999;
-  E=-999;
-  L=-999;
-  S=-999;
-  F=-999;
-  I=-999;
-  J=-999;
+  csigma=-999;
   T90=-999;
   T100=-999;
-  dsigma=-999;
-  csigma=-999;
-  zsigma=-999;
-  Esigma=-999;
-  Lsigma=-999;
-  Ssigma=-999;
-  Fsigma=-999;
-  Isigma=-999;
-  Jsigma=-999;
-  T90sigma=-999;
-  T100sigma=-999;
+  E=-999;
 
-  // Loop over the selected input variables
+  // Loop over the selected input variables and retrieve the corresponding input value
   for (Int_t ivar=1; ivar<=nvars; ivar++)
   {
    obsname=((TObjString*)fDataNames.GetObject(ivar,1))->GetString();
@@ -9500,19 +9499,33 @@ void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1
    units=((TObjString*)fDataNames.GetObject(ivar,3))->GetString();
    func=((TObjString*)fDataNames.GetObject(ivar,4))->GetString();
 
+   pval=(TObjString*)fDataNames.GetObject(ivar,5);
+
+   if (!pval) continue;
+
    lx=data.GetLeaf(varname);
    
-   if (!lx) continue;
+   // Record -999 for missing data
+   if (!lx)
+   {
+    pval->SetString("-999");
+    continue;
+   }
 
    value=lx->GetValue();
 
    if (func=="Log") value=pow(value,10);
    if (func=="Ln") value=exp(value);
 
-   if (obsname=="Run") Run=value;  
-   if (obsname=="Event") Event=value;  
-   if (obsname=="Eventb") Eventb=value;  
-   if (obsname=="DetId") DetId=value;  
+   // Convert all angular values to degrees
+   if (obsname=="a" || obsname=="b" || obsname=="csigma") value=ConvertAngle(value,units,"deg");
+
+   // Store the obtained value in string format
+   val="";
+   val+=value;
+   pval->SetString(val);
+
+   // Special values needed for later selections
    if (obsname=="Date")
    {
     Date="";
@@ -9580,27 +9593,13 @@ void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1
     }
    }
    if (obsname=="d") d=value;  
-   if (obsname=="a") a=ConvertAngle(value,units,"deg");
-   if (obsname=="b") b=ConvertAngle(value,units,"deg");
+   if (obsname=="a") a=value;  
+   if (obsname=="b") b=value;  
    if (obsname=="z") z=value;  
-   if (obsname=="E") E=value;  
-   if (obsname=="L") L=value;  
-   if (obsname=="S") S=value;  
-   if (obsname=="F") F=value;  
-   if (obsname=="I") I=value;  
-   if (obsname=="J") J=value;  
+   if (obsname=="csigma") csigma=value;  
    if (obsname=="T90") T90=value;  
    if (obsname=="T100") T100=value;
-   if (obsname=="dsigma") dsigma=value;
-   if (obsname=="csigma") csigma=ConvertAngle(value,units,"deg");
-   if (obsname=="zsigma") zsigma=value;
-   if (obsname=="Esigma") Esigma=value;
-   if (obsname=="Lsigma") Lsigma=value;
-   if (obsname=="Ssigma") Ssigma=value;
-   if (obsname=="Fsigma") Fsigma=value;
-   if (obsname=="Isigma") Isigma=value;
-   if (obsname=="T90sigma") T90sigma=value;
-   if (obsname=="T100sigma") T100sigma=value;
+   if (obsname=="E") E=value;  
   } // End of the loop over the selected input variables
 
   // For angular coordinates the distance may be irrelevant
@@ -9668,26 +9667,30 @@ void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1
 
   nnew++;
 
-  if (src) // Specific source c.q. burst data
+  // Storing the requested data in NcSignal slots
+  for (Int_t ivar=1; ivar<=nvars; ivar++)
   {
-   sx->AddNamedSlot("T90");
-   sx->SetSignal(T90,"T90");
-   sx->AddNamedSlot("csigma");
-   sx->SetSignal(csigma,"csigma");
-   sx->AddNamedSlot("z");
-   sx->SetSignal(z,"z");
-   if (S>0)
-   {
-    sx->AddNamedSlot("S");
-    sx->SetSignal(S,"S");
-   }
-  }
-  else // Specific observed c.q. reconstructed event data
-  {
-   sx->AddNamedSlot("E");
-   sx->SetSignal(E,"E");
-   sx->AddNamedSlot("csigma");
-   sx->SetSignal(csigma,"csigma");
+   obsname=((TObjString*)fDataNames.GetObject(ivar,1))->GetString();
+   val=((TObjString*)fDataNames.GetObject(ivar,5))->GetString();
+   value=val.Atof();
+
+   // The values of the observables a and b depend on the reference frame
+   // They should be retrieved via the GetSignal() facility
+   if (obsname=="a" || obsname=="b") continue;
+
+   // The Date and timestamps in specific format
+   if (obsname=="Date") value=idate;
+   if (obsname=="Tobs") value=tobs.GetMJD();
+   if (obsname=="Tstart") value=tstart.GetMJD();
+   if (obsname=="TEnd") value=tend.GetMJD();
+
+   // Values that may have got random values
+   if (obsname=="z") value=z;
+   if (obsname=="csigma") value=csigma;
+   if (obsname=="T90") value=T90;
+
+   sx->AddNamedSlot(obsname);
+   sx->SetSignal(value,obsname);
   }
  } // End of loop over the entries of the input Tree
 
