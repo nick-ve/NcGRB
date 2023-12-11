@@ -1,5 +1,5 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright(c) 1997-2019, NCFS/IIHE, All Rights Reserved.                     *
+ * Copyright(c) 1997, NCFS/IIHE, All Rights Reserved.                          *
  *                                                                             *
  * Authors: The Netherlands Center for Fundamental Studies (NCFS).             *
  *          The Inter-university Institute for High Energies (IIHE).           *                 
@@ -38,17 +38,27 @@
 // So, this NcAstrolab2 class itself does not provide any TTask
 // related functionality.
 //
-// The lab can be given a terrestrial location via the usual longitude
-// and latitude specifications.
+// The lab can be given a terrestrial location via SetLabPosition()
+// using the usual longitude and latitude specifications.
 // Since this class is derived from NcTimestamp, a lab can also be
 // given a specific timestamp. Together with the terrestrial location
 // this provides access to local (sidereal) times etc...
 // In addition to the usual astronomical reference frames, a local
-// lab reference frame can also be specified. Together with the lab's
-// timestamp this uniquely defines all the coordinate transformations
-// between the various reference frames.
+// lab reference frame can also be specified via SetLocalFrame().
+// Together with the lab's timestamp this uniquely defines all the
+// coordinate transformations between the various reference frames.
 // These lab characteristics allow space and time correlations of lab
 // observations with external (astrophysical) phenomena.
+//
+// By default, the lab is located at the North Pole using UTC
+// and the right handed local reference frame has the following convention :
+// X-axis pointing South (=Greenwich)
+// Y-axis pointing East
+// Z-axis pointing towards Zenith
+//
+// The location and local reference frame convention of several well
+// known experimental sites can be automatically obtained via
+// the memberfunction SetExperiment().
 //
 // Observations are entered as generic signals containing a position,
 // reference frame specification and a timestamp (see SetSignal).
@@ -85,6 +95,8 @@
 // 
 // Also graphical facilities (e.g. DisplaySignals) are available to
 // provide skymaps in various projections.
+// A Graphical User Interface (GUI) is available via the memberfunction SkyMapPanel(),
+// which facilitates several functionalities in a user friendly graphical environment.
 // 
 // Coding example :
 // ----------------
@@ -164,7 +176,7 @@
 // lab.DisplaySignals("equ","J",0,"ham",1);
 //
 //--- Author: Nick van Eijndhoven 15-mar-2007 Utrecht University
-//- Modified: Nick van Eijndhoven, IIHE-VUB Brussel, October 15, 2022  13:29Z
+//- Modified: Nick van Eijndhoven, IIHE-VUB Brussel, July 18, 2023  02:28Z
 ///////////////////////////////////////////////////////////////////////////
 
 #include "NcAstrolab2.h"
@@ -176,9 +188,13 @@ NcAstrolab2::NcAstrolab2(const char* name,const char* title) : TTask(name,title)
 {
 // Default constructor
 
+ fExperiment="User";
+ fLabId=0;
  fToffset=0;
  fRefs=0;
  fSigs=0;
+ fNen[0]=0;
+ fNen[1]=0;
  fBias=0;
  fGal=0;
  fIndices=0;
@@ -189,18 +205,19 @@ NcAstrolab2::NcAstrolab2(const char* name,const char* title) : TTask(name,title)
  fHist[0]=0;
  fHist[1]=0;
  fMarkers=0;
- fMarkerSize[0]=1; 
+ fMarkerSize[0]=1.5; 
  fMarkerSize[1]=1;
  fMarkerSize[2]=1.5;
  fMarkerSize[3]=0.3;
- fMarkerStyle[0]=23;
- fMarkerStyle[1]=20;
- fMarkerStyle[2]=29;
+ fMarkerStyle[0]=29;
+ fMarkerStyle[1]=8;
+ fMarkerStyle[2]=34;
  fMarkerStyle[3]=8;
  fMarkerColor[0]=kRed;
  fMarkerColor[1]=kBlue;
- fMarkerColor[2]=kRed;
+ fMarkerColor[2]=kBlack;
  fMarkerColor[3]=kBlack;
+ fSkyMapPanel=0;
  fTscmode=0;
  fTscmin=0;
  fTscmax=0;
@@ -237,6 +254,7 @@ NcAstrolab2::NcAstrolab2(const char* name,const char* title) : TTask(name,title)
  fPlanck=6.62606957e-34;
  fBoltz=1.3806488e-23;
  fNewton=6.67384e-11;
+ fGn=9.80665;
  fAu=1.49597870700e11;
  fPc=3.08567758149e16;
  // Cosmological parameters from the final Planck 2018 results (arXiv:1807.06209)
@@ -266,6 +284,73 @@ NcAstrolab2::NcAstrolab2(const char* name,const char* title) : TTask(name,title)
  // Initialize the default values for the burst parameters
  SetBurstParameter("*",0);
 
+ // Load the UTC parameters
+ LoadUTCparameterFiles();
+
+ // Set the default local frame convention
+ // X-axis pointing South (=Greenwich)
+ // Y-axis pointing East
+ // Z-axis pointing towards Zenith
+ SetLocalFrame(90,0,90,90,0,0);
+
+ // First initialization of the various SkyMapPanel GUI parameters.
+ // In case SkyMapPanel() is invoked, the current Lab settings will be imported.
+ fSkyMapPanel=0;
+ fMapTS.LoadUTCparameterFiles();
+ for (Int_t i=0; i<3; i++)
+ {
+  fMapLabLBI[i]=0;
+ }
+ fMapLabU=0;
+ fMapLabE=0;
+ fMapLabLocL=0;
+ fMapLabLocB=0;
+ fMapLabLocU="deg";
+ fMapLabExpName="User";
+ fMapLabId=0;
+ fMapTSdatetime=0;
+ fMapTStimetype=0;
+ fMapDate="";
+ fMapTime="";
+ fMapTimeType="-";
+ fMapDateTime="";
+ fMapLabTS=kTRUE;
+ for (Int_t i=0; i<6; i++)
+ {
+  fMapLabLframe[i]=0;
+ }
+ fMapCinfo="Lab";
+ fMapTinfo=-1;
+ fMapUinfo="deg";
+ fMapIname="";
+ fMapEa=0;
+ fMapEua="deg";
+ fMapEb=0;
+ fMapEub="deg";
+ fMapEtype=1;
+ fMapEcoord="-";
+ fMapEmode="-";
+ fMapEname="";
+ fMapDcoord="-";
+ fMapProj="-";
+ fMapDmode="-";
+ for (Int_t i=0; i<5; i++)
+ {
+  fMapDoptions[i]=kFALSE;
+ }
+ fMapNmax=-1;
+ fMapDname="";
+ for (Int_t i=0; i<10; i++)
+ {
+  fMapSolar[i]=kFALSE;
+ }
+ fMapMerMode=0;
+ fMapMerC=0;
+ fMapMerUc="deg";
+ fMapMarkSize=1;
+ fMapMarkStyle=23;
+ fMapMarkColor=kRed;
+ fMapMarkType=0;
 }
 ///////////////////////////////////////////////////////////////////////////
 NcAstrolab2::~NcAstrolab2()
@@ -353,6 +438,7 @@ NcAstrolab2::NcAstrolab2(const NcAstrolab2& t) : TTask(t),NcTimestamp(t)
 
  fToffset=t.fToffset;
  fLabPos=t.fLabPos;
+ fLabId=t.fLabId;
  fL=t.fL;
  Int_t size=0;
  fRefs=0;
@@ -377,6 +463,8 @@ NcAstrolab2::NcAstrolab2(const NcAstrolab2& t) : TTask(t),NcTimestamp(t)
    if (sx) fSigs->AddAt(sx->Clone(),i);
   }
  }
+ fNen[0]=t.fNen[0];
+ fNen[1]=t.fNen[1];
  fBias=0;
  fGal=0;
  fIndices=0;
@@ -446,18 +534,27 @@ void NcAstrolab2::Data(Int_t mode,TString u,Bool_t utc)
 //
 // The defaults are mode=1, u="deg" and utc=kTRUE.
  
- const char* name=GetName();
- const char* title=GetTitle();
+ TString name=GetName();
+ TString title=GetTitle();
  cout << " *" << ClassName() << "::Data*";
- if (strlen(name))  cout << " Name : " << GetName();
- if (strlen(title)) cout << " Title : " << GetTitle();
+ if (name!="")  cout << " Name : " << name;
+ if (title!="") cout << " Title : " << title;
  cout << endl;
 
  Double_t l,b;
  GetLabPosition(l,b,"deg");
- cout << " Lab position longitude : "; PrintAngle(l,"deg",u,2);
- cout << " latitude : "; PrintAngle(b,"deg",u,2);
- cout << endl;
+ cout << " Position longitude : "; PrintAngle(l,"deg",u,3);
+ cout << " latitude : "; PrintAngle(b,"deg",u,3);
+ cout << " for detector ID : " << fLabId << endl;
+ printf(" Local user reference frame orientation w.r.t X0=South, Y0=East and Z0=Zenith : \n");
+ printf(" (Note : At the Poles (e.g. IceCube) South means the Greenwich meridian) \n");
+ TString saxes[3]={"Local X-axis","Local Y-axis","Local Z-axis"};
+ for (Int_t i=0; i<5; i+=2)
+ {
+  printf(" %-s : zenith=",saxes[i/2].Data()); PrintAngle(fAxes[i],"deg",u,3,kTRUE);
+  printf(" | phi="); PrintAngle(fAxes[i+1],"deg",u,3,kTRUE);
+  printf("\n");
+ }
  cout << " Lab time offset w.r.t. UT : "; PrintTime(fToffset,12);
  cout << endl;
 
@@ -552,9 +649,20 @@ void NcAstrolab2::SetLabPosition(Nc3Vector& p)
 {
 // Set the lab position in the terrestrial coordinates and its corresponding
 // time offset w.r.t. UT.
-// The right handed position reference frame is defined such that the North Pole
+//
+// In the default constructor, the lab has been located at the North Pole using UTC
+// and the right handed local reference frame was given the following convention :
+// X-axis pointing South (=Greenwich)
+// Y-axis pointing East
+// Z-axis pointing towards Zenith
+//
+// In other words : 
+// The right handed position reference frame was defined such that the North Pole
 // corresponds to a polar angle theta=0 and the Greenwich meridian corresponds
 // to an azimuth angle phi=0, with phi increasing eastwards.
+//
+// See the memberfunction SetExperiment() for an automatic setting of the
+// characteristics of several well known experimental sites.
 
  fLabPos.SetPosition(p);
 
@@ -571,8 +679,22 @@ void NcAstrolab2::SetLabPosition(Double_t l,Double_t b,TString u)
 // and its corresponding time offset w.r.t. UT.
 // Positions north of the equator have b>0, whereas b<0 indicates
 // locations south of the equator.
-// Positions east of Greenwich have l>0, whereas l<0 indicates
-// locations west of Greenwich.
+// Positions east of the Greenwich reference meridian have l>0,
+// whereas l<0 indicates locations west of the Greenwich reference meridian.
+//
+// In the default constructor, the lab has been located at the North Pole using UTC
+// and the right handed local reference frame was given the following convention :
+// X-axis pointing South (=Greenwich)
+// Y-axis pointing East
+// Z-axis pointing towards Zenith
+//
+// In other words : 
+// The right handed position reference frame was defined such that the North Pole
+// corresponds to a polar angle theta=0 and the Greenwich meridian corresponds
+// to an azimuth angle phi=0, with phi increasing eastwards.
+//
+// See the memberfunction SetExperiment() for an automatic setting of the
+// characteristics of several well known experimental sites.
 //
 // The string argument "u" allows to choose between different angular units
 // u = "rad" : angles provided in radians
@@ -599,28 +721,73 @@ void NcAstrolab2::SetLabPosition(Double_t l,Double_t b,TString u)
  fToffset=l/15.;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab2::SetExperiment(TString name)
+void NcAstrolab2::SetExperiment(TString name,Int_t id)
 {
 // Set position, local frame definition and time offset w.r.t. UT
-// for the experiment as specified via the argument "name".
+// for a known experiment as specified via the arguments "name" and "id".
+// The (optional) input argument "id" allows to specify a particular
+// element of a larger experimental setup, like for instance a specific
+// detector station of the RNO-G radio array.
+// The value id=0 (which is the default) represents a global location,
+// like for instance the center of the experiment (like for IceCube)
+// or some generic location (like the Big House for RNO-G).
 //
 // Currently the supported experiment names are :
 //
-// Amanda  : Antarctic Muon And Neutrino Detector Array
-// IceCube : The IceCube neutrino observatory at the South Pole
-// WSRT    : The Westerbork Synthesis Radio Telescope in the Netherlands
-// Astron  : The Netherlands Institute for Radio Astronomy in Dwingeloo
-// ARA     : The Askaryan Radio Array at the South Pole
-// RNO-G   : The Greenland Radio Neutrino Observatory at Summit Station
+// User      : Virtual Lab for general use
+// Greenwich : The Royal Observatory in the UK
+// Amanda    : Antarctic Muon And Neutrino Detector Array at the South Pole
+// IceCube   : The IceCube neutrino observatory at the South Pole
+// WSRT      : The Westerbork Synthesis Radio Telescope in the Netherlands
+// Astron    : The Netherlands Institute for Radio Astronomy in Dwingeloo
+// ARA       : The Askaryan Radio Array at the South Pole
+// RNO-G     : The Greenland Radio Neutrino Observatory at Summit Station
 //
-// Note : The name and title for the NcAstrolab2 object are updated automatically
-//        according to the specified experiment name at invokation of this
-//        memberfunction.
-//        In case a different name and/or title is required, please use the 
-//        usual SetNameTitle facility after invokation of this memberfunction.
+// Notes :
+// -------
+// 1) The name and title for the NcAstrolab2 object are updated automatically
+//    according to the specified experiment name at invokation of this memberfunction.
+//    In case a different name and/or title is required, please use the usual
+//    SetNameTitle facility after invokation of this memberfunction.
+//
+// 2) In case no detector identifiers have been defined for the specified experiment,
+//    the identifier "id" will be set to 0.
+//    For the experiment "User" the provided detector identifier (id) will always be set.
+//    This allows full flexibility for a generic "User" lab.
+//
+// The default value is id=0.
+
+ fExperiment="User";
+ fLabId=0;
 
  Double_t l=0; // Longitude
  Double_t b=0; // Lattitude
+
+ if (name=="User")
+ {
+  SetNameTitle("User","Virtual Lab for general use");
+  SetLabPosition(0,90,"deg"); // North Pole
+  // Right handed local grid frame has X-South (to Greenwich), Y-East and Z-Zenith
+  // which is the same as the Master Reference Frame (MRF)
+  SetLocalFrame(90,0,90,90,0,0);
+  fExperiment=name;
+  fLabId=id;
+  return;
+ }
+
+ if (name=="Greenwich")
+ {
+  // Exact location : 51d 28' 36.6672" (N) and 0d 0' 1.8000" (W)
+  SetNameTitle("Greenwich","The Royal Observatory in the UK");
+  l=-0.000500;
+  b=51.476852;
+  SetLabPosition(l,b,"deg"); // South Pole
+  // Right handed Greenwich local grid frame has X-South, Y-East and Z-Zenith
+  // which is the same as the Master Reference Frame (MRF)
+  SetLocalFrame(90,0,90,90,0,0);
+  fExperiment=name;
+  return;
+ }
 
  if (name=="Amanda")
  {
@@ -628,6 +795,7 @@ void NcAstrolab2::SetExperiment(TString name)
   SetLabPosition(0,-90,"deg"); // South Pole
   // Right handed Amanda local grid frame has Y-North (to Greenwich), X-East and Z-Zenith
   SetLocalFrame(90,90,90,180,0,0);
+  fExperiment=name;
   return;
  }
 
@@ -640,6 +808,7 @@ void NcAstrolab2::SetExperiment(TString name)
   SetLabPosition(l,b,"deg"); // South Pole
   // Right handed IceCube local grid frame has Y-North (to Greenwich), X-East and Z-Zenith
   SetLocalFrame(90,90.+l,90,180.+l,0,0);
+  fExperiment=name;
   return;
  }
 
@@ -647,8 +816,10 @@ void NcAstrolab2::SetExperiment(TString name)
  {
   SetNameTitle("WSRT","The Westerbork Synthesis Radio Telescope");
   SetLabPosition(63612.74,525454.33,"dms");
-  // Right handed WSRT local grid frame has Y-North, X-East and Z-Zenith
-  SetLocalFrame(90,90,90,180,0,0);
+  // Right handed local grid frame has X-South, Y-East and Z-Zenith
+  // which is the same as the Master Reference Frame (MRF)
+  SetLocalFrame(90,0,90,90,0,0);
+  fExperiment=name;
   return;
  }
 
@@ -656,8 +827,10 @@ void NcAstrolab2::SetExperiment(TString name)
  {
   SetNameTitle("Astron","The Netherlands Institute for Radio Astronomy");
   SetLabPosition(62346.23,524843.99,"dms");
-  // Right handed Astron local grid frame has Y-North, X-East and Z-Zenith
-  SetLocalFrame(90,90,90,180,0,0);
+  // Right handed local grid frame has X-South, Y-East and Z-Zenith
+  // which is the same as the Master Reference Frame (MRF)
+  SetLocalFrame(90,0,90,90,0,0);
+  fExperiment=name;
   return;
  }
 
@@ -667,22 +840,52 @@ void NcAstrolab2::SetExperiment(TString name)
   SetLabPosition(0,-90,"deg"); // South Pole
   // Right handed ARA local grid frame has Y-North (to Greenwich), X-East and Z-Zenith
   SetLocalFrame(90,90,90,180,0,0);
+  fExperiment=name;
   return;
  }
 
  if (name=="RNO-G")
  {
   SetNameTitle("RNO-G","The Greenland Radio Neutrino Observatory at Summit Station");
-  l=-38.46;
-  b=72.58;
+  // Use the location of the Big House as global location
+  l=-38.4604;
+  b=72.57889;
+
+  // The locations of the various stations
+  Int_t ids[35]={11,12,13,14,15,16,17,21,22,23,24,25,26,27,33,34,35,36,37,44,45,46,47,54,55,56,57,64,65,66,67,74,75,76,77};
+  Float_t ls[35]={-38.5023,-38.4962,-38.4901,-38.4841,-38.4780,-38.4719,-38.4657,-38.4660,-38.4599,-38.4538,-38.4477,-38.4416,-38.4355,-38.4293, /*last is 27*/
+                  -38.4175,-38.4114,-38.4053,-38.3991,-38.3930,-38.3751,-38.3689,-38.3627,-38.3566,-38.3388,-38.3326,-38.3264,-38.3202,-38.3025, /*last is 64*/
+                  -38.2963,-38.2900,-38.2838,-38.2662,-38.2599,-38.2537,-38.2474};
+  Float_t bs[35]={72.58923,72.60009,72.61095,72.62181,72.63267,72.64353,72.65439,72.58741,72.59827,72.60912,72.61998,72.63084,72.64170,72.65256, /*last is 27*/  
+                  72.60729,72.61815,72.62901,72.63987,72.65073,72.61631,72.62717,72.63803,72.64889,72.61447,72.62533,72.63618,72.64704,72.61262, /*last is 64*/
+                  72.62347,72.63433,72.64518,72.61076,72.62161,72.63247,72.64332};
+
+  // Select a specific station, if requested
+  if (id)
+  {
+   for (Int_t i=0; i<35; i++)
+   {
+    if (id==ids[i])
+    {
+     l=ls[i];
+     b=bs[i];
+     fLabId=id;
+     break;
+    }
+   }
+  }
+
+  // Set the selected location
   SetLabPosition(l,b,"deg"); // Summit Station
   // Right handed RNO-G local grid frame has Y-North, X-East and Z-Zenith
   SetLocalFrame(90,90,90,180,0,0);
+  fExperiment=name;
   return;
  }
 
  cout << " *" << ClassName() << "::SetExperiment* Unsupported experiment name : " << name.Data() << endl;
- }
+ printf(" Experiment is set to %-s with detector identifier %-i \n",fExperiment.Data(),fLabId);
+}
 ///////////////////////////////////////////////////////////////////////////
 void NcAstrolab2::SetLabTimeOffset(Double_t dt)
 {
@@ -728,6 +931,20 @@ void NcAstrolab2::GetLabPosition(Double_t& l,Double_t& b,TString u) const
  fLabPos.GetPosition(p,"sph",u);
  b=offset-p[1];
  l=p[2];
+}
+///////////////////////////////////////////////////////////////////////////
+TString NcAstrolab2::GetExperiment() const
+{
+// Provide the name of the experiment site.
+
+ return fExperiment;
+}
+///////////////////////////////////////////////////////////////////////////
+Int_t NcAstrolab2::GetLabDetectorId() const
+{
+// Provide the detector identifier within the lab.
+
+ return fLabId;
 }
 ///////////////////////////////////////////////////////////////////////////
 Double_t NcAstrolab2::GetLabTimeOffset() const
@@ -872,7 +1089,7 @@ Double_t NcAstrolab2::GetLAST()
  return h;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab2::PrintAngle(Double_t a,TString in,TString out,Int_t ndig) const
+void NcAstrolab2::PrintAngle(Double_t a,TString in,TString out,Int_t ndig,Bool_t align) const
 {
 // Printing of angles in various formats.
 //
@@ -891,11 +1108,17 @@ void NcAstrolab2::PrintAngle(Double_t a,TString in,TString out,Int_t ndig) const
 //
 // The argument "ndig" specifies the number of digits for the fractional
 // part (e.g. ndig=6 for "dms" corresponds to micro-arcsecond precision).
-// No rounding will be performed, so an arcsecond count of 3.473 with ndig=1
-// will appear as 03.4 on the output.
+// Rounding will be performed, so an arcsecond count of 3.473 with ndig=1
+// will appear as 03.5 on the output, but with ndig=2 it will show 03.47.
 // Due to computer accuracy, precision on the pico-arcsecond level may get lost.
 //
-// The default is ndig=1.
+// The argument "align", when set to kTRUE, ensures that for a certain selected
+// output format, all provided output strings will have the same length.
+// This will allow the user to provide data in an aligned tabular format.
+// When "align" is set to kFALSE, the produced output will be in the most
+// compact format.
+//
+// The defaults are ndig=1 and align=kFALSE.
 //
 // Note : The angle info is printed without additional spaces or "endline".
 //        This allows the print to be included in various composite output formats.
@@ -904,18 +1127,20 @@ void NcAstrolab2::PrintAngle(Double_t a,TString in,TString out,Int_t ndig) const
 
  if (out=="deg" || out=="rad")
  {
-  cout.setf(ios::fixed,ios::floatfield);
-  Int_t nold=cout.precision(ndig);
-  cout << b << " " << out.Data();
-  cout.precision(nold);
-  cout.unsetf(ios::floatfield);
+  if (align)
+  {
+   printf("%*.*f %-s",5+ndig,ndig,b,out.Data());
+  }
+  else
+  {
+   printf("%-.*f %-s",ndig,b,out.Data());
+  }
   return; 
  }
 
  Double_t epsilon=1.e-12; // Accuracy in (arc)seconds
  Int_t word=0,ddd=0,hh=0,mm=0,ss=0;
  Double_t s;
- ULong64_t sfrac=0;
 
  if (out=="dms")
  {
@@ -945,11 +1170,16 @@ void NcAstrolab2::PrintAngle(Double_t a,TString in,TString out,Int_t ndig) const
   {
    ddd-=360;
   }
-  s*=pow(10.,ndig);
-  sfrac=ULong64_t(s);
-  if (b<0) cout << "-";
-  cout << ddd << "d " << mm << "' " << ss << "."
-       << setfill('0') << setw(ndig) << sfrac << "\"";
+  if (b<0) ddd=-ddd;
+  s+=double(ss);
+  if (align)
+  {
+   printf("%4dd %02d' %0*.*f\"",ddd,mm,3+ndig,ndig,s);
+  }
+  else
+  {
+   printf("%-dd %-d' %-.*f\"",ddd,mm,ndig,s);
+  }
   return;
  }
 
@@ -981,11 +1211,16 @@ void NcAstrolab2::PrintAngle(Double_t a,TString in,TString out,Int_t ndig) const
   {
    hh-=24;
   }
-  s*=pow(10.,ndig);
-  sfrac=ULong64_t(s);
-  if (b<0) cout << "-";
-  cout << hh << "h " << mm << "m " << ss << "."
-       << setfill('0') << setw(ndig) << sfrac << "s";
+  if (b<0) hh=-hh;
+  s+=double(ss);
+  if (align)
+  {
+   printf("%3dh %02dm %0*.*fs",hh,mm,3+ndig,ndig,s);
+  }
+  else
+  {
+   printf("%-dh %-dm %-.*fs",hh,mm,ndig,s);
+  }
   return;
  }
 }
@@ -1052,8 +1287,8 @@ NcSignal* NcAstrolab2::SetSignal(Nc3Vector* r,TString frame,TString mode,NcTimes
 //        The user is advised not to use this obsolete jref=0 facility anymore. 
 //
 // Via the input argument "name" the user can give the stored signal also a name.
-//
-// The default values are jref=0, name="" and type=0 to obtain backward compatible functionality.
+// If no name is provided, a name will be generated based on the type and the storage index,
+// like for instance Meas8 or Ref5.
 //
 // Notes :
 // -------
@@ -1081,6 +1316,17 @@ NcSignal* NcAstrolab2::SetSignal(Nc3Vector* r,TString frame,TString mode,NcTimes
  
  if (!ts) ts=(NcTimestamp*)this;
 
+ // Make a local copy of the timestamp to make sure that the newly stored
+ // signal will never contain the Tree with the UTCparameter data.
+ NcTimestamp ts2;
+ Int_t mjd=0;
+ Int_t isec=0;
+ Int_t ins=0;
+ Int_t ips=0;
+ ts->GetMJD(mjd,isec,ins);
+ ips=ts->GetPs();
+ ts2.SetMJD(mjd,isec,ins,ips);
+
  Double_t vec[3];
  vec[0]=r->GetX(1,"sph","rad");
  vec[1]=r->GetX(2,"sph","rad");
@@ -1095,7 +1341,7 @@ NcSignal* NcAstrolab2::SetSignal(Nc3Vector* r,TString frame,TString mode,NcTimes
   q=q.GetUnprimed(&fL);
 
   // Store the signal
-  sx=SetSignal(&q,"hor",mode,ts,jref,name,type);
+  sx=SetSignal(&q,"hor",mode,&ts2,jref,name,type);
   return sx;
  }
 
@@ -1107,7 +1353,7 @@ NcSignal* NcAstrolab2::SetSignal(Nc3Vector* r,TString frame,TString mode,NcTimes
  if (!fRan && type && (fTscmode==2 || fRscmode==2)) fRan=new NcRandom(-1);
 
  // Local timestamp copy to allow time scrambling
- NcTimestamp tx(*ts);
+ NcTimestamp tx(ts2);
 
  // Perform time scrambling (measurements only) if requested
  if (type && fTscmode==2)
@@ -1228,7 +1474,13 @@ NcSignal* NcAstrolab2::SetSignal(Nc3Vector* r,TString frame,TString mode,NcTimes
   {
    sxsig->Reset(1);
   }
-  if (name != "") sxsig->SetName(name);
+  if (name=="") // Generate a corresponding measurement name
+  {
+   fNen[1]++;
+   name="Meas";
+   name+=fNen[1];
+  }
+  sxsig->SetName(name);
   sxsig->SetTitle("Observed event in ICRS coordinates");
   sxsig->SetTimestamp(tx);
   sxsig->SetPosition(q);
@@ -1261,7 +1513,13 @@ NcSignal* NcAstrolab2::SetSignal(Nc3Vector* r,TString frame,TString mode,NcTimes
   {
    sxref->Reset(1);
   }
-  if (name != "") sxref->SetName(name);
+  if (name=="") // Generate a corresponding reference name
+  {
+   fNen[0]++;
+   name="Ref";
+   name+=fNen[0];
+  }
+  sxref->SetName(name);
   sxref->SetTitle("Reference event in ICRS coordinates");
   sxref->SetTimestamp(tx);
   sxref->SetPosition(q);
@@ -1556,6 +1814,8 @@ NcSignal* NcAstrolab2::SetSignal(Double_t d,Double_t a,TString au,Double_t b,TSt
   vec[2]=b;
  }
 
+ if (!ts) ts=(NcTimestamp*)this;
+
  r.SetVector(vec,"sph","deg");
  NcSignal* sx=SetSignal(&r,frame,mode,ts,jref,name,type);
  return sx;
@@ -1769,8 +2029,6 @@ NcSignal* NcAstrolab2::GetSignal(Nc3Vector& r,TString frame,TString mode,NcTimes
 //
 // The user is advised not to use the obsolete "jref=0" functionality anymore.
 //
-// Default values are jref=0 and type=0 for backward compatibility.
-//
 // Note : In case ts=0 the current timestamp of the lab will be taken.
 
  r.SetZero();
@@ -1778,6 +2036,13 @@ NcSignal* NcAstrolab2::GetSignal(Nc3Vector& r,TString frame,TString mode,NcTimes
  if (frame!="equ" && frame!="gal" && frame!="ecl" && frame!="hor" && frame!="icr" && frame!="loc") return 0;
 
  if (frame=="equ" && mode!="M" && mode!="m" && mode!="T" && mode!="t" && mode!="B" && mode!="b" && mode!="J" && mode!="j") return 0;
+
+ // For backward compatibility
+ if (!jref)
+ {
+  jref=1;
+  type=1;
+ }
 
  NcSignal* sx=GetSignal(jref,type);
 
@@ -2321,7 +2586,7 @@ NcSignal* NcAstrolab2::GetSignal(TString name,Int_t type,NcTimestamp* ts)
  NcSignal* sx=0;
  Int_t j=GetSignalIndex(name,type);
 
- if (!type && j==-1) // Set and store info for the requested Solar system object if not already stored
+ if (j==-1) // Set and store info for the requested Solar system object if not already stored
  {
   SetSolarSystem(name,ts,type);
   j=GetSignalIndex(name,type);
@@ -2331,7 +2596,7 @@ NcSignal* NcAstrolab2::GetSignal(TString name,Int_t type,NcTimestamp* ts)
  return sx;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab2::RemoveRefSignal(Int_t j,Int_t compress)
+Int_t NcAstrolab2::RemoveRefSignal(Int_t j,Int_t compress)
 {
 // ***********************************************************************************
 // *** This memberfunction is obsolete and is only kept for backward compatibility ***
@@ -2339,6 +2604,7 @@ void NcAstrolab2::RemoveRefSignal(Int_t j,Int_t compress)
 // ***********************************************************************************
 //
 // Remove the reference signal which was stored at the j-th position (j=1 is first).
+// The return argument is the number of signals that were removed.
 // Note : j=0 means that all stored reference signals will be removed.
 //        j<0 allows array compression (see below) without removing any signals. 
 //
@@ -2350,28 +2616,37 @@ void NcAstrolab2::RemoveRefSignal(Int_t j,Int_t compress)
 // Note : Compression of the storage array means that the indices of the
 //        reference signals in the storage array will change.
 
- if (!fRefs) return;
+ Int_t nrem=0;
+
+ if (!fRefs) return 0;
 
  // Clearing of the complete storage
  if (!j)
  {
+  nrem=fRefs->GetEntries();
   delete fRefs;
   fRefs=0;
-  return;
+  return nrem;
  }
 
  // Removing a specific reference signal
  if (j>0 && j<=fRefs->GetSize())
  {
   TObject* obj=fRefs->RemoveAt(j-1);
-  if (obj) delete obj;
+  if (obj)
+  {
+   delete obj;
+   nrem++;
+  }
  }
 
  // Compression of the storage array
  if (compress) fRefs->Compress();
+
+ return nrem;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab2::RemoveRefSignal(TString name,Int_t compress)
+Int_t NcAstrolab2::RemoveRefSignal(TString name,Int_t compress)
 {
 // ***********************************************************************************
 // *** This memberfunction is obsolete and is only kept for backward compatibility ***
@@ -2379,6 +2654,7 @@ void NcAstrolab2::RemoveRefSignal(TString name,Int_t compress)
 // ***********************************************************************************
 //
 // Remove the reference signal with the specified name.
+// The return argument is the number of signals that were removed.
 //
 // The "compress" parameter allows compression of the ref. signal storage array.
 //
@@ -2388,14 +2664,19 @@ void NcAstrolab2::RemoveRefSignal(TString name,Int_t compress)
 // Note : Compression of the storage array means that the indices of the
 //        reference signals in the storage array will change.
 
+ Int_t nrem=0;
+
  Int_t j=GetSignalIndex(name);
- if (j>0) RemoveRefSignal(j,compress);
+ if (j>0) nrem=RemoveRefSignal(j,compress);
+
+ return nrem;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab2::RemoveSignal(Int_t j,Int_t type,Int_t compress)
+Int_t NcAstrolab2::RemoveSignal(Int_t j,Int_t type,Int_t compress)
 {
 // Remove the signal of type "type" which was stored at the j-th position (j=1 is first).
-// Note : j=0 means that all stored signals of type "type" will be removed.
+// The return argument is the number of signals that were removed.
+// Note : j=0 means that all stored signals of type "type" will be removed with compression.
 //        j<0 allows array compression (see below) without removing any signals. 
 //
 // type = 0 --> Remove a reference signal
@@ -2408,34 +2689,55 @@ void NcAstrolab2::RemoveSignal(Int_t j,Int_t type,Int_t compress)
 //
 // Note : Compression of the storage array means that the indices of the
 //        signals in that storage array will change.
+
+ Int_t nrem=0;
  
  TObjArray* arr=fRefs;
  if (type) arr=fSigs;
 
- if (!arr) return;
+ if (!arr) return nrem;
 
- // Clearing of the complete storage
+ // Clearing of the complete "type" storage
  if (!j)
  {
+  nrem=arr->GetEntries();
   delete arr;
-  arr=0;
-  return;
+  if (type)
+  {
+   fSigs=0;
+   fNen[1]=0;
+  }
+  else
+  {
+   fRefs=0;
+   fNen[0]=0;
+  }
+  return nrem;
  }
 
- // Removing a specific reference signal
+ // Removing the specified signal
  if (j>0 && j<=arr->GetSize())
  {
   TObject* obj=arr->RemoveAt(j-1);
-  if (obj) delete obj;
+  if (obj)
+  {
+   delete obj;
+   nrem++;
+  }
  }
 
  // Compression of the storage array
  if (compress) arr->Compress();
+
+ return nrem;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab2::RemoveSignal(TString name,Int_t type,Int_t compress)
+Int_t NcAstrolab2::RemoveSignal(TString name,Int_t type,Int_t compress)
 {
 // Remove the signal with the specified name and type.
+// The return argument is the number of signals that were removed.
+//
+// Note : name="*" will remove all the entries of the specified type with compression.
 //
 // type = 0 --> Remove a reference signal
 //      = 1 --> Remove a measured signal
@@ -2448,11 +2750,82 @@ void NcAstrolab2::RemoveSignal(TString name,Int_t type,Int_t compress)
 // Note : Compression of the storage array means that the indices of the
 //        signals in that storage array will change.
 //
-// In case no matching signal with the specified name and type is found,
+// In case name="" or no matching signal with the specified name and type is found,
 // no action will be taken.
 
- Int_t j=GetSignalIndex(name,type);
- if (j>0) RemoveSignal(j,type,compress);
+ Int_t nrem=0;
+
+ if (name=="") return nrem;
+
+ if (name=="*")
+ {
+  nrem=RemoveSignal(0,type,compress);
+ }
+ else
+ {
+  Int_t j=GetSignalIndex(name,type);
+  if (j>0) nrem=RemoveSignal(j,type,compress);
+ }
+
+ return nrem;
+}
+///////////////////////////////////////////////////////////////////////////
+Int_t NcAstrolab2::RemoveSignals(TString name,Int_t type,Int_t compress)
+{
+// Remove all signals that match the provided name pattern and type.
+// The return argument is the number of signals that were removed.
+//
+// Note : name="*" will remove all the entries of the specified type with compression.
+//
+// type = 0 --> Remove a reference signal
+//      = 1 --> Remove a measured signal
+//
+// The "compress" parameter allows compression of the signal storage array of type "type".
+//
+// compress = 1 --> Array will be compressed
+//            0 --> Array will not be compressed
+//
+// Note : Compression of the storage array means that the indices of the
+//        signals in that storage array will change.
+//
+// In case name="" or no matching signal with the specified name pattern and type is found,
+// no action will be taken.
+
+ Int_t nrem=0;
+
+ if (name=="") return 0;
+
+ if (name=="*")
+ {
+  nrem=RemoveSignal(0,type,compress);
+ }
+ else
+ {
+  TObjArray* arr=fRefs;
+  if (type) arr=fSigs;
+
+  if (!arr) return 0;
+
+  NcSignal* sx=0;
+  TString namex="";
+  Int_t nremx=0;
+  for (Int_t j=1; j<=arr->GetSize(); j++)
+  {
+   sx=GetSignal(j,type);
+   if (!sx) continue;
+
+   namex=sx->GetName();
+   if (!namex.Contains(name)) continue;
+
+   nremx=RemoveSignal(j,type,0);
+   if (nremx) nrem++;
+  }
+
+  // Compression of the storage array
+  if (compress) arr->Compress();
+ }
+
+ return nrem;
 }
 ///////////////////////////////////////////////////////////////////////////
 Int_t NcAstrolab2::GetSignalIndex(TString name,Int_t type)
@@ -2462,9 +2835,11 @@ Int_t NcAstrolab2::GetSignalIndex(TString name,Int_t type)
 // type = 0 --> Provide the index of a reference signal
 //      = 1 --> Provide the index of a measured signal
 //
-// In case no signal with the specified name was found, the value -1 is returned.
+// In case name="" or no signal with the specified name was found, the value -1 is returned.
 //
 // The default value is type=0 for backward compatibility.
+
+ if (name=="") return -1;
 
  Int_t index=-1;
  
@@ -2521,7 +2896,7 @@ Int_t NcAstrolab2::GetSignalIndex(NcSignal* s,Int_t type)
  return index;
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab2::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t ndig,Int_t jref,TString emode,Int_t type)
+void NcAstrolab2::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t ndig,Int_t jref,TString emode,Int_t type,Bool_t align)
 {
 // Print data of a stored signal in user specified coordinates at the specific timestamp ts.
 // In case ts=0 the actual timestamp of the stored signal will be taken.
@@ -2530,9 +2905,15 @@ void NcAstrolab2::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t n
 //
 // The argument "ndig" specifies the number of digits for the fractional
 // part (e.g. ndig=6 for "dms" corresponds to micro-arcsecond precision).
-// No rounding will be performed, so an arcsecond count of 3.473 with ndig=1
-// will appear as 03.4 on the output.
+// Rounding will be performed, so an arcsecond count of 3.473 with ndig=1
+// will appear as 03.5 on the output, but with ndig=2 it will show 03.47.
 // Due to computer accuracy, precision on the pico-arcsecond level may get lost.
+//
+// The argument "align", when set to kTRUE, ensures that all coordinate
+// output strings will have the same length.
+// This will allow the user to provide data in an aligned tabular format.
+// When "align" is set to kFALSE, the coordinate output will be in the most
+// compact format.
 //
 // Note : The angle info is printed without additional spaces or "endline".
 //        This allows the print to be included in various composite output formats.
@@ -2590,7 +2971,7 @@ void NcAstrolab2::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t n
 // For jref=0 always the first stored measurement will be printed for backward compatibility,
 // but the user is advised not to use this obsolete method anymore.
 //
-// Default values are jref=0, emode="T" and type=0.
+// Default values are jref=0, emode="T", type=0 and align=kFALSE.
 
  NcSignal* sx=GetSignal(jref,type);
 
@@ -2615,9 +2996,6 @@ void NcAstrolab2::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t n
   slha="LMHA";
  }
 
- TString name=sx->GetName();
- if (name != "") cout << name.Data() << " ";
-
  if (frame=="equ")
  {
   Double_t a,d;
@@ -2625,13 +3003,15 @@ void NcAstrolab2::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t n
   a=r.GetX(3,"sph","rad");
   if (mode=="B" || mode=="b") mode="B1950";
   if (mode=="J" || mode=="j") mode="J2000";
-  cout << "Equatorial (" << mode.Data() <<") a : "; PrintAngle(a,"rad","hms",ndig);
-  cout << " ("; PrintAngle(a,"rad","deg",ndig); cout << ")";
-  cout << " d : "; PrintAngle(d,"deg","dms",ndig);
-  cout << " ("; PrintAngle(d,"deg","deg",ndig); cout << ")";
-  cout << " " << slha.Data() << " : "; PrintAngle(lha,"deg","hms",ndig);
-  cout << " ("; PrintAngle(lha,"deg","deg",ndig); cout << ")";
-  return;
+  cout << "Equatorial (" << mode.Data() <<") | a :";
+  if (!align) {cout << " ";} PrintAngle(a,"rad","hms",ndig,align);
+  if (!align) {cout << " ";} PrintAngle(a,"rad","deg",ndig,align);
+  cout << " | b :";
+  if (!align) {cout << " ";} PrintAngle(d,"deg","dms",ndig,align);
+  if (!align) {cout << " ";} PrintAngle(d,"deg","deg",ndig,align);
+  cout << " | " << slha.Data() << " : ";
+  PrintAngle(lha,"deg","hms",ndig,align);
+  cout << " "; PrintAngle(lha,"deg","deg",ndig,align);
  }
 
  if (frame=="gal")
@@ -2639,13 +3019,15 @@ void NcAstrolab2::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t n
   Double_t l,b;
   b=90.-r.GetX(2,"sph","deg");
   l=r.GetX(3,"sph","deg");
-  cout << "Galactic l : "; PrintAngle(l,"deg","deg",ndig);
-  cout << " ("; PrintAngle(l,"deg","dms",ndig); cout << ")";
-  cout << " b : "; PrintAngle(b,"deg","deg",ndig); 
-  cout << " ("; PrintAngle(b,"deg","dms",ndig); cout << ")";
-  cout << " " << slha.Data() << " : "; PrintAngle(lha,"deg","hms",ndig);
-  cout << " ("; PrintAngle(lha,"deg","deg",ndig); cout << ")";
-  return;
+  cout << "Galactic | l :";
+  if (!align) {cout << " ";} PrintAngle(l,"deg","deg",ndig,align);
+  if (!align) {cout << " ";} PrintAngle(l,"deg","dms",ndig,align);
+  cout << " | b :";
+  if (!align) {cout << " ";} PrintAngle(b,"deg","deg",ndig,align); 
+  if (!align) {cout << " ";} PrintAngle(b,"deg","dms",ndig,align);
+  cout << " | " << slha.Data() << " : ";
+  PrintAngle(lha,"deg","hms",ndig,align);
+  cout << " "; PrintAngle(lha,"deg","deg",ndig,align);
  }
 
  if (frame=="icr")
@@ -2653,13 +3035,15 @@ void NcAstrolab2::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t n
   Double_t l,b;
   b=90.-r.GetX(2,"sph","deg");
   l=r.GetX(3,"sph","deg");
-  cout << "ICRS l : "; PrintAngle(l,"deg","deg",ndig);
-  cout << " ("; PrintAngle(l,"deg","dms",ndig); cout << ")";
-  cout << " b : "; PrintAngle(b,"deg","deg",ndig);
-  cout << " ("; PrintAngle(b,"deg","dms",ndig); cout << ")";
-  cout << " " << slha.Data() << " : "; PrintAngle(lha,"deg","hms",ndig);
-  cout << " ("; PrintAngle(lha,"deg","deg",ndig); cout << ")";
-  return;
+  cout << "ICRS | l :";
+  if (!align) {cout << " ";} PrintAngle(l,"deg","deg",ndig,align);
+  if (!align) {cout << " ";} PrintAngle(l,"deg","dms",ndig,align);
+  cout << " | b :";
+  if (!align) {cout << " ";} PrintAngle(b,"deg","deg",ndig,align);
+  if (!align) {cout << " ";} PrintAngle(b,"deg","dms",ndig,align);
+  cout << " | " << slha.Data() << " : ";
+  PrintAngle(lha,"deg","hms",ndig,align);
+  cout << " "; PrintAngle(lha,"deg","deg",ndig,align);
  }
 
  if (frame=="ecl")
@@ -2667,13 +3051,15 @@ void NcAstrolab2::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t n
   Double_t l,b;
   b=90.-r.GetX(2,"sph","deg");
   l=r.GetX(3,"sph","deg");
-  cout << "Geocentric ecliptic l : "; PrintAngle(l,"deg","deg",ndig);
-  cout << " ("; PrintAngle(l,"deg","dms",ndig); cout << ")";
-  cout << " b : "; PrintAngle(b,"deg","deg",ndig);
-  cout << " ("; PrintAngle(b,"deg","dms",ndig); cout << ")";
-  cout << " " << slha.Data() << " : "; PrintAngle(lha,"deg","hms",ndig);
-  cout << " ("; PrintAngle(lha,"deg","deg",ndig); cout << ")";
-  return;
+  cout << "Geocentric ecliptic | l :";
+  if (!align) {cout << " ";} PrintAngle(l,"deg","deg",ndig,align);
+  if (!align) {cout << " ";} PrintAngle(l,"deg","dms",ndig,align);
+  cout << " | b :";
+  if (!align) {cout << " ";} PrintAngle(b,"deg","deg",ndig,align);
+  if (!align) {cout << " ";} PrintAngle(b,"deg","dms",ndig,align);
+  cout << " | " << slha.Data() << " : ";
+  PrintAngle(lha,"deg","hms",ndig,align);
+  cout << " "; PrintAngle(lha,"deg","deg",ndig,align);
  }
 
  if (frame=="hor")
@@ -2688,30 +3074,39 @@ void NcAstrolab2::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t n
   {
    azi+=360.;
   }
-  cout << "Horizontal azi : "; PrintAngle(azi,"deg","deg",ndig);
-  cout << " ("; PrintAngle(azi,"deg","dms",ndig); cout << ")";
-  cout << " alt : "; PrintAngle(alt,"deg","deg",ndig);
-  cout << " ("; PrintAngle(alt,"deg","dms",ndig); cout << ")";
-  cout << " " << slha.Data() << " : "; PrintAngle(lha,"deg","hms",ndig);
-  cout << " ("; PrintAngle(lha,"deg","deg",ndig); cout << ")";
-  return;
+  cout << "Horizontal | azi :";
+  if (!align) {cout << " ";} PrintAngle(azi,"deg","deg",ndig,align);
+  if (!align) {cout << " ";} PrintAngle(azi,"deg","dms",ndig,align);
+  cout << " | alt :";
+  if (!align) {cout << " ";} PrintAngle(alt,"deg","deg",ndig,align);
+  if (!align) {cout << " ";} PrintAngle(alt,"deg","dms",ndig,align);
+  cout << " | " << slha.Data() << " : ";
+  PrintAngle(lha,"deg","hms",ndig,align);
+  cout << " "; PrintAngle(lha,"deg","deg",ndig,align);
  }
 
  if (frame=="loc")
  {
   Double_t theta=r.GetX(2,"sph","deg");
   Double_t phi=r.GetX(3,"sph","deg");
-  cout << "Local-frame phi : "; PrintAngle(phi,"deg","deg",ndig);
-  cout << " ("; PrintAngle(phi,"deg","dms",ndig); cout << ")";
-  cout << " theta : "; PrintAngle(theta,"deg","deg",ndig);
-  cout << " ("; PrintAngle(theta,"deg","dms",ndig); cout << ")";
-  cout << " " << slha.Data() << " : "; PrintAngle(lha,"deg","hms",ndig);
-  cout << " ("; PrintAngle(lha,"deg","deg",ndig); cout << ")";
-  return;
+  cout << "Local-frame | phi :";
+  if (!align) {cout << " ";} PrintAngle(phi,"deg","deg",ndig,align);
+  if (!align) {cout << " ";} PrintAngle(phi,"deg","dms",ndig,align);
+  cout << " | theta :";
+  if (!align) {cout << " ";} PrintAngle(theta,"deg","deg",ndig,align);
+  if (!align) {cout << " ";} PrintAngle(theta,"deg","dms",ndig,align);
+  cout << " | " << slha.Data() << " : ";
+  PrintAngle(lha,"deg","hms",ndig,align);
+  cout << " "; PrintAngle(lha,"deg","deg",ndig,align);
  }
+
+ cout << " |";
+
+ TString name=sx->GetName();
+ if (name != "") cout << " " << name.Data();
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab2::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t ndig,TString name,TString emode,Int_t type)
+void NcAstrolab2::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t ndig,TString name,TString emode,Int_t type,Bool_t align)
 {
 // Print data of the stored signal with the specified name and type in user specified coordinates
 // at the specific timestamp ts.
@@ -2731,9 +3126,15 @@ void NcAstrolab2::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t n
 //
 // The argument "ndig" specifies the number of digits for the fractional
 // part (e.g. ndig=6 for "dms" corresponds to micro-arcsecond precision).
-// No rounding will be performed, so an arcsecond count of 3.473 with ndig=1
-// will appear as 03.4 on the output.
+// Rounding will be performed, so an arcsecond count of 3.473 with ndig=1
+// will appear as 03.5 on the output, but with ndig=2 it will show 03.47.
 // Due to computer accuracy, precision on the pico-arcsecond level may get lost.
+//
+// The argument "align", when set to kTRUE, ensures that all coordinate
+// output strings will have the same length.
+// This will allow the user to provide data in an aligned tabular format.
+// When "align" is set to kFALSE, the coordinate output will be in the most
+// compact format.
 //
 // Note : The angle info is printed without additional spaces or "endline".
 //        This allows the print to be included in various composite output formats.
@@ -2777,24 +3178,24 @@ void NcAstrolab2::PrintSignal(TString frame,TString mode,NcTimestamp* ts,Int_t n
 //        "B" --> Time and local hour angle type determined by input argument "emode" ("M" or "T")
 //        "J" --> Time and local hour angle type determined by input argument "emode" ("M" or "T")
 //
-// The default values are emode="T" and type=0.
+// The default values are emode="T", type=0 and align=kFALSE
 
  // Set c.q. update coordinates for Solar system objects
  SetSolarSystem(name,ts,type);
 
  Int_t j=GetSignalIndex(name,type);
- if (j>=0) PrintSignal(frame,mode,ts,ndig,j,emode,type);
+ if (j>=0) PrintSignal(frame,mode,ts,ndig,j,emode,type,align);
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab2::ListSignals(TString frame,TString mode,Int_t ndig,TString emode,Int_t nmax,Int_t j,Int_t type)
+void NcAstrolab2::ListSignals(TString frame,TString mode,Int_t ndig,TString emode,Int_t nmax,Int_t j,Int_t type,NcTimestamp* ts,TString name)
 {
 // List stored measurements and/or reference signals in user specified coordinates
-// at a specific timestamp.
+// at a specific timestamp if their name matches the provided name pattern "name", where name="*" means all.
 // Measurements are listed according to the timestamp of their actual stored recording, which may be
 // a scrambled timestamp according to the invokation of the memberfunction SetTimeScramble().
 // For reference signals the actual timestamp of the j-th (j=1 is first) stored measurement is used.
-// In case j=0 or no (timestamp of the) j-th measurement is available,
-// the current timestamp of the lab will be taken.
+// In case j=0 or no (timestamp of the) j-th measurement is available, the provided timestamp will be taken,
+// where a provided ts=0 (which is the default) refers to the current timestamp of the lab.
 // For j<0 the timestamp of the actual recording of the reference signal will be used.
 // In case no corresponding stored signal is available or one of the input arguments is
 // invalid, no printout is produced.
@@ -2808,8 +3209,8 @@ void NcAstrolab2::ListSignals(TString frame,TString mode,Int_t ndig,TString emod
 //
 // The argument "ndig" specifies the number of digits for the fractional
 // part (e.g. ndig=6 for "dms" corresponds to micro-arcsecond precision).
-// No rounding will be performed, so an arcsecond count of 3.473 with ndig=1
-// will appear as 03.4 on the output.
+// Rounding will be performed, so an arcsecond count of 3.473 with ndig=1
+// will appear as 03.5 on the output, but with ndig=2 it will show 03.47.
 // Due to computer accuracy, precision on the pico-arcsecond level may get lost.
 //
 // Note : The angle info is printed without additional spaces or "endline".
@@ -2854,9 +3255,22 @@ void NcAstrolab2::ListSignals(TString frame,TString mode,Int_t ndig,TString emod
 //        "B" --> Time and local hour angle type determined by input argument "emode" ("M" or "T")
 //        "J" --> Time and local hour angle type determined by input argument "emode" ("M" or "T")
 //
-// The default values are ndig=1, emode="T", nmax=10, j=-1 and type=-1.
+// The default values are ndig=1, emode="T", nmax=10, j=-1, type=-1, ts=0 and name="*".
 
  Int_t iprint=0;
+ Int_t width=0; // Width for printing of the index
+ if (nmax>0) width=log10(nmax);
+ if (nmax<0)
+ {
+  Int_t maxref=0;
+  if (fRefs) maxref=fRefs->GetSize();
+  Int_t maxsig=0;
+  if (fSigs) maxsig=fSigs->GetSize();
+  Int_t maxj=maxref;
+  if (maxsig>maxj) maxj=maxsig;
+  if (maxj>0) width=log10(maxj);
+ }
+ width++;
 
  NcSignal* sx=0;
  NcTimestamp* tx=0;
@@ -2869,8 +3283,9 @@ void NcAstrolab2::ListSignals(TString frame,TString mode,Int_t ndig,TString emod
  if (sx)
  {
   tx=sx->GetTimestamp();
+  if (!tx) tx=ts;
   if (!tx) tx=(NcTimestamp*)this;
-  cout << " *" << ClassName() << "::ListSignals* List of stored signals." << endl;
+  printf(" *%-s::ListSignals* Name : %-s Title : %-s \n",ClassName(),GetName(),GetTitle());
   if (fTscmode!=2)
   {
    cout << " Timestamp of the measurement stored at index=" << j;
@@ -2881,6 +3296,7 @@ void NcAstrolab2::ListSignals(TString frame,TString mode,Int_t ndig,TString emod
   }
   cout << " (Lab time offset w.r.t. UT : "; PrintTime(fToffset,12); cout << ")" << endl;
   tx->Date(dform,fToffset);
+  tx->Date(4);
   cout << " Corresponding location of this measurement" << endl;
   cout << " "; PrintSignal(frame,mode,tx,ndig,j,emode,1); cout << endl;
   iprint=1;
@@ -2915,6 +3331,7 @@ void NcAstrolab2::ListSignals(TString frame,TString mode,Int_t ndig,TString emod
 
   nstored=arr->GetEntries();
   jlist=0;
+  TString namex="";
   for (Int_t i=1; i<=arr->GetSize(); i++)
   {
    sx=GetSignal(i,type);
@@ -2923,13 +3340,32 @@ void NcAstrolab2::ListSignals(TString frame,TString mode,Int_t ndig,TString emod
    jlist++;
    if (nmax>=0 && jlist>nmax) break;
 
+   // Check for the name pattern
+   namex=sx->GetName();
+   if (name!="*" && !namex.Contains(name)) continue;
+
    if (!iprint)
    {
-    cout << " *" << ClassName() << "::ListSignals* List of stored signals." << endl;
-    tx=(NcTimestamp*)this;
-    cout << " Current timestamp of the laboratory (Lab time offset w.r.t. UT : "; PrintTime(fToffset,12); cout << ")";
-    cout << endl;
-    tx->Date(dform,fToffset);
+    printf(" *%-s::ListSignals* Name : %-s Title : %-s \n",ClassName(),GetName(),GetTitle());
+    if (j==0) tx=ts;
+    if (tx)
+    {
+     cout << " User provided timestamp (Lab time offset w.r.t. UT : "; PrintTime(fToffset,12); cout << ")";
+     cout << endl;
+     tx->Date(dform,fToffset);
+     tx->Date(4);
+    }
+    else
+    {
+     tx=(NcTimestamp*)this;
+     if (j>=0)
+     {
+      cout << " Current timestamp of the laboratory (Lab time offset w.r.t. UT : "; PrintTime(fToffset,12); cout << ")";
+      cout << endl;
+      tx->Date(dform,fToffset);
+      tx->Date(4);
+     }
+    }
     iprint=1;
    }
    if (iprint==1)
@@ -3007,8 +3443,7 @@ void NcAstrolab2::ListSignals(TString frame,TString mode,Int_t ndig,TString emod
     iprint=2;
    }
    if (type==1 || (!type && j<0)) tx=0;
-   if (!type && !j) tx=(NcTimestamp*)this;
-   cout << " Index : " << i << " "; PrintSignal(frame,mode,tx,ndig,i,emode,type); cout << endl;
+   printf(" Index : %*d ",width,i); PrintSignal(frame,mode,tx,ndig,i,emode,type,kTRUE); printf("\n");
   }
   iprint=1;
  }
@@ -3335,13 +3770,24 @@ void NcAstrolab2::SetLocalFrame(Double_t t1,Double_t p1,Double_t t2,Double_t p2,
 {
 // Specification of the orientations of the local reference frame axes.
 // The input arguments represent the angles (in degrees) of the local-frame axes
-// w.r.t. a so called Master Reference Frame (MRF), with the same convention
-// as the input arguments of the ROOT facility TRotMatrix::SetAngles.
+// w.r.t. a so called Master Reference Frame (MRF).
 //
-// The right handed Master Reference Frame is defined as follows :
+// The right handed Master Reference Frame (MRF) is defined as follows :
 //  Z-axis : Points to the local Zenith
 //  X-axis : Makes an angle of 90 degrees with the Z-axis and points South
 //  Y-axis : Makes an angle of 90 degrees with the Z-axis and points East
+//
+// The various input arguments are defined as follows :
+// t1 : Theta (=Zenith) angle of the local X-axis in the MRF
+// p1 : Phi angle of the local X-axis in the MRF
+// t2 : Theta (=Zenith) angle of the local Y-axis in the MRF
+// p2 : Phi angle of the local Y-axis in the MRF
+// t3 : Theta (=Zenith) angle of the local Z-axis in the MRF
+// p3 : Phi angle of the local Z-axis in the MRF
+//
+// Example :
+// ---------
+// The local frame is identical to the MRF when (t1,p1,t2,p2,t3,p3)=(90,0,90,90,0,0).
 //
 // Once the user has specified the local reference frame, any observed event
 // can be related to astronomical space-time locations via the SetSignal
@@ -3351,6 +3797,30 @@ void NcAstrolab2::SetLocalFrame(Double_t t1,Double_t p1,Double_t t2,Double_t p2,
  // into the local-frame ones.
 
  fL.SetAngles(t1,p1,t2,p2,t3,p3);
+
+ // Store the local user frame axes orientations w.r.t. the standard local Horizon (zen,azi) frame
+ fAxes[0]=t1;
+ fAxes[1]=p1;
+ fAxes[2]=t2;
+ fAxes[3]=p2;
+ fAxes[4]=t3;
+ fAxes[5]=p3;
+}
+///////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::GetLocalFrame(Float_t* arr)
+{
+// Provide the orientations of the local reference frame axes w.r.t.
+// the Master Reference Frame (MRF).
+// For details please refer to the memberfunction SetLocalFrame().
+//
+// Note : The provided array must have a minimum length of 6.
+
+ arr[0]=fAxes[0];
+ arr[1]=fAxes[1];
+ arr[2]=fAxes[2];
+ arr[3]=fAxes[3];
+ arr[4]=fAxes[4];
+ arr[5]=fAxes[5];
 }
 ///////////////////////////////////////////////////////////////////////////
 Double_t NcAstrolab2::ConvertAngle(Double_t a,TString in,TString out) const
@@ -3573,7 +4043,7 @@ Double_t NcAstrolab2::GetHourAngle(TString mode,NcTimestamp* ts,Int_t jref,Int_t
 ///////////////////////////////////////////////////////////////////////////
 void NcAstrolab2::SetLT(Int_t y,Int_t m,Int_t d,Int_t hh,Int_t mm,Int_t ss,Int_t ns,Int_t ps)
 {
-// Set the NcTimestamp parameters corresponding to the local date and time (LT)
+// Set the NcTimestamp parameters corresponding to the (mean) local date and time (LT)
 // in the Gregorian calendar as specified by the input arguments.
 // This facility is valid for all AD dates in the Gregorian calendar.
 //
@@ -3597,7 +4067,7 @@ void NcAstrolab2::SetLT(Int_t y,Int_t m,Int_t d,Int_t hh,Int_t mm,Int_t ss,Int_t
 ///////////////////////////////////////////////////////////////////////////
 void NcAstrolab2::SetLT(Int_t y,Int_t m,Int_t d,Int_t hh,Int_t mm,Double_t s)
 {
-// Set the NcTimestamp parameters corresponding to the local date and time (LT)
+// Set the NcTimestamp parameters corresponding to the (mean) local date and time (LT)
 // in the Gregorian calendar as specified by the input arguments.
 // This facility is valid for all AD dates in the Gregorian calendar.
 //
@@ -3619,7 +4089,7 @@ void NcAstrolab2::SetLT(Int_t y,Int_t m,Int_t d,Int_t hh,Int_t mm,Double_t s)
 ///////////////////////////////////////////////////////////////////////////
 void NcAstrolab2::SetLT(Int_t y,Int_t m,Int_t d,TString time)
 {
-// Set the NcTimestamp parameters corresponding to the local date and time (LT)
+// Set the NcTimestamp parameters corresponding to the (mean) local date and time (LT)
 // in the Gregorian calendar as specified by the input arguments.
 // This facility is valid for all AD dates in the Gregorian calendar.
 //
@@ -3639,7 +4109,7 @@ void NcAstrolab2::SetLT(Int_t y,Int_t m,Int_t d,TString time)
 ///////////////////////////////////////////////////////////////////////////
 void NcAstrolab2::SetLT(TString date,TString time,Int_t mode)
 {
-// Set the NcTimestamp parameters corresponding to the local date and time (LT)
+// Set the NcTimestamp parameters corresponding to the (mean) local date and time (LT)
 // in the Gregorian calendar as specified by the input arguments.
 // This facility is valid for all AD dates in the Gregorian calendar.
 //
@@ -4620,7 +5090,7 @@ Int_t NcAstrolab2::GetPositionScramble(Double_t* dmin,Double_t* dmax,TF1* df,Dou
  return fRscmode; 
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t j,TString proj,Int_t clr)
+void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t j,TString proj,Int_t clr,TString name)
 {
 // Display a stored signal in a user specified coordinate projection
 // at the specific timestamp ts.
@@ -4635,12 +5105,17 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t
 //
 // The user is advised not to use the obsolete "j=0" functionality anymore.
 //
-// Default value is j=0 for backward compatibility.
+// Default value is j=-1 for backward compatibility.
 //
 // Measurements are indicated as blue dots.
-// Reference signals are indicated as red triangles.
-// The Galactic Center is indicated as a red star.
-// The size of the marker symbols may be tailored via the member function SetMarkerSize().
+// Reference signals are indicated as red stars.
+// The Galactic Center is indicated as a black cross.
+// The attributes of the marker symbols may be tailored via the member functions
+// SetMarkerSize(), SetMarkerStyle() and SetMarkerColor().
+//
+// In case a non-empty string for the input parameter "name" is provided, this name will
+// appear in the title text of the display. In this way the user can indicate the name
+// of the object that is displayed.
 //
 // In case no stored signal was available or one of the input arguments was
 // invalid, no display is produced.
@@ -4695,7 +5170,6 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t
 // LTh  : Day view (0-24 hours) of b vs. Local Time
 // GSTh : Day view (0-24 hours) of b vs. Greenwich Siderial Time
 // LSTh : Day view (0-24 hours) of b vs. Local Siderial Time
-//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 // UYh  : Year view of b vs. day of the year at the Universal Time of the specified timestamp
 // LYh  : Year view of b vs. day of the year at the Local Time of the specified timestamp
 // GSYh : Year view of b vs. day of the year at the Greenwich Siderial Time of the specified timestamp
@@ -4704,19 +5178,19 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t
 // Notes :
 // -------
 // 1) The ang(h) plot allows for easy identification of an isotropic distribution.
-// 2) For the projections "GSTh", "LSTh", "@@@@@GSYh" and "@@@@@@LSYh", the input argument "mode"
+// 2) For the projections "GSTh", "LSTh", "GSYh" and "LSYh", the input argument "mode"
 //    also determines whether they show the Mean (mode="M") or Apparent (mode="T") Sidereal Time. 
 //
 // The input argument "clr" allows to clear (1) the display before drawing or not (0).
 //
-// The default values are : j=0, proj="ham" and clr=0.
+// The default values are : j=0, proj="ham", clr=0 and name="".
 //
 // This routine is based on initial work by Garmt de Vries-Uiterweerd.
 
  // Comply with the new (jref,type) convention for measurements and reference signals.
  Int_t jref=abs(j);
  Int_t type=0;
- if (j<0) type=1;
+ if (j<=0) type=1;
  if (!j) jref=1;
 
  NcSignal* sx=0;
@@ -4732,6 +5206,11 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t
  sx=GetSignal(r,frame,mode,ts,jref,type);
 
  if (!sx) return;
+
+ // Save name and timestamp to enable timestamp restoration for Solar system objects
+ // after a Day View or Year View display 
+ TString namesave=sx->GetName();
+ NcTimestamp tsave=(*ts);
 
  // The generic input angles (in rad) for the projections 
  Double_t theta=0;
@@ -4782,12 +5261,12 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t
  Int_t hist=0;
  if (proj=="hamh" || proj=="aith" || proj=="merh" || proj=="cylh" || proj=="angh") hist=1;
  if (proj=="UTh" || proj=="LTh" || proj=="GSTh" || proj=="LSTh") hist=1;
- if (proj=="UYh" || proj=="LYh" || proj=="GSYh" || proj=="LSYh") hist=1; //@@@@@@@@@@@@
+ if (proj=="UYh" || proj=="LYh" || proj=="GSYh" || proj=="LSYh") hist=1;
 
  // Update the display for this signal position
 
  // Create a new canvas if needed
- if (!fCanvas) fCanvas=new TCanvas("NcAstrolab2","Skymap");
+ if (!fCanvas || !(gROOT->GetListOfCanvases()->FindObject("NcAstrolab2"))) fCanvas=new TCanvas("NcAstrolab2","Skymap");
 
  // Construct the various strings for this map
  TString titleup;  // The upper title string
@@ -4798,21 +5277,26 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t
  TString slow;     // The most lower coordinate indicator
  sup="90#circ";
  slow="-90#circ";
+ if (name!="")
+ {
+  titleup=name;
+  titleup+=" ";
+ }
  if (frame=="equ")
  {
-  titleup="Geocentric Equatorial (";
+  titleup+="Geocentric Equatorial (";
   titleup+=mode;
   if (mode=="J") titleup+="2000";
   if (mode=="B") titleup+="1950";
   titleup+=") ";
  }
- if (frame=="gal") titleup="Heliocentric Galactic";
- if (frame=="ecl") titleup=" Geocentric Ecliptic";
- if (frame=="hor") titleup="  Standard Horizon";
- if (frame=="icr") titleup="Static Barycentric ICRS";
+ if (frame=="gal") titleup+="Heliocentric Galactic";
+ if (frame=="ecl") titleup+=" Geocentric Ecliptic";
+ if (frame=="hor") titleup+="  Standard Horizon";
+ if (frame=="icr") titleup+="Static Barycentric ICRS";
  if (frame=="loc")
  {
-  titleup=" User defined Local";
+  titleup+=" User defined Local";
   sup=" 0#circ";
   slow="180#circ";
  }
@@ -5073,10 +5557,12 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t
    // The header and footer text
    TLatex* header=new TLatex;
    fMarkers->Add(header);
-   header->DrawLatex(-1.2,yup+0.2,titleup.Data());
+   header->SetTextAlign(21); // Text will be horizontally centered
+   header->DrawLatex(0,yup+0.2,titleup.Data());
    TLatex* footer=new TLatex;
    fMarkers->Add(footer);
-   footer->DrawLatex(-1.7,ylow-0.25,titlelow.Data());
+   footer->SetTextAlign(21); // Text will be horizontally centered
+   footer->DrawLatex(0,ylow-0.25,titlelow.Data());
 
    // The left side angular value indicator
    TLatex* left=new TLatex;
@@ -5271,7 +5757,13 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t
    if (!ts) ts=(NcTimestamp*)this;
    NcTimestamp tx=(*ts);
    Double_t toffset=GetLabTimeOffset();
-   TString title="Day view at ";
+   TString title="Day view";
+   if (name!="")
+   {
+    title+=" of ";
+    title+=name;
+   }
+   title+=" at ";
    title+=GetName();
    title+=" on ";
    TString date;
@@ -5337,8 +5829,10 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t
 
     tx.Add(1); // Add 1 hour for each time step
    }
+
+   // Restore the original timestamp for Solar system objects
+   SetSolarSystem(namesave,&tsave,type);
   }
-//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
   else if (proj=="UYh" || proj=="LYh" || proj=="GSYh" || proj=="LSYh") // The day of the year view
   {
    // Set histogram binning and axes attributes
@@ -5361,13 +5855,20 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t
     if (mode=="T") tmode="LAST";
    }
    TString time;
-   ts->GetDayTimeString(tmode,0,0,0,&time);
+   if (proj=="UYh" || proj=="GSYh") ts->GetDayTimeString(tmode,0,0,0,&time);
+   if (proj=="LYh" || proj=="LSYh") ts->GetDayTimeString(tmode,0,toffset,0,&time);
 
-   TString title="Year view at ";
+   TString title="Year view";
+   if (name!="")
+   {
+    title+=" of ";
+    title+=name;
+   }
+   title+=" at ";
    title+=GetName();
    title+=" in ";
    title+=year;
-   title+=" at  ";
+   title+=" at ";
    title+=time;
    title+=";Day of the year;";
    TString ytitle="Declination ";
@@ -5386,17 +5887,21 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t
    fHist[type]->SetStats(kFALSE);
 
    // Fill the year view histogram
-   // Start at 01-jan 00:00:00h of the corresponding year
-   if (proj=="UYh" || proj=="GSYh") tx.SetUT(year.Atoi(),1,1,"00:00:00");
-   if (proj=="LYh" || proj=="LSYh") tx.SetLT(toffset,year.Atoi(),1,1,"00:00:00");
+   // Start at 01-jan 00:00:00h for the corresponding year at the selected location
+   // and then set the time according to the specified timestamp
    Double_t hour=0;
-   if (tmode=="UT") hour=tx.GetUT();
-   if (tmode=="LMT") hour=tx.GetLT(toffset);
-   if (tmode=="GMST") hour=tx.GetGMST();
-   if (tmode=="GAST") hour=tx.GetGAST();
-   if (tmode=="LMST") hour=tx.GetLMST(toffset);
-   if (tmode=="LAST") hour=tx.GetLAST(toffset);
+   if (proj=="UYh" || proj=="GSYh") // Location is Greenwich
+   {
+    tx.SetUT(year.Atoi(),1,1,"00:00:00");
+    hour=ts->GetUT();
+   }
+   if (proj=="LYh" || proj=="LSYh") // The lab location
+   {
+    tx.SetLT(toffset,year.Atoi(),1,1,"00:00:00");
+    hour=ts->GetLT(toffset);
+   }
    tx.Add(hour); // Set the selected time
+
    Double_t d,a,b;
    Int_t day=0;
    for (Int_t i=0; i<367; i++)
@@ -5415,8 +5920,12 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,Int_t
 
     tx.Add(24); // Add 1 day (= 24 hours) for each time step
    }
+
+   // Restore the original timestamp for Solar system objects
+   SetSolarSystem(namesave,&tsave,type);
   }
-//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+  // Draw the selected histogram
   if ((!type && fHist[1]) || (type && fHist[0]))
   {
    fHist[type]->Draw("same");
@@ -5459,9 +5968,10 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,TStri
 //        1 --> Display the corresponding measurement
 //
 // Measurements are indicated as blue dots.
-// Reference signals are indicated as red triangles.
-// The Galactic Center is indicated as a red star.
-// The size of the marker symbols may be tailored via the member function SetMarkerSize().
+// Reference signals are indicated as red stars.
+// The Galactic Center is indicated as a black cross.
+// The attributes of the marker symbols may be tailored via the member functions
+// SetMarkerSize(), SetMarkerStyle() and SetMarkerColor().
 //
 // Note : In case ts=0 the actual recorded timestamp of the signal will be taken.
 //        If such a recorded timestamp is absent, the current timestamp of the lab is used.
@@ -5516,7 +6026,6 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,TStri
 // LTh  : Day view (0-24 hours) of b vs. Local Time
 // GSTh : Day view (0-24 hours) of b vs. Greenwich Siderial Time
 // LSTh : Day view (0-24 hours) of b vs. Local Siderial Time
-//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 // UYh  : Year view of b vs. day of the year at the Universal Time of the specified timestamp
 // LYh  : Year view of b vs. day of the year at the Local Time of the specified timestamp
 // GSYh : Year view of b vs. day of the year at the Greenwich Siderial Time of the specified timestamp
@@ -5529,7 +6038,7 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,TStri
 //    All geocentric name specifications for solar system objects as indicated in the
 //    docs of NcTimestamp::Almanac() are supported.
 // 2) The ang(h) plot allows for easy identification of an isotropic distribution.
-// 3) For the projections "GSTh", "LSTh", "@@@@@GSYh" and "@@@@@@LSYh", the input argument "mode"
+// 3) For the projections "GSTh", "LSTh", "GSYh" and "LSYh", the input argument "mode"
 //    also determines whether they show the Mean (mode="M") or Apparent (mode="T") Sidereal Time. 
 //
 // The input argument "clr" allows to clear (1) the display before drawing or not (0).
@@ -5544,13 +6053,17 @@ void NcAstrolab2::DisplaySignal(TString frame,TString mode,NcTimestamp* ts,TStri
  if (j>0)
  {
   if (type) j=-j;
-  DisplaySignal(frame,mode,ts,j,proj,clr);
+  DisplaySignal(frame,mode,ts,j,proj,clr,name);
  }
+ 
+ // Update the canvas so that the Skymap GUI immediately shows the result
+ if (fCanvas) fCanvas->Update();
 }
 ///////////////////////////////////////////////////////////////////////////
-void NcAstrolab2::DisplaySignals(TString frame,TString mode,NcTimestamp* ts,TString proj,Int_t clr,Int_t nmax,Int_t j,Int_t type)
+void NcAstrolab2::DisplaySignals(TString frame,TString mode,NcTimestamp* ts,TString proj,Int_t clr,Int_t nmax,Int_t j,Int_t type,TString name)
 {
-// Display of stored signals in a user specified coordinate projection at the specific timestamp.
+// Display of stored signals in a user specified coordinate projection at the specific timestamp,
+// if their name matches the provided name pattern "name", where name="*" means all.
 //
 // All measurements are displayed according to the timestamp of their actual stored recording,
 // which may be a scrambled timestamp according to the invokation of the memberfunction SetTimeScramble().
@@ -5563,9 +6076,10 @@ void NcAstrolab2::DisplaySignals(TString frame,TString mode,NcTimestamp* ts,TStr
 // Note : ts=0 corresponds to the current timestamp of the lab.
 //
 // Measurements are indicated as blue dots.
-// Reference signals are indicated as red triangles.
-// The Galactic Center is indicated as a red star.
-// The size of the marker symbols may be tailored via the member function SetMarkerSize().
+// Reference signals are indicated as red stars.
+// The Galactic Center is indicated as a black cross.
+// The attributes of the marker symbols may be tailored via the member functions
+// SetMarkerSize(), SetMarkerStyle() and SetMarkerColor().
 //
 // In case no corresponding stored signal is available or one of the input arguments is
 // invalid, no display is produced.
@@ -5620,14 +6134,27 @@ void NcAstrolab2::DisplaySignals(TString frame,TString mode,NcTimestamp* ts,TStr
 // merh : Mercator projection plotted in a 2-D histogram
 // ang  : Straight sin(b) vs. l plot with colored markers
 // angh : Straight sin(b) vs. l plot in a 2-D histogram
+// UTh  : Day view (0-24 hours) of b vs. Universal Time
+// LTh  : Day view (0-24 hours) of b vs. Local Time
+// GSTh : Day view (0-24 hours) of b vs. Greenwich Siderial Time
+// LSTh : Day view (0-24 hours) of b vs. Local Siderial Time
+// UYh  : Year view of b vs. day of the year at the Universal Time of the specified timestamp
+// LYh  : Year view of b vs. day of the year at the Local Time of the specified timestamp
+// GSYh : Year view of b vs. day of the year at the Greenwich Siderial Time of the specified timestamp
+// LSYh : Year view of b vs. day of the year at the Local Siderial Time of the specified timestamp
 //
-// Note : The ang(h) plot allows for easy identification of an isotropic distribution.
+// Notes :
+// -------
+// 1) The ang(h) plot allows for easy identification of an isotropic distribution.
+// 2) For the projections "GSTh", "LSTh", "GSYh" and "LSYh", the input argument "mode"
+//    also determines whether they show the Mean (mode="M") or Apparent (mode="T") Sidereal Time. 
 //
 // The input argument "clr" allows to clear (1) the display before drawing or not (0).
 //
-// The default values are : proj="ham", clr=0, nmax=-1, j=-1 and type=-1.
+// The default values are : proj="ham", clr=0, nmax=-1, j=-1, type=-1 and name="*".
 
  NcSignal* sx=0;
+ TString namex="";
  NcTimestamp* tx=0;
  Int_t jdisp=0;
 
@@ -5635,11 +6162,14 @@ void NcAstrolab2::DisplaySignals(TString frame,TString mode,NcTimestamp* ts,TStr
  if (fRefs && type<=0)
  {
   // Use timestamp of j-th measurement if requested
-  if (j>0) sx=GetSignal(j,1);
-  if (sx) tx=sx->GetTimestamp();
+  if (j>0)
+  {
+   sx=GetSignal(j,1);
+   if (sx) tx=sx->GetTimestamp();
+  }
 
   // Use the provided timestamp
-  tx=ts;
+  if (!j || !tx) tx=ts;
 
   // Use the current lab timestamp if no timestamp selected
   if (!tx) tx=(NcTimestamp*)this;
@@ -5653,6 +6183,10 @@ void NcAstrolab2::DisplaySignals(TString frame,TString mode,NcTimestamp* ts,TStr
    jdisp++;
    if (nmax>=0 && jdisp>nmax) break;
 
+   // Check for the name pattern
+   namex=sx->GetName();
+   if (name!="*" && !namex.Contains(name)) continue;
+
    // Use the actual timestamp of the reference signal
    if (j<0)
    {
@@ -5661,7 +6195,14 @@ void NcAstrolab2::DisplaySignals(TString frame,TString mode,NcTimestamp* ts,TStr
     if (!tx) tx=(NcTimestamp*)this;
    }
 
-   DisplaySignal(frame,mode,tx,i,proj,clr);
+   if (name=="*")
+   {
+    DisplaySignal(frame,mode,tx,i,proj,clr);
+   }
+   else
+   {
+    DisplaySignal(frame,mode,tx,i,proj,clr,name);
+   }
    clr=0; // No display clear for subsequent signals
   }
  }
@@ -5678,28 +6219,72 @@ void NcAstrolab2::DisplaySignals(TString frame,TString mode,NcTimestamp* ts,TStr
    jdisp++;
    if (nmax>=0 && jdisp>nmax) break;
 
+   // Check for the name pattern
+   namex=sx->GetName();
+   if (name!="*" && !namex.Contains(name)) continue;
+
    tx=sx->GetTimestamp();
    if (!tx) tx=ts;
    if (!tx) tx=(NcTimestamp*)this;
-   DisplaySignal(frame,mode,tx,-j,proj,clr);
+   if (name=="*")
+   {
+    DisplaySignal(frame,mode,tx,-j,proj,clr);
+   }
+   else
+   {
+    DisplaySignal(frame,mode,tx,-j,proj,clr,name);
+   }
    clr=0; // No display clear for subsequent signals
   }
  }
+ 
+ // Update the canvas so that the Skymap GUI immediately shows the result
+ if (fCanvas) fCanvas->Update();
 }
 ///////////////////////////////////////////////////////////////////////////
 void NcAstrolab2::SetMarkerSize(Float_t size,Int_t type)
 {
 // Set the size of the marker symbols for skymaps and related histograms.
-// By default all sizes are set to 1 in the constructor of this NcAstrolab2 class. 
+// Defaults are set in the constructor of this NcAstrolab2 class. 
 //
-// type = 0 --> Set marker size for reference signals
-//        1 --> Set marker size for measurements
-//        2 --> Set marker size for the Galactic Center
-//        3 --> Set marker size for the skymap grid dots
+// type = 0 --> Set marker size for reference signals    (default=1.5)
+//        1 --> Set marker size for measurements         (default=1.0)
+//        2 --> Set marker size for the Galactic Center  (default=1.5)
+//        3 --> Set marker size for the skymap grid dots (default=0.3)
 
  if (type<0 || type >3) return;
 
  fMarkerSize[type]=size;
+}
+///////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::SetMarkerStyle(Int_t style,Int_t type)
+{
+// Set the style of the marker symbols for skymaps and related histograms.
+// Defaults are set in the constructor of this NcAstrolab2 class. 
+//
+// type = 0 --> Set marker style for reference signals    (default=29 filled star)
+//        1 --> Set marker style for measurements         (default=8  scalable dot)
+//        2 --> Set marker style for the Galactic Center  (default=34 filled cross)
+//        3 --> Set marker style for the skymap grid dots (default=8  scalable dot)
+
+ if (type<0 || type >3) return;
+
+ fMarkerStyle[type]=style;
+}
+///////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::SetMarkerColor(Int_t color,Int_t type)
+{
+// Set the color of the marker symbols for skymaps and related histograms.
+// Defaults are set in the constructor of this NcAstrolab2 class. 
+//
+// type = 0 --> Set marker color for reference signals    (default=kRed)
+//        1 --> Set marker color for measurements         (default=kBlue)
+//        2 --> Set marker color for the Galactic Center  (default=kBlack)
+//        3 --> Set marker color for the skymap grid dots (default=kBlack)
+
+ if (type<0 || type >3) return;
+
+ fMarkerColor[type]=color;
 }
 ///////////////////////////////////////////////////////////////////////////
 void NcAstrolab2::SetCentralMeridian(Int_t mode,Double_t phi,TString u)
@@ -5894,6 +6479,7 @@ void NcAstrolab2::SetPhysicalParameter(TString name,Double_t value)
 // Planck  = The value of the Planck constant (h) in J s
 // Boltz   = The value of the Boltzmann constant (k) in J K^-1
 // Newton  = The Newton gravitational constant in m^3 kg^-1 s^-1
+// Gn      = The nominal value of the gravitational acceleration at the Earth surface in m s^-2
 // Au      = The astronomical unit in m
 // Pc      = The parsec in m
 // Hubble  = The Hubble parameter in km s^-1 Mpc^-1
@@ -5964,7 +6550,13 @@ void NcAstrolab2::SetPhysicalParameter(TString name,Double_t value)
   fFermi/=pow(frac,3.);
  }
  if (name=="Boltz") fBoltz=value;
- if (name=="Newton") fNewton=value;
+ if (name=="Newton")
+ {
+  frac=value/fNewton;
+  fNewton=value;
+  fGn*=frac;
+ }
+ if (name=="Gn") fGn=value;
  if (name=="Au") fAu=value;
  if (name=="Pc") fPc=value;
  if (name=="Hubble") fHubble=value;
@@ -6014,6 +6606,7 @@ Double_t NcAstrolab2::GetPhysicalParameter(TString name) const
  if (name=="Planck") return fPlanck;
  if (name=="Boltz") return fBoltz;
  if (name=="Newton") return fNewton;
+ if (name=="Gn") return fGn;
  if (name=="Au") return fAu;
  if (name=="Pc") return fPc;
  if (name=="Hubble") return fHubble;
@@ -6348,10 +6941,10 @@ Double_t NcAstrolab2::GetHubbleParameter(Double_t z,TString u) const
  return val;
 }
 ///////////////////////////////////////////////////////////////////////////
-Double_t NcAstrolab2::GetNuclearMass(Int_t z,Int_t n,Int_t mode) const
+Double_t NcAstrolab2::GetNuclearMass(Int_t Z,Int_t N,Int_t mode) const
 {
 // Provide the nuclear mass or binding energy of a specified nucleus
-// with "z" protons and "n" neutrons.
+// with "Z" protons and "N" neutrons.
 // Here the semi-empirical mass formula is used as indicated on the slides
 // of the lecture "Aspects of Nuclear Physics" by Nick van Eijndhoven.
 // For very light nuclei this may be inaccurate.
@@ -6374,11 +6967,11 @@ Double_t NcAstrolab2::GetNuclearMass(Int_t z,Int_t n,Int_t mode) const
 //
 // The default is mode=1.
 
- if (z<0 || n<0) return 0;
+ if (Z<0 || N<0) return 0;
 
- Double_t rz=z;
- Double_t rn=n;
- Double_t ra=z+n;
+ Double_t rz=Z;
+ Double_t rn=N;
+ Double_t ra=Z+N;
 
  // Coefficients from a recent fit mentioned in Tipler's modern physics (4th ed.) textbook.
  // The values in the comment field are the ones of the slides mentioned above.
@@ -6394,8 +6987,8 @@ Double_t NcAstrolab2::GetNuclearMass(Int_t z,Int_t n,Int_t mode) const
  Double_t term4=d*pow(rz,2.)/pow(ra,1./3.); // Coulomb term
  Double_t term5=0;                          // Phenomenological correction for light nuclei (pairing energy term)
  
- Int_t oz=z%2; // Flag (1) for odd Z nuclei 
- Int_t on=n%2; // Flag (1) for odd N nuclei
+ Int_t oz=Z%2; // Flag (1) for odd Z nuclei 
+ Int_t on=N%2; // Flag (1) for odd N nuclei
 
  if (oz && on) term5=delta/sqrt(ra);
  if (!oz && !on) term5=-delta/sqrt(ra);
@@ -6404,7 +6997,7 @@ Double_t NcAstrolab2::GetNuclearMass(Int_t z,Int_t n,Int_t mode) const
  Double_t bnz=term1-term2-term3-term4-term5;
 
  // In case a single nucleon was specified
- if ((z+n)<2)
+ if ((Z+N)<2)
  {
   bnz=0;
   ra=1;
@@ -6414,25 +7007,25 @@ Double_t NcAstrolab2::GetNuclearMass(Int_t z,Int_t n,Int_t mode) const
  Double_t mass=rz*fMp+rn*fMn-bnz;
 
  // Explicit literature values for very light elements
- if (z==1 && n==1) // Deuteron
+ if (Z==1 && N==1) // Deuteron
  {
   mass=2.013553212712*fAmu;
   bnz=rz*fMp+rn*fMn-mass;
  }
 
- if (z==1 && n==2) // Triton
+ if (Z==1 && N==2) // Triton
  {
   mass=3.0155007134*fAmu;
   bnz=rz*fMp+rn*fMn-mass;
  }
 
- if (z==2 && n==1) // Helion
+ if (Z==2 && N==1) // Helion
  {
   mass=3.0149322468*fAmu;
   bnz=rz*fMp+rn*fMn-mass;
  }
 
- if (z==2 && n==2) // Alpha
+ if (Z==2 && N==2) // Alpha
  {
   mass=4.001506179125*fAmu;
   bnz=rz*fMp+rn*fMn-mass;
@@ -6470,6 +7063,396 @@ Double_t NcAstrolab2::GetNuclearMass(Int_t z,Int_t n,Int_t mode) const
  return value;
 }
 ///////////////////////////////////////////////////////////////////////////
+Double_t NcAstrolab2::GetRadiationLength(Double_t Z,Double_t A,Double_t rho) const
+{
+// Provide the radiation length of a medium consisting of (averaged) nuclei (Z,A).
+// The radiation length is returned in g/cm^2, #nucleons/cm^2 or cm, depending on
+// the value of "rho" (see below)
+//
+// The radition length (X0) is the mean distance over which the energy of a high-energy electron
+// is reduced by a factor 1/e due to bremmstrahlung.
+// Alternatively, it is also 7/9 times the mean free path of a high-energy photon before
+// pair production occurs.
+//
+// The following approximation was obtained from the Particle Data Group (https://pdg.lbl.gov)
+//
+// X0=716.4*A/[Z(Z+1)(Ln(287/sqrt(Z))] g/cm^2
+//
+// Input arguments :
+// -----------------
+// Z   : The (averaged) atomic number (=number of protons) of the nucleus 
+// A   : The (averaged) mass number (=number of nucleons) of the nucleus
+// rho : <0 --> [X0]=g/cm^2
+//       =0 --> [X0]=#nucleons/cm^2
+//       >0 --> rho=density of the medium in g/cm^3 and [X0]=cm
+//
+// The default value is rho=-1.
+//
+// In case of inconsistent input the unphysical value -1 will be returned.
+
+ Double_t X0=-1;
+
+ if (Z<=0 || A<1 || A<Z) return -1;
+
+ X0=716.4*A/(Z*(Z+1.)*(log(287./sqrt(Z))));
+
+ Double_t mN=0.001*fGn*fQe/fAmu; // The nucleon mass in gram
+ if (rho==0) X0=X0/mN;
+ if (rho>0) X0=X0/rho;
+
+ return X0;
+}
+///////////////////////////////////////////////////////////////////////////
+Double_t NcAstrolab2::GetMeanFreePath(Double_t sigma,Double_t rho,Int_t mode) const
+{
+// Provide the mean free path "lambda" of a high-energy particle passing through a certain medium.
+// The input parameter "mode" dictates the units of "rho" and the returned value of "lambda" (see below).
+//
+// The mean free path (lambda) is the mean distance over which a high-energy particle travels
+// inside the medium before an interaction occurs.
+// For non (quasi)elastic interactions, this is also called "interaction length",
+// "attenuation length" or "absorption length".
+//
+// The scattering centers (=particles) in the medium are regarded as being stationary,
+// such that we can use the formula :
+//
+// lambda=1/(sigma*n)
+//
+// where "sigma" represents the cross section and "n" represents the number density
+// of the scattering centers in the medium.
+//
+// For details please refer to the slides of my lectures :
+// https://sites.google.com/site/nickveweb/lectures/scatteringanddecayprocesses
+//
+// Input arguments :
+// -----------------
+// sigma : The interaction cross section in barn (1 barn=1e-24 cm^2)
+// rho   : The density of the medium (see below)
+// mode  : 0 --> rho=#particles/cm^3 and [lambda]=cm
+//         1 --> rho=#particles/cm^3 and [lambda]=#particles/cm^2
+//         2 --> Atomic c.q. nuclear medium with [rho]=g/cm^3 and [lambda]=cm
+//         3 --> Atomic c.q. nuclear medium with [rho]=g/cm^3 and [lambda]=g/cm^2
+//         4 --> Atomic c.q. nuclear medium with [rho]=g/cm^3 and [lambda]=#nucleons/cm^2
+//
+// In case of inconsistent input the unphysical value -1 will be returned.
+
+ Double_t lambda=-1;
+
+ if (sigma<=0 || rho<=0 || mode<0 || mode>4) return -1;
+
+ Double_t mN=0.001*fGn*fQe/fAmu; // The nucleon mass in gram
+ Double_t n=fabs(rho)/mN;        // The number of nucleons per cm^3
+ if (mode<2) n=rho;              // The number of scattering centers per cm^3
+ sigma=sigma*1e-24;              // Convert to cm^2
+
+ lambda=1./(sigma*n);
+
+ if (mode==1 || mode==4) lambda=lambda*n;
+ if (mode==3) lambda=lambda*rho;
+
+ return lambda;
+}
+///////////////////////////////////////////////////////////////////////////
+Double_t NcAstrolab2::GetInteractionProbability(Double_t x,Double_t lambda) const
+{
+// Provide the interaction probability of a high-energy particle traveling
+// a distance "x" through a certain medium.
+//
+// For a mono-energetic beam of identical particles, this probability allows
+// to calculate the interaction rate once the beam luminosity is known.
+//
+// Input arguments :
+// -----------------
+// x      : The distance traveled by the particle inside the medium
+// lambda : The mean free path of the particle in the medium
+//
+// The formula used is : prob=1-exp(-x/lambda).
+//
+// So, when x=lambda, the interaction probability is about 0.63.
+//
+// For details please refer to the slides of my lectures :
+// https://sites.google.com/site/nickveweb/lectures/scatteringanddecayprocesses
+//
+// Notes :
+// -------
+// 1) "x" and "lambda" have to be specified in the same units.
+// 2) The probability of pair production by a high-energy photon
+//    may be obtained from the corresponding radiation length X0
+//    by using the fact that lambda=X0*9/7.
+//
+// In case of inconsistent input the unphysical value -1 will be returned.
+
+ Double_t prob=-1;
+
+ if (x<0 || lambda<=0) return -1;
+
+ prob=1.-exp(-x/lambda);
+
+ return prob;
+}
+///////////////////////////////////////////////////////////////////////////
+Double_t NcAstrolab2::GetInteractionProbability(Double_t x,Double_t sigma,Double_t rho,Int_t mode) const
+{
+// Provide the interaction probability of a high-energy particle traveling
+// a distance "x" through a certain medium.
+// The input parameter "mode" dictates the units of "x" and "rho" (see below).
+//
+// For a mono-energetic beam of identical particles, this probability allows
+// to calculate the interaction rate once the beam luminosity is known.
+//
+// Input arguments :
+// -----------------
+// x     : The distance traveled by the particle inside the medium (see below)
+// sigma : The interaction cross section in barn (1 barn=1e-24 cm^2)
+// rho   : The density of the medium (see below)
+// mode  : 0 --> rho=#particles/cm^3 and [x]=cm
+//         1 --> rho=#particles/cm^3 and [x]=#particles/cm^2
+//         2 --> Atomic c.q. nuclear medium with [rho]=g/cm^3 and [x]=cm
+//         3 --> Atomic c.q. nuclear medium with [rho]=g/cm^3 and [x]=g/cm^2
+//         4 --> Atomic c.q. nuclear medium with [rho]=g/cm^3 and [x]=#nucleons/cm^2
+//
+// The formula used is : prob=1-exp(-x/lambda),
+// where lambda is the corresponding mean free path.
+//
+// So, when x=lambda, the interaction probability is about 0.63.
+//
+// For details please refer to the slides of my lectures :
+// https://sites.google.com/site/nickveweb/lectures/scatteringanddecayprocesses
+//
+// In case of inconsistent input the unphysical value -1 will be returned.
+
+ Double_t prob=-1;
+
+ Double_t lambda=GetMeanFreePath(sigma,rho,mode);
+
+ if (lambda>0) prob=GetInteractionProbability(x,lambda);
+
+ return prob;
+}
+///////////////////////////////////////////////////////////////////////////
+Double_t NcAstrolab2::GetSurvivalProbability(Double_t x,Double_t lambda) const
+{
+// Provide the survival probability of a high-energy particle traveling
+// a distance "x" through a certain medium.
+//
+// For a mono-energetic beam of identical particles, this probability
+// also represents the beam attenuation factor.
+//
+// Input arguments :
+// -----------------
+// x      : The distance traveled by the particle inside the medium
+// lambda : The mean free path of the particle in the medium
+//
+// The formula used is : prob=exp(-x/lambda).
+//
+// So, when x=lambda, the survial probability is 1/e.
+//
+// For details please refer to the slides of my lectures :
+// https://sites.google.com/site/nickveweb/lectures/scatteringanddecayprocesses
+//
+// Notes :
+// -------
+// 1) "x" and "lambda" have to be specified in the same units.
+// 2) The probability for a high-energy photon to survive pair production
+//    may be obtained from the corresponding radiation length X0
+//    by using the fact that lambda=X0*9/7.
+//
+// In case of inconsistent input the unphysical value -1 will be returned.
+
+ Double_t prob=-1;
+
+ if (x<0 || lambda<=0) return -1;
+
+ prob=exp(-x/lambda);
+
+ return prob;
+}
+///////////////////////////////////////////////////////////////////////////
+Double_t NcAstrolab2::GetSurvivalProbability(Double_t x,Double_t sigma,Double_t rho,Int_t mode) const
+{
+// Provide the survival probability of a high-energy particle traveling
+// a distance "x" through a certain medium.
+// The input parameter "mode" dictates the units of "x" and "rho" (see below).
+//
+// For a mono-energetic beam of identical particles, this probability
+// also represents the beam attenuation factor.
+//
+// Input arguments :
+// -----------------
+// x     : The distance traveled by the particle inside the medium (see below)
+// sigma : The interaction cross section in barn (1 barn=1e-24 cm^2)
+// rho   : The density of the medium (see below)
+// mode  : 0 --> rho=#particles/cm^3 and [x]=cm
+//         1 --> rho=#particles/cm^3 and [x]=#particles/cm^2
+//         2 --> Atomic c.q. nuclear medium with [rho]=g/cm^3 and [x]=cm
+//         3 --> Atomic c.q. nuclear medium with [rho]=g/cm^3 and [x]=g/cm^2
+//         4 --> Atomic c.q. nuclear medium with [rho]=g/cm^3 and [x]=#nucleons/cm^2
+//
+// The formula used is : prob=exp(-x/lambda),
+// where lambda is the corresponding mean free path.
+//
+// So, when x=lambda, the survial probability is 1/e.
+//
+// For details please refer to the slides of my lectures :
+// https://sites.google.com/site/nickveweb/lectures/scatteringanddecayprocesses
+//
+// In case of inconsistent input the unphysical value -1 will be returned.
+
+ Double_t prob=-1;
+
+ Double_t lambda=GetMeanFreePath(sigma,rho,mode);
+
+ if (lambda>0) prob=GetSurvivalProbability(x,lambda);
+
+ return prob;
+}
+///////////////////////////////////////////////////////////////////////////
+Double_t NcAstrolab2::GetShieldingThickness(Double_t prob,Double_t lambda) const
+{
+// Provide the shielding thickness "x" to obtain the specified survival probability
+// for a high-energy particle.
+// The calculated thickness is returned in the same units as the provided "lambda".
+//
+// Input arguments :
+// -----------------
+// prob   : The requested survival probability
+// lambda : The mean free path of the particle in the medium
+//
+// The formula used is : x=-lambda*Ln(prob).
+//
+// So, when the specified probability is 1/e, the shielding thickness x=lambda.
+//
+// For details please refer to the slides of my lectures :
+// https://sites.google.com/site/nickveweb/lectures/scatteringanddecayprocesses
+//
+// Note :
+// ------
+// The shielding thickness for a high-energy photon to undergo pair production
+// may be obtained from the corresponding radiation length X0 by using the fact
+// that lambda=X0*9/7.
+//
+// In case of inconsistent input the unphysical value -1 will be returned.
+
+ Double_t x=-1;
+
+ if (prob<=0 || prob>1 || lambda<=0) return -1;
+
+ x=-lambda*log(prob);
+
+ return x;
+}
+///////////////////////////////////////////////////////////////////////////
+Double_t NcAstrolab2::GetShieldingThickness(Double_t prob,Double_t sigma,Double_t rho,Int_t mode) const
+{
+// Provide the shielding thickness "x" to obtain the specified survival probability
+// for a high-energy particle.
+// The input parameter "mode" dictates the units of "rho" and the returned value of "x" (see below).
+//
+// Input arguments :
+// -----------------
+// prob  : The requested survival probability
+// sigma : The interaction cross section in barn (1 barn=1e-24 cm^2)
+// rho   : The density of the medium (see below)
+// mode  : 0 --> rho=#particles/cm^3 and [x]=cm
+//         1 --> rho=#particles/cm^3 and [x]=#particles/cm^2
+//         2 --> Atomic c.q. nuclear medium with [rho]=g/cm^3 and [x]=cm
+//         3 --> Atomic c.q. nuclear medium with [rho]=g/cm^3 and [x]=g/cm^2
+//         4 --> Atomic c.q. nuclear medium with [rho]=g/cm^3 and [x]=#nucleons/cm^2
+//
+// The formula used is : x=-lambda*Ln(prob),
+// where lambda is the corresponding mean free path.
+//
+// So, when the specified probability is 1/e, the shielding thickness x=lambda.
+//
+// For details please refer to the slides of my lectures :
+// https://sites.google.com/site/nickveweb/lectures/scatteringanddecayprocesses
+//
+// In case of inconsistent input the unphysical value -1 will be returned.
+
+ Double_t x=-1;
+
+ if (prob<=0 || prob>1) return -1;
+
+ Double_t lambda=GetMeanFreePath(sigma,rho,mode);
+
+ if (lambda>0) x=GetShieldingThickness(prob,lambda);
+
+ return x;
+}
+///////////////////////////////////////////////////////////////////////////
+Double_t NcAstrolab2::GetTargetThickness(Double_t prob,Double_t lambda) const
+{
+// Provide the target thickness "x" to obtain the specified interaction probability
+// for a high-energy particle.
+// The calculated thickness is returned in the same units as the provided "lambda".
+//
+// Input arguments :
+// -----------------
+// prob   : The requested interaction probability
+// lambda : The mean free path of the particle in the medium
+//
+// The formula used is : x=-lambda*Ln(1-prob).
+//
+// So, when the specified probability is (1-1/e), the shielding thickness x=lambda.
+//
+// For details please refer to the slides of my lectures :
+// https://sites.google.com/site/nickveweb/lectures/scatteringanddecayprocesses
+//
+// Note :
+// ------
+// The target thickness for a high-energy photon to undergo pair production
+// may be obtained from the corresponding radiation length X0 by using the fact
+// that lambda=X0*9/7.
+//
+// In case of inconsistent input the unphysical value -1 will be returned.
+
+ if (prob<=0 || prob>1 || lambda<=0) return -1;
+
+ Double_t p=1.-prob;
+ Double_t x=GetShieldingThickness(p,lambda);
+
+ return x;
+}
+///////////////////////////////////////////////////////////////////////////
+Double_t NcAstrolab2::GetTargetThickness(Double_t prob,Double_t sigma,Double_t rho,Int_t mode) const
+{
+// Provide the target thickness "x" to obtain the specified interaction probability
+// for a high-energy particle.
+// The input parameter "mode" dictates the units of "rho" and the returned value of "x" (see below).
+//
+// Input arguments :
+// -----------------
+// prob  : The requested interaction probability
+// sigma : The interaction cross section in barn (1 barn=1e-24 cm^2)
+// rho   : The density of the medium (see below)
+// mode  : 0 --> rho=#particles/cm^3 and [x]=cm
+//         1 --> rho=#particles/cm^3 and [x]=#particles/cm^2
+//         2 --> Atomic c.q. nuclear medium with [rho]=g/cm^3 and [x]=cm
+//         3 --> Atomic c.q. nuclear medium with [rho]=g/cm^3 and [x]=g/cm^2
+//         4 --> Atomic c.q. nuclear medium with [rho]=g/cm^3 and [x]=#nucleons/cm^2
+//
+// The formula used is : x=-lambda*Ln(1-prob),
+// where lambda is the corresponding mean free path.
+//
+// So, when the specified probability is (1-1/e), the shielding thickness x=lambda.
+//
+// For details please refer to the slides of my lectures :
+// https://sites.google.com/site/nickveweb/lectures/scatteringanddecayprocesses
+//
+// In case of inconsistent input the unphysical value -1 will be returned.
+
+ Double_t x=-1;
+
+ if (prob<=0 || prob>1) return -1;
+
+ Double_t lambda=GetMeanFreePath(sigma,rho,mode);
+
+ Double_t p=1.-prob;
+ if (lambda>0) x=GetShieldingThickness(p,lambda);
+
+ return x;
+}
+///////////////////////////////////////////////////////////////////////////
 Double_t NcAstrolab2::GetNeutrinoXsection(Int_t mode,Int_t type,Double_t egev,Double_t xscale,Double_t* eprimgev,Double_t* alpha) const
 {
 // Provide the neutrino cross section and (optional) the average energy
@@ -6490,11 +7473,11 @@ Double_t NcAstrolab2::GetNeutrinoXsection(Int_t mode,Int_t type,Double_t egev,Do
 // -----------------
 // mode   :  1 --> Nucleon target DIS CC cross section
 //           2 --> Nucleon target DIS NC cross section
-//        :  3 --> Nucleon target DIS total cross section
-//        : -1 --> Electron target CC cross section
+//           3 --> Nucleon target DIS total cross section
+//          -1 --> Electron target CC cross section
 //          -2 --> Electron target NC cross section
-//        : -3 --> Electron target total cross section
-//        : -4 --> Special CC process anu_e+e-->anu_mu+mu (not included in other mode values)
+//          -3 --> Electron target total cross section
+//          -4 --> Special CC process anu_e+e-->anu_mu+mu (not included in other mode values)
 // type   :  1 --> Electron neutrino
 //           2 --> Muon neutrino
 //           3 --> Tau neutrino
@@ -7325,7 +8308,12 @@ TH1F NcAstrolab2::GetDifHistogram(TH1* hin,Int_t mode,TString s,TF1* f) const
  TString syout=s;
  if (syout=="")
  {
-  syout="d(";
+  if (f)
+  {
+   syout=f->GetExpFormula("p");
+   syout+="*";
+  }
+  syout+="d(";
   syout+=syin;
   syout+=")/d(";
 
@@ -7490,6 +8478,111 @@ TH1F NcAstrolab2::GetCountsHistogram(TF1& spec,Int_t nbins,Double_t xmin,Double_
  }
 
  delete [] xbins;
+
+ return hout;
+}
+///////////////////////////////////////////////////////////////////////////
+TH1F NcAstrolab2::GetCountsHistogram(TH1& hin,Int_t mode,TString s,TF1* fscale) const
+{
+// Construct the counts (N) vs. x histogram from a 1D input histogram describing a differential distribution dN/dx.
+// Such a returned histogram allows an easy way to for instance obtain a primary particle distribution N(E)
+// to be used as input for cosmic ray event generators based on a predicted differential power spectrum dN/dE.
+//
+// Input arguments :
+// -----------------
+// hin    : The input histogram describing the fscale(x)*dN/dx distribution
+// mode   : 0 ==> Histogram X-axis represents the x value
+//          1 ==> Histogram X-axis represents the Log10(x) value
+//          2 ==> Histogram X-axis represents the Ln(x) value
+// s      : Character string for the title and axes labels of the returned histogram.
+//          Example : s="Energy distribution;^{10}Log(Energy) in GeV;Counts".
+//          If string s is not provided the labels will be constructed from the
+//          labels of the input histogram "hin".
+// fscale : (Optional) scaling function that was used for the distribution in "hin".
+//          For example : In case "hin" contained E^2*dN/dE vs. E, than the user
+//          should specifiy "fscale" as the function "pow(x,2)" so that this scaling
+//          can be compensated for in constructing the N(E) vs. E output histogram.
+//          In case "hin" contains a regular dN/dx distribution, "fscale" should not
+//          be specified.
+//
+// Returned object : The 1-D histogram (TH1F) containing the expected counts N vs. x.
+//
+// The default values are s="" and fscale=0.
+
+ // Setting up the output histogram
+ TH1F hout;
+ hout.SetName("CountsHistogram");
+ Int_t nbins=hin.GetNbinsX();
+
+ if (nbins<1) return hout;
+
+ TAxis* ax=hin.GetXaxis();
+ Double_t xmin=ax->GetXmin();
+ Double_t xmax=ax->GetXmax();
+ hout.SetBins(nbins,xmin,xmax);
+
+ // Set histogram title and axes labels
+ if (s=="")
+ {
+  s=hin.GetTitle();
+  s+=";";
+  TString tx=ax->GetTitle();
+  if (tx!="")
+  {
+   s+=tx;
+  }
+  else
+  {
+   if (mode==0) s+="x";
+   if (mode==1) s+="^{10}Log(x)";
+   if (mode==2) s+="Ln(x)";
+  }
+  s+=";Counts";
+ }
+ hout.SetTitle(s);
+
+ // Filling the output histogram
+ Double_t x=0;
+ Double_t xlow=0;
+ Double_t xup=0;
+ Double_t dx=0;
+ Double_t xval=0;
+ Double_t N=0;
+ Double_t fval=0;
+ for (Int_t ibin=1; ibin<=nbins; ibin++)
+ {
+  x=hin.GetBinCenter(ibin);
+  xlow=hin.GetBinLowEdge(ibin);
+  xup=xlow+hin.GetBinWidth(ibin);
+  N=hin.GetBinContent(ibin);
+  if (!mode)
+  {
+   xval=x;
+   dx=xup-xlow;
+   N=N*dx;
+  }
+  else if (mode==1)
+  {
+   xval=pow(10.,x);
+   dx=pow(10.,xup)-pow(10.,xlow);
+   N=N*dx;
+  }
+  else if (mode==2)
+  {
+   xval=exp(x);
+   dx=exp(xup)-exp(xlow);
+   N=N*dx;
+  }
+
+  // Compensate for the Y-axis scaling if needed
+  if (fscale)
+  {
+   fval=fscale->Eval(xval);
+   if (fval) N=N/fval;
+  }
+
+  hout.Fill(x,N);
+ }
 
  return hout;
 }
@@ -8774,11 +9867,13 @@ void NcAstrolab2::SetDataNames(TString obsname,TString varname,TString units,TSt
 //
 // Accepted (physical) observable names are :
 // ------------------------------------------
+// Name      : Name of the object or observation (e.g. GRB031025A or IC190722A)
 // Run       : Run number
 // Event     : Event number
 // Eventb    : Sub-event number
+// VetoLevel : Veto level indicator
 // DetId     : Detector identifier
-// Date      : The UTC observation date with as possible units "ddmmyyy", "yyyymmdd", "mmddyyyy" or "yyyyddmm"
+// Date      : The UTC observation date with as possible units "ddmmyyyy", "yyyymmdd", "mmddyyyy" or "yyyyddmm"
 // Tobs      : The UTC observation c.q. trigger timestamp with as possible units "JD", "MJD", "TJD", "hms" or "hrs"
 // Tstart    : Generic UTC start timestamp with as possible units "JD", "MJD", "TJD", "hms" or "hrs"
 // Tend      : Generic UTC end timestamp with as possible units "JD", "MJD", "TJD", "hms" or "hrs"
@@ -8837,8 +9932,8 @@ void NcAstrolab2::SetDataNames(TString obsname,TString varname,TString units,TSt
 
  Bool_t error=kFALSE;
 
- if (obsname!="Run" && obsname!="Event" && obsname!="Eventb" && obsname!="DetId"
-     && obsname!="Date" && obsname!="Tobs" && obsname!="Tstart" && obsname!="Tend"
+ if (obsname!="Name" && obsname!="Run" && obsname!="Event" && obsname!="Eventb" && obsname!="VetoLevel"
+     && obsname!="DetId" && obsname!="Date" && obsname!="Tobs" && obsname!="Tstart" && obsname!="Tend"
      && obsname!="d" && obsname!="a" && obsname!="b" && obsname!="z"
      && obsname!="E" && obsname!="L" && obsname!="S" && obsname!="F" && obsname!="I" && obsname!="J"
      && obsname!="T90" && obsname!="T100"
@@ -9485,7 +10580,12 @@ void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1
 // date2 : The date (yyyymmdd) of the end of the observation period [date1,date2] (0=No restriction)
 // nmax  : Maximum number of sources or events to be accepted from this input file (<0 : no limitation)
 // type  : Identifier of the source (c.q. burst) or observed event (alert) type (e.g. "GRB", "GW", "IC",...)
-//         When type="-" the source type is set to "GRB" and the event type is set to "EVT".         
+//         In case no "Name" is provided as an "observable" in the input data, the provided "type" will
+//         be combined with the Tobs data to construct names like GRB031025, IC190722 etc...
+//         However, in case "Name" is provided in the input data, the corresponding string will be
+//         used as the name for the source (c.q. burst) or observed event, irrespective of the provided "type". 
+//         When type="-" the source type is set to "GRB" and the event type is set to "EVT", in case
+//         no "Name" is provided as "observable" in the input data.
 //
 // The default values are date1=0, date2=0, nmax=-1 and type="-".
 //
@@ -9555,11 +10655,14 @@ void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1
  TString val;
 
  // The retrieved numerical (physical) observable value from the ROOT Tree
- Double_t value;
+ Double_t value=0;
+
+ // The conversion factor depending on the units specification 
+ Double_t fact=0;
 
  // Some of the pre-defined observable values that are used for selections
  // or that need special treatment
- TString Date,Tobs,Tstart,Tend;
+ TString Name,Date,Tobs,Tstart,Tend;
  Double_t d,a,b;
  Float_t z,csigma,T90,T100,E;
 
@@ -9576,6 +10679,7 @@ void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1
  NcSignal* sx=0;
  Int_t nnew=0;
  TLeaf* lx=0;
+ TLeafC* lxc=0;
  Int_t jlast=0;
 
  // Loop over the data entries in the input Tree
@@ -9589,6 +10693,7 @@ void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1
 
   // Initialisation of the values that are used for selections
   // or that need special treatment
+  Name="none";
   Date="none";
   Tobs="none";
   Tstart="none";
@@ -9623,13 +10728,29 @@ void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1
     continue;
    }
 
-   value=lx->GetValue();
+   if (obsname=="Name") // Character string data from the input Tree
+   {
+    value=0;
+    lxc=(TLeafC*)lx;
+    Name=lxc->GetValueString();
+   }
+   else // Numerical data from the input Tree
+   {
+    value=lx->GetValue();
+   }
 
    if (func=="Log") value=pow(value,10);
    if (func=="Ln") value=exp(value);
 
    // Convert all angular values to degrees
    if (obsname=="a" || obsname=="b" || obsname=="csigma") value=ConvertAngle(value,units,"deg");
+
+   // Convert numerical values to the standard units
+   if (units.IsFloat())
+   {
+    fact=units.Atof();
+    value*=fact;
+   }
 
    // Store the obtained value in string format
    val="";
@@ -9703,6 +10824,7 @@ void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1
      Tend+=value;
     }
    }
+
    if (obsname=="d") d=value;  
    if (obsname=="a") a=value;  
    if (obsname=="b") b=value;  
@@ -9730,10 +10852,18 @@ void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1
   // Obtain the date in yyyymmdd format
   tobs.GetDate(kTRUE,0,&yyyy,&mm,&dd);
   idate=dd+100*mm+10000*yyyy;
-  // Compose the name of the source c.q. burst with the common yymmdd suffix
-  jdate=idate%1000000;
-  grbname=type;
-  grbname+=jdate;
+
+  if (Name!="none") // Set the name of the object or observation
+  {
+   grbname=Name;
+  }
+  else // Compose the name of the source c.q. burst with the common yymmdd suffix
+  {
+   jdate=idate%1000000;
+   grbname=type;
+   if (jdate<100000) grbname+="0"; // Add leading zero for the year if needed
+   grbname+=jdate;
+  }
 
   if (date1 && idate<date1) continue;
   if (date2 && idate>date2) continue;
@@ -9783,6 +10913,10 @@ void NcAstrolab2::LoadInputData(Bool_t src,TString file,TString tree,Int_t date1
   {
    obsname=((TObjString*)fDataNames.GetObject(ivar,1))->GetString();
    val=((TObjString*)fDataNames.GetObject(ivar,5))->GetString();
+
+   // The observable Name is not stored in the NcSignal slots
+   if (obsname=="Name") continue;
+
    value=val.Atof();
 
    // The values of the observables a and b depend on the reference frame
@@ -11030,17 +12164,9 @@ void NcAstrolab2::GenBurstSignals()
  // Retreive the needed parameters
  Float_t fDeclmin=fBurstParameters->GetSignal("Declmin");
  Float_t fDeclmax=fBurstParameters->GetSignal("Declmax");
- Float_t fT90min=fBurstParameters->GetSignal("T90min");
- Float_t fT90max=fBurstParameters->GetSignal("T90max");
- Float_t fZmin=fBurstParameters->GetSignal("Zmin");
- Float_t fZmax=fBurstParameters->GetSignal("Zmax");
- Float_t fSigmamin=fBurstParameters->GetSignal("Sigmamin");
- Float_t fSigmamax=fBurstParameters->GetSignal("Sigmamax");
  Float_t fTimres=fBurstParameters->GetSignal("Timres");
  Float_t fEmin=fBurstParameters->GetSignal("Emin");
  Float_t fEmax=fBurstParameters->GetSignal("Emax");
- Float_t fAlphasig=fBurstParameters->GetSignal("Alphasig");
- Float_t fAlphabkg=fBurstParameters->GetSignal("Alphabkg");
  Int_t fKinangle=TMath::Nint(fBurstParameters->GetSignal("Kinangle"));
  Float_t fAngresmin=fBurstParameters->GetSignal("Angresmin");
  Float_t fAngresmax=fBurstParameters->GetSignal("Angresmax");
@@ -11055,11 +12181,6 @@ void NcAstrolab2::GenBurstSignals()
  Float_t fDtwin=fBurstParameters->GetSignal("Dtwin");
  Float_t fDawin=fBurstParameters->GetSignal("Dawin");
  Int_t fDatype=TMath::Nint(fBurstParameters->GetSignal("Datype"));
- Float_t fTbin=fBurstParameters->GetSignal("Tbin");
- Int_t fTbint90=TMath::Nint(fBurstParameters->GetSignal("Tbint90"));
- Float_t fNbkg=fBurstParameters->GetSignal("Nbkg");
- Float_t fVarTbin=fBurstParameters->GetSignal("VarTbin");
- Float_t fAbin=fBurstParameters->GetSignal("Abin");
  Float_t fGrbnu=fBurstParameters->GetSignal("Grbnu");
  Int_t fInburst=TMath::Nint(fBurstParameters->GetSignal("Inburst"));
  Float_t fDtnu=fBurstParameters->GetSignal("Dtnu");
@@ -11067,7 +12188,6 @@ void NcAstrolab2::GenBurstSignals()
 
  // Derived parameters
  Float_t fMaxsigmatot=fBurstParameters->GetSignal("Maxsigmatot");
- Float_t fMinsigmatot=fBurstParameters->GetSignal("Minsigmatot");
  Float_t fNbkgWin=fBurstParameters->GetSignal("NbkgWin");
 
  ////////////////////////////////////////////////
@@ -11076,10 +12196,6 @@ void NcAstrolab2::GenBurstSignals()
 
  Int_t fNgrbs=GetNsignals(0);
 
- TH1* hzburst=(TH1*)fBurstHistos.FindObject("hzburst");
- TH1* hdburst=(TH1*)fBurstHistos.FindObject("hdburst");
- TH1* ht90burst=(TH1*)fBurstHistos.FindObject("ht90burst");
- TH1* hsigmaburst=(TH1*)fBurstHistos.FindObject("hsigmaburst");
  TH1* hbkgsigmaburst=(TH1*)fBurstHistos.FindObject("hbkgsigmaburst");
  TH1* htotsigmaburst=(TH1*)fBurstHistos.FindObject("htotsigmaburst");
  TH1* hbkgsigmareco=(TH1*)fBurstHistos.FindObject("hbkgsigmareco");
@@ -11662,25 +12778,18 @@ void NcAstrolab2::InitBurstHistograms()
 // **********************************************************************************
 
  // Retreive the needed parameters
- Float_t fDeclmin=fBurstParameters->GetSignal("Declmin");
- Float_t fDeclmax=fBurstParameters->GetSignal("Declmax");
  Float_t fT90min=fBurstParameters->GetSignal("T90min");
  Float_t fT90max=fBurstParameters->GetSignal("T90max");
  Float_t fZmin=fBurstParameters->GetSignal("Zmin");
  Float_t fZmax=fBurstParameters->GetSignal("Zmax");
  Float_t fSigmamin=fBurstParameters->GetSignal("Sigmamin");
  Float_t fSigmamax=fBurstParameters->GetSignal("Sigmamax");
- Float_t fTimres=fBurstParameters->GetSignal("Timres");
  Float_t fEmin=fBurstParameters->GetSignal("Emin");
  Float_t fEmax=fBurstParameters->GetSignal("Emax");
  Float_t fAlphasig=fBurstParameters->GetSignal("Alphasig");
  Float_t fAlphabkg=fBurstParameters->GetSignal("Alphabkg");
- Int_t fKinangle=TMath::Nint(fBurstParameters->GetSignal("Kinangle"));
  Float_t fAngresmin=fBurstParameters->GetSignal("Angresmin");
  Float_t fAngresmax=fBurstParameters->GetSignal("Angresmax");
- Float_t fAngresfix=fBurstParameters->GetSignal("Angresfix");
- Int_t fRecoangle=TMath::Nint(fBurstParameters->GetSignal("Recoangle"));
- Int_t fSumsigmas=TMath::Nint(fBurstParameters->GetSignal("Sumsigmas"));
  Float_t fAvgrbz=fBurstParameters->GetSignal("Avgrbz");
  Float_t fAvgrbt90=fBurstParameters->GetSignal("Avgrbt90");
  Float_t fTmin=fBurstParameters->GetSignal("Tmin");
@@ -11693,10 +12802,6 @@ void NcAstrolab2::InitBurstHistograms()
  Float_t fNbkg=fBurstParameters->GetSignal("Nbkg");
  Float_t fVarTbin=fBurstParameters->GetSignal("VarTbin");
  Float_t fAbin=fBurstParameters->GetSignal("Abin");
- Float_t fGrbnu=fBurstParameters->GetSignal("Grbnu");
- Int_t fInburst=TMath::Nint(fBurstParameters->GetSignal("Inburst"));
- Float_t fDtnu=fBurstParameters->GetSignal("Dtnu");
- Float_t fDtnus=fBurstParameters->GetSignal("Dtnus");
 
  // Derived parameters
  Float_t fMaxsigmatot=fBurstParameters->GetSignal("Maxsigmatot");
@@ -13139,6 +14244,1381 @@ void NcAstrolab2::WriteBurstHistograms(TString filename)
  cout << endl;
  cout << " *" << ClassName() << "::WriteBurstHistograms* All generated histograms have been written to file " << filename << endl;
  ListBurstHistograms();
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::SkyMapPanel()
+{
+// Main steering routine for the SkyMapPanel GUI.
+// Invokation of this memberfunction will open an interactive GUI
+// to provide a user friendly interface to this NcAstrolab2 instance
+// to Enter, Remove, List and Display entries and their properties.
+
+ if (gROOT->IsBatch())
+ {
+  printf("\n *%-s::SkyMapPanel* GUI is not available in batch mode. \n",ClassName());
+  return;
+ }
+
+ // Select the lab timestamp as default
+ fMapTS.SetMJD(fMJD,fJsec,fJns,fJps,"A");
+ 
+ // Import current Lab settings
+ Double_t l=0;
+ Double_t b=0;
+ GetLabPosition(l,b,"deg");
+ fMapLabLocL=l;
+ fMapLabLocB=b;
+ fMapLabExpName=GetExperiment();
+ fMapLabId=fLabId;
+ // Get the lab timestamp data in the text box
+ UInt_t year=0;
+ UInt_t month=0;
+ UInt_t day=0;
+ GetDate(kTRUE,0,&year,&month,&day);
+ GetDayTimeString("UTC",3,0,0,&fMapTime);
+ fMapDate.Form("%02i-%02i-%-i",day,month,year);
+ fMapTime.ReplaceAll(" UTC","");
+ fMapDateTime=fMapDate;
+ fMapDateTime+="/";
+ fMapDateTime+=fMapTime;
+
+ // Re-invokation of the SkyMapPanel
+ if (fSkyMapPanel)
+ {
+  // Import the current lab settings
+  Int_t idx=1;
+  TString names[8]={"User","IceCube","RNO-G","ARA","Amanda","WSRT","Astron","Greenwich"};
+  for (Int_t i=1; i<=8; i++)
+  {
+   if (names[i-1]==fExperiment) idx=i;
+  }
+  fMapLabE->Select(idx,kTRUE);
+
+  MapLocEnter();
+
+  // The Lab UTC time
+  fMapTStimetype->Select(1,kTRUE);
+  MapTimeType(10);
+
+  // Map all subwindows of main frame
+  fSkyMapPanel->MapSubwindows();
+
+  // Initialize the layout algorithm
+  fSkyMapPanel->Resize(fSkyMapPanel->GetDefaultSize());
+
+  // Map main frame
+  fSkyMapPanel->MapWindow();
+  
+  return;
+ }
+
+ // New initialization of the SkyMapPanel
+ UInt_t border=5;
+ fSkyMapPanel=new TGMainFrame(gClient->GetRoot());
+ fSkyMapPanel->SetWindowName("SkyMapPanel");
+ fSkyMapPanel->Connect("CloseWindow()","NcAstrolab2",this,"MapClose()");
+
+ // Define the various sub-frames and fill them with the various panels 
+ TGCompositeFrame* frames[4]={0,0,0,0};
+ TGLayoutHints* layouts[4]={0,0,0,0};
+
+ // The Lab specification and timestamp frame
+ frames[0]=new TGCompositeFrame(fSkyMapPanel,1,1,kHorizontalFrame|kSunkenFrame);
+ layouts[0]=new TGLayoutHints(kLHintsExpandX,border,border,0,0);
+ LabLocationPanel(frames[0]);
+ TimestampPanel(frames[0]);
+
+ // The local reference and info frame
+ frames[1]=new TGCompositeFrame(fSkyMapPanel,1,1,kHorizontalFrame|kSunkenFrame);
+ layouts[1]=new TGLayoutHints(kLHintsExpandX,border,border,0,0);
+ LabLocalFramePanel(frames[1]);
+ InfoPanel(frames[1]);
+
+ // The entries frame
+ frames[2]=new TGCompositeFrame(fSkyMapPanel,1,1,kHorizontalFrame|kSunkenFrame);
+ layouts[2]=new TGLayoutHints(kLHintsExpandX,border,border,0,0);
+ EntriesPanel(frames[2]);
+
+ // The drawing/listing options and command buttons frame
+ frames[3]=new TGCompositeFrame(fSkyMapPanel,1,1,kHorizontalFrame|kSunkenFrame);
+ layouts[3]=new TGLayoutHints(kLHintsExpandX,border,border,0,0);
+ MapListOptionsPanel(frames[3]);
+ CommandPanel(frames[3]);
+
+ // Add all subframes to the mainframe
+ for (Int_t i=0; i<4; i++)
+ {
+  if (frames[i]) fSkyMapPanel->AddFrame(frames[i],layouts[i]);
+ }
+
+ // Map all subwindows of main frame
+ fSkyMapPanel->MapSubwindows();
+
+ // Initialize the layout algorithm
+ fSkyMapPanel->Resize(fSkyMapPanel->GetDefaultSize());
+
+ // Map main frame
+ fSkyMapPanel->MapWindow();
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::LabLocationPanel(TGCompositeFrame* frame)
+{
+// Internal memberfunction to render the Lab location and experiment specification GUI panel.
+
+ if (!frame) return;
+
+ TGGroupFrame* panel=new TGGroupFrame(frame,"Lab longitude, latitude, experiment site and detector ID",kHorizontalFrame);
+ panel->SetTitlePos(TGGroupFrame::kCenter);
+ frame->AddFrame(panel);
+
+ // The lab longitude entry field
+ fMapLabLBI[0]=new TGNumberEntryField(panel,-1,fMapLabLocL);
+ fMapLabLBI[0]->SetToolTipText("Longitude");
+ fMapLabLBI[0]->Connect("TextChanged(const char*)","NcAstrolab2",this,"MapLocl(const char*)");
+ fMapLabLBI[0]->Resize(65,20);
+ panel->AddFrame(fMapLabLBI[0]);
+
+ // The lab latitude entry field
+ fMapLabLBI[1]=new TGNumberEntryField(panel,-1,fMapLabLocB);
+ fMapLabLBI[1]->SetToolTipText("Latitude");
+ fMapLabLBI[1]->Connect("TextChanged(const char*)","NcAstrolab2",this,"MapLocb(const char*)");
+ fMapLabLBI[1]->Resize(65,20);
+ panel->AddFrame(fMapLabLBI[1]);
+
+ // The lab longitude and latitude type selection box
+ fMapLabU=new TGComboBox(panel);
+ fMapLabU->Connect("Selected(Int_t)","NcAstrolab2",this,"MapUloc(Int_t)");
+ fMapLabU->AddEntry("deg",1);
+ fMapLabU->AddEntry("dms",2);
+ fMapLabU->AddEntry("hms",3);
+ fMapLabU->AddEntry("rad",4);
+ fMapLabU->Resize(50,20);
+ panel->AddFrame(fMapLabU);
+ fMapLabU->Select(1,kTRUE);
+
+ // The experiment name selection box
+ fMapLabE=new TGComboBox(panel);
+ fMapLabE->Connect("Selected(Int_t)","NcAstrolab2",this,"MapExperiment(Int_t)");
+ Int_t idx=1;
+ TString names[8]={"User","IceCube","RNO-G","ARA","Amanda","WSRT","Astron","Greenwich"};
+ for (Int_t i=1; i<=8; i++)
+ {
+  fMapLabE->AddEntry(names[i-1],i);
+  if (names[i-1]==fExperiment) idx=i;
+ }
+ fMapLabE->Resize(90,20);
+ panel->AddFrame(fMapLabE);
+ fMapLabE->Select(idx,kTRUE);
+
+ // The detector element ID field
+ fMapLabLBI[2]=new TGNumberEntryField(panel,-1,fLabId,TGNumberFormat::kNESInteger);
+ fMapLabLBI[2]->SetToolTipText("The (optional) detector element ID (0=global)");
+ fMapLabLBI[2]->Connect("TextChanged(const char*)","NcAstrolab2",this,"MapLocId(const char*)");
+ fMapLabLBI[2]->Resize(40,20);
+ panel->AddFrame(fMapLabLBI[2]);
+
+ // The button to enter the provided data
+ TGTextButton* enter=new TGTextButton(panel,"Enter");
+ enter->SetToolTipText("Enter the provided data");
+ enter->Connect("Clicked()","NcAstrolab2",this,"MapLocEnter()");
+ TGLayoutHints* Lenter=new TGLayoutHints(kLHintsCenterX,10,0,0,0);
+ panel->AddFrame(enter,Lenter);
+
+ MapLocEnter();
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapLocl(const char* text)
+{
+// Action on the lab longitude entry field
+ TString s=text;
+ fMapLabLocL=s.Atof();
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapLocb(const char* text)
+{
+// Action on the lab latitude entry field
+ TString s=text;
+ fMapLabLocB=s.Atof();
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapUloc(Int_t i)
+{
+// Action on a button from the lab angular unit selection box
+ TString s[4]={"deg","dms","hms","rad"};
+ if (i<=4) fMapLabLocU=s[i-1];
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapExperiment(Int_t i)
+{
+// Action on a button from the lab experiment site box
+ TString s[8]={"User","IceCube","RNO-G","ARA","Amanda","WSRT","Astron","Greenwich"};
+ if (i<=8) fMapLabExpName=s[i-1];
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapLocId(const char* text)
+{
+// Action on the lab detector element Id entry field
+ TString s=text;
+ fMapLabId=s.Atoi();
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapLocEnter()
+{
+// Enter the provided lab location entry
+
+ fSkyMapPanel->RequestFocus();
+
+ SetLabPosition(fMapLabLocL,fMapLabLocB,fMapLabLocU);
+
+ if (fMapLabExpName=="User")
+ {
+  SetNameTitle("User","Virtual Lab for general use");
+  MapLocId("0");
+  printf("\n *** Settings adopted for a virtual lab for general use. *** \n");
+ }
+ else
+ {
+  SetExperiment(fMapLabExpName,fMapLabId);
+  fMapLabId=GetLabDetectorId();
+  // Update the longitude, latitude and detector ID  selection boxes
+  GetLabPosition(fMapLabLocL,fMapLabLocB,"deg");
+  TString s;
+  s.Form("%-.3f",fMapLabLocL);
+  fMapLabLBI[0]->SetText(s);
+  s.Form("%-.3f",fMapLabLocB);
+  fMapLabLBI[1]->SetText(s);
+  fMapLabU->Select(1,kTRUE);
+  MapUloc(1);
+  s.Form("%-i",fMapLabId);
+  fMapLabLBI[2]->SetText(s);
+  printf("\n *** Lab settings adopted for the %-s location. *** \n",fMapLabExpName.Data());
+ }
+
+ // Update the local frame data for the selected lab
+ TString val;
+ for (Int_t i=0; i<6; i++)
+ {
+  val.Form("%-.2f",fAxes[i]);
+  if (fMapLabLframe[i]) fMapLabLframe[i]->SetText(val);
+ }
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::TimestampPanel(TGCompositeFrame* frame)
+{
+// Internal memberfunction to render the Timestamp specification GUI panel.
+
+ if (!frame) return;
+
+ TGGroupFrame* panel=new TGGroupFrame(frame,"Timestamp to be used for Entries, List and Map",kHorizontalFrame);
+ panel->SetTitlePos(TGGroupFrame::kCenter);
+ frame->AddFrame(panel);
+
+ // The Date/Time textbox
+ fMapTSdatetime=new TGTextEntry(panel,fMapDateTime.Data());
+ fMapTSdatetime->SetToolTipText("Date/Time as dd-mm-yyyy/hh:mm:ss.sss or MJD");
+ fMapTSdatetime->Connect("TextChanged(const char*)","NcAstrolab2",this,"MapDateTime(const char*)");
+ fMapTSdatetime->SetAlignment(kTextRight);
+ fMapTSdatetime->Resize(170,20);
+ panel->AddFrame(fMapTSdatetime);
+
+ // The Time type selection box
+ fMapTStimetype=new TGComboBox(panel);
+ fMapTStimetype->Connect("Selected(Int_t)","NcAstrolab2",this,"MapTimeType(Int_t)");
+ fMapTStimetype->AddEntry("UTC",1);
+ fMapTStimetype->AddEntry("LMT",2);
+ fMapTStimetype->AddEntry("UT1",3);
+ fMapTStimetype->AddEntry("MJD",4);
+ fMapTStimetype->AddEntry("Unix",5);
+ fMapTStimetype->AddEntry("GPS",6);
+ fMapTStimetype->AddEntry("TAI",7);
+ fMapTStimetype->AddEntry("TT",8);
+ fMapTStimetype->AddEntry("SysClock",9);
+ fMapTStimetype->AddEntry("Lab",10);
+ fMapTStimetype->AddEntry("EntryName",11);
+ fMapTStimetype->Resize(100,20);
+ panel->AddFrame(fMapTStimetype);
+ fMapTStimetype->Select(1,kTRUE);
+ MapTimeType(1);
+
+ // The Lab TS modification button
+ TGTextButton* labTS=new TGTextButton(panel,"Store as Lab TS");
+ labTS->SetToolTipText("Store the current selection as Lab timestamp");
+ labTS->Connect("Clicked()","NcAstrolab2",this,"MapLabTS()");
+ TGLayoutHints* LlabTS=new TGLayoutHints(kLHintsCenterX,10,0,0,0);
+ panel->AddFrame(labTS,LlabTS);
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapDateTime(const char* text)
+{
+// Action on the time specification entry field
+ fMapDateTime=text;
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapTimeType(Int_t i)
+{
+// Action on the time type selection box
+ TString s[11]={"UTC","LMT","UT1","MJD","Unix","GPS","TAI","TT","SysClock","Lab","EntryName"};
+
+ if (i<=11) fMapTimeType=s[i-1];
+
+ if (fMapTimeType=="SysClock" || fMapTimeType=="Lab") SetMapTS();
+ if (fMapTimeType=="MJD" || fMapTimeType=="Unix" || fMapTimeType.Contains("Name")) fMapTSdatetime->SetText("");
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapLabTS()
+{
+// Use the current date/time selection as the Lab timestamp
+
+ SetMapTS();
+
+ fSkyMapPanel->RequestFocus();
+
+ Int_t mjd,sec,ns;
+ fMapTS.GetMJD(mjd,sec,ns);
+ Int_t ps=fMapTS.GetPs();
+ this->SetMJD(mjd,sec,ns,ps,"A");
+
+ printf("\n *** Lab timestamp modified *** \n");
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::LabLocalFramePanel(TGCompositeFrame* frame)
+{
+// Internal memberfunction to render the Lab local reference frame specification GUI panel.
+
+ if (!frame) return;
+
+ TGGroupFrame* panel=new TGGroupFrame(frame,"Local frame axes orientations w.r.t. X0=South, Y0=East, Z0=Zenith)",kHorizontalFrame);
+ panel->SetTitlePos(TGGroupFrame::kCenter);
+ frame->AddFrame(panel);
+
+ // The local X-axis theta (=zenith) angle w.r.t. the MRF
+ fMapLabLframe[0]=new TGNumberEntryField(panel,-1,fAxes[0]);
+ fMapLabLframe[0]->SetToolTipText("Local X-axis zenith angle in deg");
+ fMapLabLframe[0]->Resize(55,20);
+ panel->AddFrame(fMapLabLframe[0]);
+
+ // The local X-axis phi angle w.r.t. the MRF
+ fMapLabLframe[1]=new TGNumberEntryField(panel,-1,fAxes[1]);
+ fMapLabLframe[1]->SetToolTipText("Local X-axis phi angle in deg");
+ fMapLabLframe[1]->Resize(55,20);
+ panel->AddFrame(fMapLabLframe[1]);
+
+ // The local Y-axis theta (=zenith) angle w.r.t. the MRF
+ fMapLabLframe[2]=new TGNumberEntryField(panel,-1,fAxes[2]);
+ fMapLabLframe[2]->SetToolTipText("Local Y-axis zenith angle in deg");
+ fMapLabLframe[2]->Resize(55,20);
+ panel->AddFrame(fMapLabLframe[2]);
+
+ // The local Y-axis phi angle w.r.t. the MRF
+ fMapLabLframe[3]=new TGNumberEntryField(panel,-1,fAxes[3]);
+ fMapLabLframe[3]->SetToolTipText("Local Y-axis phi angle in deg");
+ fMapLabLframe[3]->Resize(55,20);
+ panel->AddFrame(fMapLabLframe[3]);
+
+ // The local Z-axis theta (=zenith) angle w.r.t. the MRF
+ fMapLabLframe[4]=new TGNumberEntryField(panel,-1,fAxes[4]);
+ fMapLabLframe[4]->SetToolTipText("Local Z-axis zenith angle in deg");
+ fMapLabLframe[4]->Resize(55,20);
+ panel->AddFrame(fMapLabLframe[4]);
+
+ // The local Z-axis phi angle w.r.t. the MRF
+ fMapLabLframe[5]=new TGNumberEntryField(panel,-1,fAxes[5]);
+ fMapLabLframe[5]->SetToolTipText("Local Z-axis phi angle in deg");
+ fMapLabLframe[5]->Resize(55,20);
+ panel->AddFrame(fMapLabLframe[5]);
+
+ MapLabLframeEnter();
+
+ // The button to enter the provided data
+ TGTextButton* enter=new TGTextButton(panel,"Enter");
+ enter->SetToolTipText("Enter the provided data");
+ enter->Connect("Clicked()","NcAstrolab2",this,"MapLabLframeEnter()");
+ TGLayoutHints* Lenter=new TGLayoutHints(kLHintsLeft,10,0,0,0);
+ panel->AddFrame(enter,Lenter);
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapLabLframeEnter()
+{
+// Enter the specified local frame parameters.
+// Note : Local frame parameters for established experimental sites
+//        may NOT be modified.
+
+ fSkyMapPanel->RequestFocus();
+
+ if (fMapLabExpName=="IceCube" || fMapLabExpName=="RNO-G" || fMapLabExpName=="Amanda")
+ {
+  printf("\n *** Local frame will NOT be changed for experiment site %-s *** \n",fMapLabExpName.Data());
+
+  // Update the local frame data for the selected lab
+  TString val;
+  for (Int_t i=0; i<6; i++)
+  {
+   val.Form("%-.2f",fAxes[i]);
+   if (fMapLabLframe[i]) fMapLabLframe[i]->SetText(val);
+  }
+  return;
+ }
+
+ for (Int_t i=0; i<6; i++)
+ {
+  fAxes[i]=fMapLabLframe[i]->GetNumber();
+ }
+ 
+ SetLocalFrame(fAxes[0],fAxes[1],fAxes[2],fAxes[3],fAxes[4],fAxes[5]);
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::InfoPanel(TGCompositeFrame* frame)
+{
+// The Information panel
+
+ if (!frame) return;
+
+ TGGroupFrame* panel=new TGGroupFrame(frame,"Informative output",kHorizontalFrame);
+ panel->SetTitlePos(TGGroupFrame::kCenter);
+ frame->AddFrame(panel);
+
+ // The info category selection box
+ TGComboBox* cinfo=new TGComboBox(panel);
+ cinfo->Connect("Selected(Int_t)","NcAstrolab2",this,"MapCinfo(Int_t)");
+ cinfo->AddEntry("Lab",1);
+ cinfo->AddEntry("TSbox",2);
+ cinfo->AddEntry("Entry",3);
+ cinfo->AddEntry("Nstore",4);
+ cinfo->Resize(60,20);
+ panel->AddFrame(cinfo);
+ cinfo->Select(1,kTRUE);
+ MapCinfo(1);
+
+ // The lab info time type selection box
+ TGComboBox* tinfo=new TGComboBox(panel);
+ tinfo->Connect("Selected(Int_t)","NcAstrolab2",this,"MapTinfo(Int_t)");
+ tinfo->AddEntry("LAT/LAST",1);
+ tinfo->AddEntry("LMT/LMST",2);
+ tinfo->AddEntry("Julian",3);
+ tinfo->Resize(85,20);
+ panel->AddFrame(tinfo);
+ tinfo->Select(1,kTRUE);
+ MapTinfo(1);
+
+ // The lab info longitude and latitude type selection box
+ TGComboBox* uinfo=new TGComboBox(panel);
+ uinfo->Connect("Selected(Int_t)","NcAstrolab2",this,"MapUinfo(Int_t)");
+ uinfo->AddEntry("deg",1);
+ uinfo->AddEntry("dms",2);
+ uinfo->AddEntry("hms",3);
+ uinfo->AddEntry("rad",4);
+ uinfo->Resize(50,20);
+ panel->AddFrame(uinfo);
+ uinfo->Select(1,kTRUE);
+ MapUinfo(1);
+
+ // The entry name textbox
+ TGTextEntry* mapiname=new TGTextEntry(panel,"");
+ mapiname->SetToolTipText("Stored entry name for info");
+ mapiname->Connect("TextChanged(const char*)","NcAstrolab2",this,"MapIname(const char*)");
+ mapiname->SetAlignment(kTextRight);
+ mapiname->Resize(100,20);
+ panel->AddFrame(mapiname);
+
+ // The info button
+ TGTextButton* info=new TGTextButton(panel,"Info");
+ info->Connect("Clicked()","NcAstrolab2",this,"MapInfo()");
+ info->SetToolTipText("Provide info on the specified item");
+ TGLayoutHints* Linfo=new TGLayoutHints(kLHintsLeft,10,0,0,0);
+ panel->AddFrame(info,Linfo);
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapCinfo(Int_t i)
+{
+// Action on a button from the category selection box
+ TString s[4]={"Lab","TS box","EntryName","Nstore"};
+ if (i<=4) fMapCinfo=s[i-1];
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapTinfo(Int_t i)
+{
+// Action on a button from the time type selection box
+ if (i==1) fMapTinfo=-1;
+ if (i==2) fMapTinfo=1;
+ if (i==3) fMapTinfo=2;
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapUinfo(Int_t i)
+{
+// Action on a button from the info angular format selection box
+ TString s[4]={"deg","dms","hms","rad"};
+ if (i<=4) fMapUinfo=s[i-1];
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapIname(const char* text)
+{
+// Treating the text of the entry name for the information panel.
+ fMapIname=text; 
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapInfo()
+{
+// Provide the requested info
+
+ SetMapTS();
+
+ if (fMapCinfo=="Nstore")
+ {
+  Int_t nref=GetNsignals(0);
+  Int_t nmeas=GetNsignals(1);
+  Int_t ntot=nref+nmeas;
+  printf("\n *** Info about the stored entries *** \n");
+  printf(" Ntotal=%-i Nrefs=%-i Nmeas=%-i \n",ntot,nref,nmeas);
+ }
+ else if (fMapCinfo=="Lab")
+ {
+  printf("\n *** Info about the current Lab settings *** \n");
+  Data(fMapTinfo,fMapUinfo);
+ }
+ else if (fMapCinfo.Contains("TS"))
+ {
+  printf("\n *** Info for the timestamp in the user selection box *** \n");
+  printf(" Lab time offset w.r.t. UT : "); PrintTime(fToffset,12); printf("\n");
+  fMapTS.Date(fMapTinfo,fToffset);
+  fMapTS.Date(4);
+ }
+ else // Information of the specified entry name
+ {
+  NcSignal* sx=0;
+  sx=GetSignal(fMapIname,1);
+  if(!sx) sx=GetSignal(fMapIname,0);
+  if (sx)
+  {
+   printf("\n *** Info for entry : %-s *** \n",fMapIname.Data());
+   sx->Data("sph",fMapUinfo);
+  }
+  else
+  {
+   printf("\n *** No entry found with name : %-s *** \n",fMapIname.Data());
+  }
+ }
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::EntriesPanel(TGCompositeFrame* frame)
+{
+// Internal memberfunction to render the GUI panel to enter c.q. remove data entries.
+
+ if (!frame) return;
+
+ TGGroupFrame* panel=new TGGroupFrame(frame,"Entries in (a,b) coordinates",kHorizontalFrame);
+ panel->SetTitlePos(TGGroupFrame::kCenter);
+ frame->AddFrame(panel);
+
+ // The a coordinate entry field
+ TGNumberEntryField* ea=new TGNumberEntryField(panel,-1,0);
+ ea->SetToolTipText("Angle a");
+ ea->Connect("TextChanged(const char*)","NcAstrolab2",this,"MapEa(const char*)");
+ ea->Resize(100,20);
+ panel->AddFrame(ea);
+ MapEa("0");
+
+ // The a coordinate type selection box
+ TGComboBox* ua=new TGComboBox(panel);
+ ua->Connect("Selected(Int_t)","NcAstrolab2",this,"MapUa(Int_t)");
+ ua->AddEntry("deg",1);
+ ua->AddEntry("dms",2);
+ ua->AddEntry("hms",3);
+ ua->AddEntry("rad",4);
+ ua->AddEntry("hrs",5);
+ ua->Resize(50,20);
+ panel->AddFrame(ua);
+ ua->Select(1,kTRUE);
+ MapUa(1);
+
+ // The b coordinate entry field
+ TGNumberEntryField* eb=new TGNumberEntryField(panel,-1,0);
+ eb->SetToolTipText("Angle b");
+ eb->Connect("TextChanged(const char*)","NcAstrolab2",this,"MapEb(const char*)");
+ eb->Resize(100,20);
+ panel->AddFrame(eb);
+ MapEb("0");
+
+ // The b coordinate type selection box
+ TGComboBox* ub=new TGComboBox(panel);
+ ub->Connect("Selected(Int_t)","NcAstrolab2",this,"MapUb(Int_t)");
+ ub->AddEntry("deg",1);
+ ub->AddEntry("dms",2);
+ ub->AddEntry("hms",3);
+ ub->AddEntry("rad",4);
+ ub->AddEntry("hrs",5);
+ ub->Resize(50,20);
+ panel->AddFrame(ub);
+ ub->Select(1,kTRUE);
+ MapUb(1);
+
+ TGComboBox* ecoords=new TGComboBox(panel);
+ ecoords->Connect("Selected(Int_t)","NcAstrolab2",this,"MapEcoord(Int_t)");
+ ecoords->AddEntry("(ra,dec) (J2000)",1);
+ ecoords->AddEntry("(ra,dec) (Mean)",2);
+ ecoords->AddEntry("(ra,dec) (True)",3);
+ ecoords->AddEntry("(ra,dec) (B1950)",4);
+ ecoords->AddEntry("Galactic (l,b)",5);
+ ecoords->AddEntry("Ecliptic (l,b)",6);
+ ecoords->AddEntry("Horizon (azi,zen)",7);
+ ecoords->AddEntry("ICR (l,b)",8);
+ ecoords->AddEntry("Local (theta,phi)",9);
+ ecoords->Resize(125,20);
+ panel->AddFrame(ecoords);
+ ecoords->Select(1,kTRUE);
+ MapEcoord(1);
+
+ // The signal type
+ TGComboBox* etypes=new TGComboBox(panel);
+ etypes->Connect("Selected(Int_t)","NcAstrolab2",this,"MapEtype(Int_t)");
+ etypes->AddEntry("Meas",1);
+ etypes->AddEntry("Ref",2);
+ etypes->Resize(55,20);
+ panel->AddFrame(etypes);
+ etypes->Select(1,kTRUE);
+ MapEtype(1);
+
+ // The (optional) signal name
+ TGTextEntry* ename=new TGTextEntry(panel,"");
+ ename->SetToolTipText("The (optional) entry name");
+ ename->Connect("TextChanged(const char*)","NcAstrolab2",this,"MapEname(const char*)");
+ ename->SetAlignment(kTextRight);
+ ename->Resize(100,20);
+ panel->AddFrame(ename);
+
+ // The button to Enter the entry
+ TGTextButton* enter=new TGTextButton(panel,"Enter");
+ enter->SetToolTipText("Enter the provided entry");
+ enter->Connect("Clicked()","NcAstrolab2",this,"MapEnter()");
+ TGLayoutHints* Lenter=new TGLayoutHints(kLHintsCenterX,10,0,0,0);
+ panel->AddFrame(enter,Lenter);
+
+ // The button to Remove the entry
+ TGTextButton* remove=new TGTextButton(panel,"Remove");
+ remove->SetToolTipText("Remove the entry specified by type and name pattern (name=* means all)");
+ remove->Connect("Clicked()","NcAstrolab2",this,"MapRemove()");
+ TGLayoutHints* Lremove=new TGLayoutHints(kLHintsCenterX,10,0,0,0);
+ panel->AddFrame(remove,Lremove);
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapEa(const char* text)
+{
+// Action on the entries a coordinate specification field
+ TString s=text;
+ fMapEa=s.Atof();
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapUa(Int_t i)
+{
+// Action on a button from the a coordinate angular format selection box
+ TString s[5]={"deg","dms","hms","rad","hrs"};
+ if (i<=5) fMapEua=s[i-1];
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapEb(const char* text)
+{
+// Action on the entries b coordinate specification field
+ TString s=text;
+ fMapEb=s.Atof();
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapUb(Int_t i)
+{
+// Action on a button from the b coordinate angular format selection box
+ TString s[5]={"deg","dms","hms","rad","hrs"};
+ if (i<=5) fMapEub=s[i-1];
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapEcoord(Int_t i)
+{
+// Action on a button from the entry coordinate frame selection box
+ TString system[9]={"equ","equ","equ","equ","gal","ecl","hor","icr","loc"};
+ TString mode[4]={"J","M","T","B"};
+ 
+ if (i<=9) fMapEcoord=system[i-1];
+
+ if (i<=4) fMapEmode=mode[i-1];
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapEtype(Int_t i)
+{
+// Action on a button from the entry type selection box
+ fMapEtype=1;
+ if (i==2) fMapEtype=0;
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapEname(const char* text)
+{
+// Action on the (optional) entry name selection field
+ fMapEname=text;
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapEnter()
+{
+// Enter the provided entry
+
+ SetMapTS(); // Set the selected timestamp
+
+ fSkyMapPanel->RequestFocus();
+
+ SetSignal(1,fMapEa,fMapEua,fMapEb,fMapEub,fMapEcoord,&fMapTS,-1,fMapEmode,fMapEname,fMapEtype);
+ printf("\n *** Specified entry stored *** \n");
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapRemove()
+{
+// Remove the entry/entries specified by type and name pattern
+
+ SetMapTS(); // Set the selected timestamp
+
+ fSkyMapPanel->RequestFocus();
+
+ Int_t nrem=0;
+ nrem=RemoveSignals(fMapEname,fMapEtype,1);
+
+ printf("\n *** Number of specified entries have been removed : %-i *** \n",nrem);
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapListOptionsPanel(TGCompositeFrame* frame)
+{
+// Internal memberfunction to render the GUI panel to specify various Mapping and Listing options
+
+ if (!frame) return;
+
+ TGGroupFrame* panel=new TGGroupFrame(frame,"Map/List options for the (a,b) coordinates",kHorizontalFrame);
+ panel->SetTitlePos(TGGroupFrame::kCenter);
+ frame->AddFrame(panel);
+
+ // A frame with various additional settings
+ TGVerticalFrame* render=new TGVerticalFrame(panel,1,1);
+ panel->AddFrame(render);
+
+ // The coordinate system selection box
+ TGGroupFrame* coordsys=new TGGroupFrame(render,"Coordinate system",kHorizontalFrame);
+ coordsys->SetTitlePos(TGGroupFrame::kCenter);
+ render->AddFrame(coordsys);
+ TGComboBox* dcoords=new TGComboBox(coordsys);
+ dcoords->Connect("Selected(Int_t)","NcAstrolab2",this,"MapDcoord(Int_t)");
+ dcoords->AddEntry("Equatorial (J2000)",1);
+ dcoords->AddEntry("Equatorial (Mean)",2);
+ dcoords->AddEntry("Equatorial (True)",3);
+ dcoords->AddEntry("Equatorial (B1950)",4);
+ dcoords->AddEntry("Galactic",5);
+ dcoords->AddEntry("Ecliptic",6);
+ dcoords->AddEntry("Horizon",7);
+ dcoords->AddEntry("ICR",8);
+ dcoords->AddEntry("Local",9);
+ dcoords->Resize(140,20);
+ coordsys->AddFrame(dcoords);
+ dcoords->Select(1,kTRUE);
+ MapDcoord(1);
+
+ // The Map representation selection box
+ TGGroupFrame* mapview=new TGGroupFrame(render,"Map representation",kHorizontalFrame);
+ mapview->SetTitlePos(TGGroupFrame::kCenter);
+ render->AddFrame(mapview);
+ TGComboBox* projs=new TGComboBox(mapview);
+ projs->Connect("Selected(Int_t)","NcAstrolab2",this,"MapProj(Int_t)");
+ projs->AddEntry("Hammer projection",1);
+ projs->AddEntry("Aitoff projection",2);
+ projs->AddEntry("Mercator projection",3);
+ projs->AddEntry("sin(b) vs. a",4);
+ projs->AddEntry("b vs. a",5);
+ projs->AddEntry("b vs. UT (0-24 hrs)",6);
+ projs->AddEntry("b vs. LT (0-24 hrs)",7);
+ projs->AddEntry("b vs. GST (0-24 hrs)",8);
+ projs->AddEntry("b vs. LST (0-24 hrs)",9);
+ projs->AddEntry("b vs. Day at UT",10);
+ projs->AddEntry("b vs. Day at LT",11);
+ projs->AddEntry("b vs. Day at GST",12);
+ projs->AddEntry("b vs. Day at LST",13);
+ projs->Resize(150,20);
+ mapview->AddFrame(projs);
+ projs->Select(1,kTRUE);
+ MapProj(1);
+
+ // The meridian representation options
+ TGGroupFrame* meridian=new TGGroupFrame(render,"Meridian ordering",kHorizontalFrame);
+ meridian->SetTitlePos(TGGroupFrame::kCenter);
+ render->AddFrame(meridian);
+
+ // The meridian mode selection box
+ TGComboBox* mermode=new TGComboBox(meridian);
+ mermode->Connect("Selected(Int_t)","NcAstrolab2",this,"MapMerMode(Int_t)");
+ mermode->AddEntry("Auto",1);
+ mermode->AddEntry("---->",2);
+ mermode->AddEntry("<----",3);
+ mermode->Resize(55,20);
+ meridian->AddFrame(mermode);
+ mermode->Select(1,kTRUE);
+ MapMerMode(1);
+
+ // The meridian central value
+ TGNumberEntryField* merc=new TGNumberEntryField(meridian,-1,0);
+ merc->SetToolTipText("Central meridian position");
+ merc->Connect("TextChanged(const char*)","NcAstrolab2",this,"MapMerC(const char*)");
+ merc->Resize(65,20);
+ meridian->AddFrame(merc);
+ MapMerC("0");
+
+ // The meridian central value type selection box
+ TGComboBox* meruc=new TGComboBox(meridian);
+ meruc->Connect("Selected(Int_t)","NcAstrolab2",this,"MapMerUc(Int_t)");
+ meruc->AddEntry("deg",1);
+ meruc->AddEntry("dms",2);
+ meruc->AddEntry("hms",3);
+ meruc->AddEntry("rad",4);
+ meruc->Resize(50,20);
+ meridian->AddFrame(meruc);
+ meruc->Select(1,kTRUE);
+ MapMerUc(1);
+
+ // The options group
+ TGVButtonGroup* options=new TGVButtonGroup(panel,"Options");
+ options->SetTitlePos(TGGroupFrame::kCenter);
+ options->Connect("Clicked(Int_t)","NcAstrolab2",this,"MapDoptions(Int_t)");
+ TGCheckButton* bhist=new TGCheckButton(options,"Hist");
+ bhist->SetToolTipText("Project data in a histogram");
+ TGCheckButton* bclr=new TGCheckButton(options,"Clr");
+ bclr->SetToolTipText("Clear display before drawing");
+ TGCheckButton* bref=new TGCheckButton(options,"Ref");
+ bref->SetToolTipText("Display reference signals");
+ TGCheckButton* bmeas=new TGCheckButton(options,"Meas");
+ bmeas->SetToolTipText("Display measured signals");
+ TGCheckButton* brefts=new TGCheckButton(options,"RefTS");
+ brefts->SetToolTipText("Display/list each reference signal using its actual recorded timestamp");
+ panel->AddFrame(options);
+ options->Show();
+ options->SetButton(1,kFALSE);
+ options->SetButton(2,kTRUE);
+ options->SetButton(3,kTRUE);
+ options->SetButton(4,kTRUE);
+ options->SetButton(5,kFALSE);
+ fMapDoptions[0]=kFALSE;
+ fMapDoptions[1]=kTRUE;
+ fMapDoptions[2]=kTRUE;
+ fMapDoptions[3]=kTRUE;
+ fMapDoptions[4]=kFALSE;
+
+ // The Nmax entry field
+ TGNumberEntryField* nmax=new TGNumberEntryField(options,-1,-1,TGNumberFormat::kNESInteger);
+ nmax->SetToolTipText("Max. number of Drawn/Listed entries per type (-1=all)");
+ nmax->Connect("TextChanged(const char*)","NcAstrolab2",this,"MapNmax(const char*)");
+ nmax->Resize(40,20);
+ options->AddFrame(nmax);
+ MapNmax("-1");
+
+ // The signal name pattern for matching
+ TGTextEntry* sname=new TGTextEntry(options,"*");
+ sname->SetToolTipText("The requested entry name pattern (*=all)");
+ sname->Connect("TextChanged(const char*)","NcAstrolab2",this,"MapDname(const char*)");
+ sname->SetAlignment(kTextRight);
+ sname->Resize(100,20);
+ TGLayoutHints* Lsname=new TGLayoutHints(kLHintsLeft,0,0,5,0);
+ options->AddFrame(sname,Lsname);
+ MapDname("*");
+
+ // A frame with various additional settings
+ TGVerticalFrame* others=new TGVerticalFrame(panel,1,1);
+ panel->AddFrame(others);
+
+ // The Marker size frame
+ TGGroupFrame* markers=new TGGroupFrame(others,"Marker settings",kHorizontalFrame);
+ markers->SetTitlePos(TGGroupFrame::kCenter);
+ others->AddFrame(markers);
+
+ // The marker size
+ TGNumberEntryField* marksize=new TGNumberEntryField(markers,-1,1);
+ marksize->SetToolTipText("Marker size");
+ marksize->Connect("TextChanged(const char*)","NcAstrolab2",this,"MapMarkSize(const char*)");
+ marksize->Resize(40,20);
+ markers->AddFrame(marksize);
+ MapMarkSize("1");
+
+ // The marker style
+ TGComboBox* markstyle=new TGComboBox(markers);
+ markstyle->Connect("Selected(Int_t)","NcAstrolab2",this,"MapMarkStyle(Int_t)");
+ markstyle->AddEntry("Dot",1);
+ markstyle->AddEntry("Star",2);
+ markstyle->AddEntry("Square",3);
+ markstyle->AddEntry("Utriangle",4);
+ markstyle->AddEntry("Dtriangle",5);
+ markstyle->AddEntry("Diamond",6);
+ markstyle->AddEntry("Cross",7);
+ markstyle->AddEntry("Ast",8);
+ markstyle->AddEntry("Plus",9);
+ markstyle->AddEntry("Times",10);
+ markstyle->AddEntry("Circle",11);
+ markstyle->AddEntry("oStar",12);
+ markstyle->AddEntry("oSquare",13);
+ markstyle->AddEntry("oUtriangle",14);
+ markstyle->AddEntry("oDtriangle",15);
+ markstyle->AddEntry("oDiamond",16);
+ markstyle->AddEntry("oCross",17);
+ markstyle->Resize(90,20);
+ markers->AddFrame(markstyle);
+ markstyle->Select(1,kTRUE);
+ MapMarkStyle(1);
+
+ // The marker color selection box
+ TGComboBox* markcolor=new TGComboBox(markers);
+ markcolor->Connect("Selected(Int_t)","NcAstrolab2",this,"MapMarkColor(Int_t)");
+ markcolor->AddEntry("Black",1);
+ markcolor->AddEntry("Red",2);
+ markcolor->AddEntry("Blue",3);
+ markcolor->AddEntry("Green",4);
+ markcolor->AddEntry("Yellow",5);
+ markcolor->AddEntry("Magenta",6);
+ markcolor->AddEntry("Cyan",7);
+ markcolor->AddEntry("Orange",8);
+ markcolor->AddEntry("Violet",9);
+ markcolor->AddEntry("Pink",10);
+ markcolor->AddEntry("Azure",11);
+ markcolor->AddEntry("Spring",12);
+ markcolor->AddEntry("Teal",13);
+ markcolor->AddEntry("Gray",14);
+ markcolor->AddEntry("White",15);
+ markcolor->Resize(80,20);
+ markers->AddFrame(markcolor);
+ markcolor->Select(3,kTRUE);
+ MapMarkColor(3);
+
+ // The marker type selection box
+ TGComboBox* marktype=new TGComboBox(markers);
+ marktype->Connect("Selected(Int_t)","NcAstrolab2",this,"MapMarkType(Int_t)");
+ marktype->AddEntry("Ref",1);
+ marktype->AddEntry("Meas",2);
+ marktype->AddEntry("GC",3);
+ marktype->AddEntry("Grid",4);
+ marktype->Resize(55,20);
+ markers->AddFrame(marktype);
+ marktype->Select(2,kTRUE);
+ MapMarkType(2);
+
+ // The Solar system group
+ TGGroupFrame* solar=new TGGroupFrame(others,"Selection of Solar system reference objects",kHorizontalFrame);
+ solar->SetTitlePos(TGGroupFrame::kCenter);
+ others->AddFrame(solar);
+
+ TGButtonGroup* Ssolar=new TGButtonGroup(solar,0,3,5);
+ Ssolar->SetTitlePos(TGGroupFrame::kCenter);
+ Ssolar->Connect("Clicked(Int_t)","NcAstrolab2",this,"MapSolar(Int_t)");
+ TGCheckButton* bsun=new TGCheckButton(Ssolar,"Sun");
+ bsun->SetToolTipText("Enter/Remove the Sun as a reference entry");
+ TGCheckButton* bmoon=new TGCheckButton(Ssolar,"Moon");
+ bmoon->SetToolTipText("Enter/Remove the Moon as a reference entry");
+ TGCheckButton* bmercury=new TGCheckButton(Ssolar,"Mercury");
+ bmercury->SetToolTipText("Enter/Remove Mercury as a reference entry");
+ TGCheckButton* bvenus=new TGCheckButton(Ssolar,"Venus");
+ bvenus->SetToolTipText("Enter/Remove Venus as a reference entry");
+ TGCheckButton* bearth=new TGCheckButton(Ssolar,"Earth");
+ bearth->SetToolTipText("Enter/Remove the Earth as a reference entry");
+ TGCheckButton* bmars=new TGCheckButton(Ssolar,"Mars");
+ bmars->SetToolTipText("Enter/Remove Mars as a reference entry");
+ TGCheckButton* bjupiter=new TGCheckButton(Ssolar,"Jupiter");
+ bjupiter->SetToolTipText("Enter/Remove Jupiter as a reference entry");
+ TGCheckButton* bsaturn=new TGCheckButton(Ssolar,"Saturn");
+ bsaturn->SetToolTipText("Enter/Remove Saturn as a reference entry");
+ TGCheckButton* buranus=new TGCheckButton(Ssolar,"Uranus");
+ buranus->SetToolTipText("Enter/Remove Uranus as a reference entry");
+ TGCheckButton* bneptune=new TGCheckButton(Ssolar,"Neptune");
+ bneptune->SetToolTipText("Enter/Remove Neptune as a reference entry");
+ solar->AddFrame(Ssolar);
+ Ssolar->Show();
+ Ssolar->SetButton(1,kFALSE);
+ Ssolar->SetButton(2,kFALSE);
+ Ssolar->SetButton(3,kFALSE);
+ Ssolar->SetButton(4,kFALSE);
+ Ssolar->SetButton(5,kFALSE);
+ Ssolar->SetButton(6,kFALSE);
+ Ssolar->SetButton(7,kFALSE);
+ Ssolar->SetButton(8,kFALSE);
+ Ssolar->SetButton(9,kFALSE);
+ Ssolar->SetButton(10,kFALSE);
+ for (Int_t i=0; i<10; i++)
+ {
+  fMapSolar[i]=kFALSE;
+ }
+
+ // The Solar system Enter and Remove command buttons
+ TGVerticalFrame* comms=new TGVerticalFrame(solar,1,1);
+ TGLayoutHints* Lcomms=new TGLayoutHints(kLHintsLeft,10,0,15,0);
+ solar->AddFrame(comms,Lcomms); // Command buttons
+
+ // The button to Enter the solar system entries
+ TGTextButton* enter=new TGTextButton(comms,"Enter");
+ enter->SetToolTipText("Enter the selected Solar system objects as reference signals");
+ enter->Connect("Clicked()","NcAstrolab2",this,"MapEnterSolar()");
+ TGLayoutHints* Lenter=new TGLayoutHints(kLHintsCenterX,0,0,10,15);
+ comms->AddFrame(enter,Lenter);
+
+ // The button to Remove the solar system entries
+ TGTextButton* remove=new TGTextButton(comms,"Remove");
+ remove->SetToolTipText("Remove the selected Solar system objects from the reference signals");
+ remove->Connect("Clicked()","NcAstrolab2",this,"MapRemoveSolar()");
+ TGLayoutHints* Lremove=new TGLayoutHints(kLHintsCenterX,0,0,0,0);
+ comms->AddFrame(remove,Lremove);
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapDcoord(Int_t i)
+{
+// Action on a button from the coordinate system selection box
+ TString system[9]={"equ","equ","equ","equ","gal","ecl","hor","icr","loc"};
+ TString mode[4]={"J","M","T","B"};
+ 
+ if (i<=9) fMapDcoord=system[i-1];
+
+ if (i<=4) fMapDmode=mode[i-1];
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapProj(Int_t i)
+{
+// Action on a button from the projection selection box
+ TString s[13]={"ham","ait","mer","ang","cyl","UTh","LTh","GSTh","LSTh","UYh","LYh","GSYh","LSYh"};
+ TString sh[13]={"hamh","aith","merh","angh","cylh","UTh","LTh","GSTh","LSTh","UYh","LYh","GSYh","LSYh"};
+ if (!fMapDoptions[0] && i<13) fMapProj=s[i-1];
+ if (fMapDoptions[0] && i<13) fMapProj=sh[i-1];
+ for (Int_t k=0; k<13; k++)
+ {
+  if (fMapDoptions[0] && fMapProj==s[k]) fMapProj=sh[k];
+  if (!fMapDoptions[0] && fMapProj==sh[k]) fMapProj=s[k];
+ }
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapMerMode(Int_t i)
+{
+// Action on a button from the meridian ordering selection box
+ Int_t modes[3]={0,1,-1};
+ if (i<=3) fMapMerMode=modes[i-1];
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapMerC(const char* text)
+{
+// Action on the central meridian specification field
+ TString s=text;
+ fMapMerC=s.Atof();
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapMerUc(Int_t i)
+{
+// Action on a button from the central meridian angular format selection box
+ TString s[4]={"deg","dms","hms","rad"};
+ if (i<=4) fMapMerUc=s[i-1];
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapDoptions(Int_t i)
+{
+// Action on an button from the draw/list options group
+
+ if (i>5) return;
+
+ if (!fMapDoptions[i-1])
+ {
+  fMapDoptions[i-1]=1;
+ }
+ else
+ {
+  fMapDoptions[i-1]=0;
+ }
+ if (i==1) MapProj(14); // Set histogram selection
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapNmax(const char* text)
+{
+// Action on the draw/list Nmax selection field
+ TString s=text;
+ fMapNmax=s.Atoi();
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapDname(const char* text)
+{
+// Action on the draw/list entry name selection field
+ fMapDname=text;
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapMarkSize(const char* text)
+{
+// Action on the marker size selection field
+ TString s=text;
+ fMapMarkSize=s.Atof();
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapMarkStyle(Int_t i)
+{
+// Action on the marker style selection box
+ Int_t styles[17]={8,29,21,22,23,33,34,31,2,5,24,30,25,26,32,27,28};
+
+ if (i>17) return;
+
+ fMapMarkStyle=styles[i-1];
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapMarkColor(Int_t i)
+{
+// Action on the marker color selection box
+ Int_t colors[15]={kBlack,kRed,kBlue,kGreen,kYellow,kMagenta,kCyan,kOrange,kViolet,kPink,kAzure,kSpring,kTeal,kGray,kWhite};
+
+ if (i>15) return;
+
+ fMapMarkColor=colors[i-1];
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapMarkType(Int_t i)
+{
+// Action on the markers entry type selection box
+ if (i<=4) fMapMarkType=i-1;
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapSolar(Int_t i)
+{
+// Action on a button from the Solar system selection group
+ if (i>10) return;
+
+ if (!fMapSolar[i-1])
+ {
+  fMapSolar[i-1]=1;
+ }
+ else
+ {
+  fMapSolar[i-1]=0;
+ }
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapEnterSolar()
+{
+// Enter the seleced Solar system objects as reference object
+ TString names[10]={"Sun","Moon","Mercury","Venus","Earth","Mars","Jupiter","Saturn","Uranus","Neptune"};
+
+ SetMapTS(); // Get the selected timestamp
+
+ fSkyMapPanel->RequestFocus();
+
+ for (Int_t i=0; i<10; i++)
+ {
+  if (fMapSolar[i]) GetSignal(names[i],0,&fMapTS);
+ }
+ printf("\n *** Selected Solar system object(s) entered *** \n");
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapRemoveSolar()
+{
+// Remove the seleced Solar system object(s) from the reference objects
+ TString names[10]={"Sun","Moon","Mercury","Venus","Earth","Mars","Jupiter","Saturn","Uranus","Neptune"};
+
+ SetMapTS(); // Get the selected timestamp
+
+ fSkyMapPanel->RequestFocus();
+
+ Int_t nrem=0;
+ Int_t nremx=0;
+ for (Int_t i=0; i<10; i++)
+ {
+  if (fMapSolar[i])
+  {
+   nremx=RemoveSignal(names[i],0,1);
+   if (nremx) nrem++;
+  }
+ }
+
+ printf("\n *** Number of Solar system object that have been removed : %-i *** \n",nrem);
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::CommandPanel(TGCompositeFrame* frame)
+{
+// Internal memberfunction to render the GUI panel with the various command buttons.
+
+ if (!frame) return;
+
+ TGGroupFrame* panel=new TGGroupFrame(frame,"Commands",kVerticalFrame);
+ panel->SetTitlePos(TGGroupFrame::kCenter);
+ frame->AddFrame(panel);
+
+ TGTextButton* list=new TGTextButton(panel,"List");
+ list->Connect("Clicked()","NcAstrolab2",this,"MapList()");
+ list->SetToolTipText("List the selected entries");
+ TGLayoutHints* Llist=new TGLayoutHints(kLHintsCenterX,0,0,10,10);
+ panel->AddFrame(list,Llist);
+
+ TGTextButton* map=new TGTextButton(panel,"Map");
+ map->Connect("Clicked()","NcAstrolab2",this,"MapDraw()");
+ map->SetToolTipText("Display the selected entries");
+ TGLayoutHints* Lmap=new TGLayoutHints(kLHintsCenterX,0,0,10,10);
+ panel->AddFrame(map,Lmap);
+
+ TGTextButton* close=new TGTextButton(panel,"Close");
+ close->Connect("Clicked()","NcAstrolab2",this,"MapClose()");
+ close->SetToolTipText("Close this panel window");
+ TGLayoutHints* Lclose=new TGLayoutHints(kLHintsCenterX,0,0,10,10);
+ panel->AddFrame(close,Lclose);
+
+ TGTextButton* exit=new TGTextButton(panel,"Exit");
+ exit->Connect("Clicked()","NcAstrolab2",this,"MapExit()");
+ exit->SetToolTipText("Exit this ROOT session");
+ TGLayoutHints* Lexit=new TGLayoutHints(kLHintsCenterX,0,0,10,10);
+ panel->AddFrame(exit,Lexit);
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapList()
+{
+// List the entries of the skymap
+
+ SetMapTS(); // Set the skymap timestamp
+
+ fSkyMapPanel->RequestFocus();
+
+ Int_t type=0;
+ if (fMapDoptions[3]) type=1;
+ if (fMapDoptions[2] && fMapDoptions[3]) type=-1;
+
+ NcTimestamp* ts=&fMapTS; // User selected timestamp
+ if (fMapLabTS) ts=0; // To get Lab timestamp notification in listings
+
+ Int_t j=0;
+ if (fMapDoptions[4]) j=-1; // Individual reference timestamps
+
+ printf("\n");
+ ListSignals(fMapDcoord,fMapDmode,1,"T",fMapNmax,j,type,ts,fMapDname);
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapDraw()
+{
+// Draw the skymap
+
+ SetMapTS(); // Set the skymap timestamp
+
+ fSkyMapPanel->RequestFocus();
+
+ Int_t type=0;
+ if (fMapDoptions[3]) type=1;
+ if (fMapDoptions[2] && fMapDoptions[3]) type=-1;
+
+ NcTimestamp* ts=&fMapTS; // User selected timestamp
+ if (fMapLabTS) ts=0; // To get Lab timestamp notification in listings
+
+ Int_t j=0;
+ if (fMapDoptions[4]) j=-1; // Individual reference timestamps
+
+ SetCentralMeridian(fMapMerMode,fMapMerC,fMapMerUc);
+ SetMarkerSize(fMapMarkSize,fMapMarkType);
+ SetMarkerStyle(fMapMarkStyle,fMapMarkType);
+ SetMarkerColor(fMapMarkColor,fMapMarkType);
+
+ DisplaySignals(fMapDcoord,fMapDmode,ts,fMapProj,fMapDoptions[1],fMapNmax,j,type,fMapDname);
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapClose()
+{
+// Close the SkyMapPanel window but do NOT exit the current ROOT session.
+
+ // De-activate all automatic CloseWindow() actions of the system window manager
+ // in order to fully control it in this function 
+ fSkyMapPanel->DontCallClose();
+
+ // To prevent crash when the cursor is still left active in a TextEntry
+ fSkyMapPanel->RequestFocus();
+
+ // Unmap the display window
+ fSkyMapPanel->UnmapWindow();
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::MapExit()
+{
+// Exit this ROOT session
+
+ fSkyMapPanel->RequestFocus();
+ fSkyMapPanel->Cleanup();
+ gApplication->Terminate(0);
+}
+///////////////////////////////////////////////////////////////////////////////
+void NcAstrolab2::SetMapTS()
+{
+// Internal memberfunction to compose the timestamp within the SkyMapPanel GUI.
+
+ fMapLabTS=kFALSE;
+ UInt_t year=0;
+ UInt_t month=0;
+ UInt_t day=0;
+ Int_t imjd=0;
+ Int_t isec=0;
+ Int_t ins=0;
+ Int_t ips=0;
+
+ if (fMapTimeType=="SysClock") // Use the system clock time
+ {
+  fMapTS.SetSystemTime();
+ }
+ else if (fMapTimeType=="Lab") // Use the Lab timestamp
+ {
+  fMapTS.SetMJD(fMJD,fJsec,fJns,fJps);
+  fMapLabTS=kTRUE;
+ }
+ else if (fMapTimeType=="MJD") // Modified Julian Date entry
+ {
+  Double_t mjd=fMapDateTime.Atof();
+  fMapTS.SetMJD(mjd);
+ }
+ else if (fMapTimeType=="Unix") // Unix time
+ {
+  Double_t val=fMapDateTime.Atof();
+  fMapTS.SetUnixTime(val);
+ }
+ else
+ {
+  if (fMapTimeType.Contains("Name")) // Get timestamp of the specified named entry
+  {
+   NcSignal* sx=0;
+   NcTimestamp* tx=0;
+   TString name=fMapDateTime;
+   sx=GetSignal(name,1);
+   if (!sx) sx=GetSignal(name,0);
+   if (sx) tx=sx->GetTimestamp();
+   if (tx) // Stored entry was found
+   {
+    tx->GetMJD(imjd,isec,ins);
+    ips=tx->GetPs();
+    fMapTS.SetMJD(imjd,isec,ins,ips);
+   }
+   else
+   {
+    printf("\n *** No stored entry with name %-s found --> Lab TS will be used *** \n",name.Data());
+    GetMJD(imjd,isec,ins);
+    ips=GetPs();
+    fMapTS.SetMJD(imjd,isec,ins,ips);
+    fMapLabTS=kTRUE;
+   }
+    fMapTS.GetDate(kTRUE,0,&year,&month,&day);
+    fMapTS.GetDayTimeString("UTC",12,0,0,&fMapTime);
+    fMapDate.Form("%02i-%02i-%-i",day,month,year);
+    fMapTime.ReplaceAll(" UTC","");
+  }
+  else // Date/Time entry
+  {
+   fMapDate=fMapDateTime;
+   fMapDate.Remove(fMapDateTime.Index("/"),fMapDateTime.Length());
+   fMapTime=fMapDateTime;
+   fMapTime.Remove(0,fMapDateTime.Index("/")+1);
+  }
+  fMapTS.SetUT(fMapDate,fMapTime,0);
+  if (fMapTimeType=="UT1") fMapTS.SetUT(fMapDate,fMapTime,0,"U");
+  if (fMapTimeType=="LMT") fMapTS.SetLT(fToffset,fMapDate,fMapTime,0);
+  if (fMapTimeType=="GPS" || fMapTimeType=="TAI" || fMapTimeType=="TT")
+  {
+   fMapTS.SetTAI(fMapTimeType,fMapDate,fMapTime,0,"A",0);
+  }
+ }
+
+ // Show the new timestamp in the textbox
+ fMapTS.GetDate(kTRUE,0,&year,&month,&day);
+ fMapTS.GetDayTimeString("UTC",3,0,0,&fMapTime);
+ fMapDate.Form("%02i-%02i-%-i",day,month,year);
+ fMapTime.ReplaceAll(" UTC","");
+ fMapDateTime=fMapDate;
+ fMapDateTime+="/";
+ fMapDateTime+=fMapTime;
+ fMapTSdatetime->SetText(fMapDateTime);
+
+ // Adapt the timestamp type for the updated text window contents
+ if (fMapTStimetype) fMapTStimetype->Select(1,kTRUE);
+ MapTimeType(1);
 }
 ///////////////////////////////////////////////////////////////////////////
 TObject* NcAstrolab2::Clone(const char* name) const

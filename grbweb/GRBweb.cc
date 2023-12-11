@@ -3,6 +3,7 @@
 // GRBweb database of Paul Coppin into a ROOT Tree.     //
 //                                                      //
 // --- Nick van Eijndhoven 13-sep-2018 IIHE-VUB Brussel //
+// --- Updated by NvE December 11, 2023  12:19Z         //
 //////////////////////////////////////////////////////////
 {
  gSystem->Load("ncfspack");
@@ -20,7 +21,7 @@
  gcn.seekg(0); // Position at begin of file
 
  // Input variables
- TString namegcn,namefermi,name,ttrig,t90start,gbmloc;
+ TString namegcn,namefermi,idname,name,ttrig,t90start,gbmloc;
  Float_t ra,decl,sigmapos,t90,sigmat90,fluence,sigmafluence,z,t100;
  Double_t mjdtrig,mjdt90start,mjdt90end;
 
@@ -30,13 +31,14 @@
  Double_t dutx;
 
  NcTimestamp ts;
- ts.LoadUTCparameterFiles("leap.txt","dut.txt");
+ ts.LoadUTCparameterFiles();
 
  // The produced output structure
- TFile* output=new TFile("GRBweb2.root","RECREATE","GRB database");
+ TFile* output=new TFile("GRBweb.root","RECREATE","GRB database");
  TTree* otree=new TTree("T","GRB data");
 
  // The output variables for the Tree
+ otree->Branch("name",idname.Data(),"name/C");
  otree->Branch("date",&date,"date/I");
  otree->Branch("leapsec",&leapsec,"leapsec/I");
  otree->Branch("dut",&dut,"dut/F");
@@ -70,10 +72,10 @@
             >> fluence >> sigmafluence >> z >> t100 >> gbmloc >> mjdtrig)
  {
   // Check for consistent data
-  name=namegcn;
-  if (name=="None") name=namefermi;
+  idname=namegcn;
+  if (idname=="None") idname=namefermi;
 
-  if (name=="None" || ttrig=="-999" || mjdtrig<=0) continue;
+  if (idname=="None" || ttrig=="-999" || mjdtrig<=0) continue;
 
   /////////////////////////////////
   // Create some additional data //
@@ -87,7 +89,8 @@
   gbmpos=0;
   if (gbmloc=="True") gbmpos=1;
 
-  // Extract the date as yymmdd from the name
+  // Extract the date as yymmdd from the idname
+  name=idname;
   name.Remove(0,3);
   name.Remove(6);
 
@@ -102,7 +105,6 @@
   }
 
   date=name.Atoi();
-
   // Set the trigger timestamp based on the date and UTC trigger time
   // Note : The trigger MJD in the input file was NOT corrected for dUT=UT1-UTC
   // So, we will use the UTC trigger time and store the corrected trigger MJD

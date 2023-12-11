@@ -6,10 +6,13 @@
 {
  gSystem->Load("ncfspack");
 
- gROOT->LoadMacro("code.cxx+");
+///// gROOT->LoadMacro("code.cxx+");
 
  // The virtual lab providing various analysis tools
  NcAstrolab lab;
+ lab.SetUT("11-04-1960","12:00:00.0",0);
+ lab.SetRandomiser(-1);
+ lab.Data();
 
  NcRandom ran;
  NcMath math;
@@ -18,32 +21,52 @@
  // Arrival time window in seconds
  Float_t xmin=-500;
  Float_t xmax=500;
- Int_t nbins=100000;
+ Int_t nbins=10000;
+ Float_t twin=xmax-xmin;
 
  // Settings for the Dt histogram
  Double_t deltatbin=-1;
  Double_t deltatmin=-1;
  Double_t deltatmax=-1;
- Double_t fact=1;
+ Double_t fact=0.1;
  Int_t nevtdt=2; // Number of events within a dt cell for which the inter-event dt statistics will be performed 
 
  // The arival time window histogram
- TH1F* ht=new TH1F("ht","Arrival times;Arrival time;Counts",nbins,xmin,xmax);
- Double_t tbin=ht.GetXaxis()->GetBinWidth(1);
- Double_t tmin=ht.GetXaxis()->GetXmin();
- Double_t tmax=ht.GetXaxis()->GetXmax();
+ TH1F* ht=new TH1F("ht","Arrival times",nbins,xmin,xmax);
+ Double_t tbin=ht->GetXaxis()->GetBinWidth(1);
+ Double_t tmin=ht->GetXaxis()->GetXmin();
+ Double_t tmax=ht->GetXaxis()->GetXmax();
+
+ // Set titles for the axes
+ TString s;
+ s.Form("Counts per bin of size %-10.3g",tbin);
+ ht->GetXaxis()->SetTitle("Arrival time in seconds");
+ ht->GetYaxis()->SetTitle(s.Data());
 
  // Background and signal rates
  Float_t brate=0.030; // The background event rate in Hz
  Float_t srate=0.005; // The signal event rate in Hz 
- Float_t tsig=0;      // The central signal arrival time
- Float_t dtsig=tbin*5.;  // Spread of the signal arrival time
+ Float_t tsig=120;    // The central signal arrival time
+ Float_t dtsig=tbin*0.;  // Spread of the signal arrival time
 
- Float_t rate=brate+srate;                  // Total event rate
- Int_t nbkg=TMath::Nint(brate*(xmax-xmin)); // The number background of events
- Int_t nsig=TMath::Nint(srate*(xmax-xmin)); // The number of signal events
+ Float_t rate=brate+srate;           // Total event rate
+ Int_t nbkg=TMath::Nint(brate*twin); // The number background of events
+ Int_t nsig=TMath::Nint(srate*twin); // The number of signal events
+ Int_t ntot=TMath::Nint(rate*twin);  // The total number of events
 
  cout << " Event rates (Hz) Background:" << brate << " Signal:" << srate << " Total:" << rate << endl;
+
+ // The posterior background and signal rate pdfs
+ TF1 pdfbkg=lab.GetBackgroundRatePDF(nbkg,twin);
+ pdfbkg.SetRange(0,3.*brate);
+ TF1 pdfsig=lab.GetSignalRatePDF(ntot,twin,nbkg,twin);
+ pdfsig.SetRange(0,3.*rate);
+ 
+ TCanvas* cbkg=new TCanvas("cbkg","pdfbkg");
+ pdfbkg.Draw();
+ 
+ TCanvas* csig=new TCanvas("csig","pdfsig");
+ pdfsig.Draw();
 
  Double_t nrandom=1e3; // (Maximum) number of randomised configurations for direct psi P-value determination (0 means n=1e19)
  Int_t ncut=10;        // Number of obtained psi>psi0 entries at which randomisations will be terminated (0= no early termination)
@@ -73,14 +96,14 @@
  ht->Draw();
  
  // Create the delta t histogram
- TH1F hdt=lab.GetDxHistogram(ht,nevtdt,deltatbin,deltatmin,deltatmax);
- TH1F hdt0=GetDxHistogram4(ht,nevtdt,deltatbin,deltatmin,deltatmax,0,fact);
- TH1F hdt1=GetDxHistogram4(ht,nevtdt,deltatbin,deltatmin,deltatmax,1,fact);
- TH1F hdt2=GetDxHistogram4(ht,nevtdt,deltatbin,deltatmin,deltatmax,2,fact);
- TH1F hdt3=GetDxHistogram4(ht,nevtdt,deltatbin,deltatmin,deltatmax,3,fact);
+ TH1F hdtdef=lab.GetDxHistogram(ht,nevtdt,deltatbin,deltatmin,deltatmax,1,1);
+ TH1F hdt0=lab.GetDxHistogram(ht,nevtdt,deltatbin,deltatmin,deltatmax,0,fact);
+ TH1F hdt1=lab.GetDxHistogram(ht,nevtdt,deltatbin,deltatmin,deltatmax,1,fact);
+ TH1F hdt2=lab.GetDxHistogram(ht,nevtdt,deltatbin,deltatmin,deltatmax,2,fact);
+ TH1F hdt3=lab.GetDxHistogram(ht,nevtdt,deltatbin,deltatmin,deltatmax,3,fact);
  
- TCanvas* c2=new TCanvas("c2","hdt");
- hdt.Draw();
+ TCanvas* c2def=new TCanvas("c2def","hdtdef");
+ hdtdef.Draw();
  
  TCanvas* c20=new TCanvas("c20","hdt0");
  hdt0.Draw();
@@ -94,7 +117,7 @@
  TCanvas* c23=new TCanvas("c23","hdt3");
  hdt3.Draw();
 
- TH1F* hdtx=&hdt1;
+ TH1F* hdtx=&hdt2;
 
  Int_t nbdt=hdtx->GetNbinsX();
  deltatbin=hdtx->GetXaxis()->GetBinWidth(1);

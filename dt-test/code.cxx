@@ -445,11 +445,11 @@ TH1F GetDxHistogram4(TH1* hx,Int_t nc,Double_t dxbin,Double_t dxmin,Double_t dxm
 //               the same x-value, possibly resulting in interval values dx=0.
 //               See also note 1) below.
 //         1 ==> Same as "mode=0", but the x-value of each entry of the input histogram "hx" will be
-//               assigned to a random value within the corresponding bin. See note 1) below.  
+//               assigned to a uniform random value within the corresponding bin. See note 1) below.  
 //         2 ==> Bin contents of the input histogram "hx" are treated as (weighted) values.
 //               Each filled bin is treated as a single event with as x-value the center of the bin.
 //         3 ==> Same as "mode=2", but the x-value of each entry of the input histogram "hx" will be
-//               assigned to a random value within the corresponding bin. See also note 1) below.
+//               assigned to a uniform random value within the corresponding bin. See also note 1) below.
 // fact  : Multiplication factor applied to the bin size of the input histogram "hx" to provide
 //         a lower limit to the bin size of the produced Dx histogram when "dxbin=-1". See note 1) below.
 //
@@ -489,9 +489,10 @@ TH1F GetDxHistogram4(TH1* hx,Int_t nc,Double_t dxbin,Double_t dxmin,Double_t dxm
 //    In case one wants to avoid this effect, the binning of the input histogram "hx" could be
 //    chosen fine enough to reflect a basically unbinned situation.
 //    Another way to avoid this effect is to specify "mode=1", for which all entries in the
-//    input histogram "hx" will be assigned a random value within the corresponding bin, instead of
-//    the usual center of bin value. The "sensitivity" to this randomisation effect can be tuned
-//    by the input argument "fact" which controls the minimal bin size of the produced Dx histogram.
+//    input histogram "hx" will be assigned a uniform random value within the corresponding bin,
+//    instead of the usual center of bin value.
+//    The "sensitivity" to this randomisation effect can be tuned by the input argument "fact"
+//    which controls the minimal bin size of the produced Dx histogram.
 //    Yet another way of avoiding this effect is to specify "mode=2" or "mode=3", which will treat
 //    every filled bin of the input histogram as a single event, irrespective of the bin content.
 //    These modes 2 or 3 allow the treatment of input histograms for which the bin contents do
